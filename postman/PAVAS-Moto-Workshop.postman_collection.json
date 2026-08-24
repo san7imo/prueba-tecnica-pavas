@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "Implemented Client, Bike and HITO 4 Work Order API requests.",
+    "description": "Complete Phase 1 Client, Bike and Work Order API requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

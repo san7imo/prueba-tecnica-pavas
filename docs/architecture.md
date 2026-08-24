@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules, HITO 3 added WorkOrder creation/list/detail, HITO 4 added transactional item totals and HITO 5 adds concurrency-safe status transitions through the complete layered request flow. Phase 1 frontend and Phase 2 security/audit controls remain unimplemented.
+This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules, HITO 3 added WorkOrder creation/list/detail, HITO 4 added transactional item totals, HITO 5 added concurrency-safe status transitions and HITO 6 completes the Phase 1 React interface. Phase 2 security/audit controls remain unimplemented.
 
 ## Architectural Style
 
@@ -101,6 +101,24 @@ Express API
 Server data is held close to the consuming page or feature. Authentication will use a narrowly scoped context. Forms use local state unless later complexity justifies a small form library. Redux is not part of the initial architecture.
 
 React Router owns navigation and future role guards. Axios provides a single HTTP client whose refresh behavior will be added during Phase 2.
+
+HITO 6 implements this as:
+
+```text
+src/
+├── api/                    one Axios client + resource modules
+├── components/ui/          shared loading, error, empty and status states
+├── constants/              display labels and transition map
+├── features/workOrders/    focused workflow components and list hook
+├── layouts/                application shell
+├── pages/                  route-level orchestration and local state
+├── routes/                 route table
+└── utils/                  safe API errors and exact decimal presentation
+```
+
+The browser never supplies WorkOrder `status` or `total` during creation. Mutations refetch detail so the persisted backend total and status remain authoritative. Item subtotals are informational and use decimal-string/`BigInt` arithmetic rather than `Number`. The centralized frontend transition map improves the workflow but does not replace backend state validation.
+
+For local development the Axios base defaults to `/api` and Vite proxies it to port 3000. `VITE_API_BASE_URL` can instead point to a deployed API; cross-origin production policy remains part of the approved security milestone.
 
 ## API conventions
 

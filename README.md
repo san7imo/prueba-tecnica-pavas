@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository currently includes the complete Phase 1 backend through HITO 5: Client/Bike operations, WorkOrder creation/read/filtering, transactional item totals and concurrency-safe state transitions. Operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
+The repository now includes the complete Phase 1 product through HITO 6: Client/Bike operations, WorkOrder creation/read/filtering, transactional item totals, concurrency-safe state transitions and the three required operational React screens. Authentication, authorization and audit history remain assigned to Phase 2 milestones.
 
 ## Features
 
-Implemented through HITO 5:
+Implemented through HITO 6:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -29,10 +29,16 @@ Implemented through HITO 5:
 - server-authoritative `SUM(count * unitValue)` totals and rollback coverage;
 - canonical WorkOrder state machine with terminal states, cancellation and stable HTTP 400 errors;
 - transactional `FOR UPDATE` status changes with exhaustive matrix and concurrency tests;
+- responsive application shell and React Router views for `/orders`, `/orders/new` and `/orders/:id`;
+- server-filtered order list with pagination, status badges and complete loading/error/empty states;
+- existing-bike lookup plus integrated quick Client/Bike registration;
+- WorkOrder detail with item creation/deletion, confirmations, valid status actions and server-authoritative total refresh;
+- exact decimal-string subtotal and COP presentation without floating-point monetary arithmetic;
+- focused frontend behavior tests for the critical Phase 1 workflows;
 - guarded MySQL integration tests for the persistence and HTTP layers;
-- Postman folders for all Client, Bike and HITO 5 WorkOrder requests.
+- Postman folders for the complete Phase 1 Client, Bike and WorkOrder API.
 
-Phase 1 frontend and Phase 2 capabilities remain pending for later approved milestones.
+Phase 2 capabilities remain pending for later approved milestones.
 
 ## Assessment Scope
 
@@ -40,7 +46,7 @@ The final solution will cover the mandatory requirements of PAVAS assessment Pha
 
 ## Architecture
 
-The application uses a modular layered monolith: routes, controllers, services, repositories, Sequelize models and MySQL on the backend; feature-oriented React code with a narrow authentication context on the frontend.
+The application uses a modular layered monolith: routes, controllers, services, repositories, Sequelize models and MySQL on the backend; feature-oriented pages/components, narrow API modules and local workflow state on the frontend.
 
 See [docs/architecture.md](docs/architecture.md).
 
@@ -107,11 +113,11 @@ See [docs/architecture.md](docs/architecture.md).
    npm run dev
    ```
 
-The API health endpoint is `http://localhost:3000/api/health`; Vite defaults to `http://localhost:5173`.
+The API health endpoint is `http://localhost:3000/api/health`; Vite defaults to `http://localhost:5173` and proxies `/api` to the local backend.
 
 ## Environment Variables
 
-Root `.env` configures the local MySQL container. `backend/.env` configures the API and future authentication settings. `frontend/.env` configures the API base URL. Only `.env.example` files belong in Git.
+Root `.env` configures the local MySQL container. `backend/.env` configures the API and future authentication settings. `frontend/.env` configures the API base URL; `/api` uses the Vite development proxy and a deployed environment may provide an absolute API URL. Only `.env.example` files belong in Git.
 
 See the comments in each example file. Test integration suites must use `DB_NAME_TEST`, never the development or production database.
 
@@ -177,7 +183,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, Client/Bike behavior, WorkOrder reads/items/totals and HITO 5 state-machine transaction/concurrency behavior. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, Client/Bike behavior, WorkOrder reads/items/totals and HITO 5 state-machine transaction/concurrency behavior. Frontend tests exercise list filters/pagination, creation and quick registration, detail/items/status operations, error/empty/loading states and decimal presentation. The strategy is documented in [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -203,7 +209,7 @@ Accepted decisions are stored under `docs/decisions/`. ADR-001 defines the modul
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the Client, Bike and WorkOrder flows implemented through HITO 5, including item totals and status-transition examples. It deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the complete Phase 1 Client, Bike and WorkOrder API used by the HITO 6 frontend, including item totals and status-transition examples. It deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
@@ -211,18 +217,19 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 - Dates use the migration-defined MySQL `DATETIME(3)` representation and will be exposed in ISO 8601 form by their future APIs.
 - Plate normalization is technical only; no Colombian plate regex will be invented.
 - WorkOrder `entryDate` requires an ISO 8601 date-time with timezone when provided and otherwise uses current server time.
+- The HITO 6 creation screen intentionally omits `entryDate`, so the backend server time is the single default.
 - WorkOrder pages default to 1/20, reject page sizes above 100 and use `entryDate DESC, id DESC`.
 - The first audit record will be `NULL -> RECIBIDA` once audit history is introduced in Phase 2.
 
 ## Known Limitations
 
-Domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones. Status notes are accepted but intentionally not persisted until audit history is implemented.
+Authentication, authorization, user administration and audit history are intentionally absent until their approved Phase 2 milestones. Status notes are accepted but intentionally not persisted until audit history is implemented. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 5 — Phase 1 Work-Order State Machine completed locally.** It is ready for review and commit with the verification evidence reported for this milestone. HITO 6 has not started.
+**HITO 6 — Phase 1 Frontend completed locally.** Phase 1 is ready for review once the completion-gate evidence reported for this milestone is accepted.
 
 ## Roadmap
 

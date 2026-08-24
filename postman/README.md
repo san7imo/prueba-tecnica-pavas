@@ -18,4 +18,4 @@ Import `PAVAS-Moto-Workshop.postman_collection.json` and run requests in folder 
 
 The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify exact totals. `toStatus` defaults to `DIAGNOSTICO`; change it to each next legal target (`EN_PROCESO`, `LISTA`, `ENTREGADA`) or use `CANCELADA` from a non-terminal order.
 
-Only endpoints implemented through HITO 5 are present. Authentication, history and other future modules will be added when implemented.
+All Phase 1 endpoints are present. Authentication, history and other Phase 2 modules will be added only when implemented.

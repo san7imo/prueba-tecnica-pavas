@@ -3,11 +3,31 @@
 ## Foundation baseline
 
 - Backend: Vitest + Supertest verifies `GET /api/health` and the technical 404 envelope.
-- Frontend: Vitest + React Testing Library renders `App` in a router context.
+- Frontend: Vitest + React Testing Library verifies the application shell and Phase 1 operational workflows in router contexts.
 - ESLint runs independently in each package.
 - Domain behavior is added only by its approved milestone suites.
 
 Vitest is used for both packages to keep foundation tooling small and consistent. Supertest still exercises Express without binding a network port. This is a tooling choice, not an architectural change; later suites remain integration-focused.
+
+## HITO 6 frontend suite
+
+Frontend tests mock the narrow resource API modules, not React components. This keeps tests deterministic while exercising page state, routing, forms and user-visible outcomes.
+
+Coverage includes:
+
+- application shell, `/orders` route and friendly unknown-route handling;
+- list loading, empty, populated and API-error/retry states;
+- status/plate filter requests and metadata-driven pagination;
+- existing-bike lookup, automatic selection, exact order payload and navigation;
+- missing-bike flow with sequential quick Client/Bike registration;
+- backend error display and duplicate-submission locks;
+- detail loading/not-found, related resources, items and authoritative total;
+- exact decimal-string subtotal/COP presentation without float arithmetic;
+- item add/delete, destructive confirmation and detail refetch;
+- valid state actions only, cancellation confirmation, terminal states and backend transition errors;
+- API-module envelope/query/status-body contracts.
+
+The suite deliberately does not mock a Phase 2 user, history or authentication boundary. Those modules do not exist in HITO 6.
 
 ## Dedicated integration database
 

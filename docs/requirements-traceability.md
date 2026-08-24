@@ -6,12 +6,12 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 backend requirements through HITO 5 are marked Done. Frontend and all Phase 2 requirements remain pending.
+All mandatory Phase 1 backend and frontend requirements through HITO 6 are marked Done. Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
 | P0-INF-001 | Node/Express backend boots | Foundation | `backend/server.js`, `src/app.js` | `GET /api/health` | `tests/health.test.js` | Foundation |
-| P0-INF-002 | React frontend boots/builds | Foundation | Vite React shell | Technical foundation screen | `tests/App.test.jsx` | Foundation |
+| P0-INF-002 | React frontend boots/builds | Foundation | Vite React application shell | `/orders` | `tests/App.test.jsx` + production build | Done |
 | P0-INF-003 | Central technical error handling | Foundation | `AppError`, 404 and error middleware | Error envelope | `tests/notFound.test.js` | Foundation |
 | P0-INF-004 | MySQL reproducible locally | Foundation | `docker-compose.yml` | N/A | Compose health verification | Foundation |
 | P0-INF-005 | Dedicated test DB strategy | Foundation | `testDatabaseGuard.js`, `DB_NAME_TEST`, Umzug | N/A | Guard + schema integration suite | Done |
@@ -45,18 +45,18 @@ All mandatory Phase 1 backend requirements through HITO 5 are marked Done. Front
 | P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Empty terminal transition sets, no rollback | Status endpoint | Terminal rows in complete matrix + explicit tests | Done |
 | P1-STATE-004 | Invalid/idempotent transition returns clear 400 | 1/2 | `BusinessRuleError` with stable `INVALID_STATUS_TRANSITION` | Status endpoint | Known-invalid, same-state and unknown-state distinction | Done |
 | P1-STATE-005 | Concurrent transitions are serialized | Project contract | Service transaction + shared WorkOrder `FOR UPDATE` repository query | Status endpoint | Serial-valid race + mutually exclusive terminal race | Done |
-| P1-FE-001 | Work-order list table: plate/client/status/date/total | 1 | Planned HITO 6 | `/orders` | List UI tests | Pending |
-| P1-FE-002 | Status and plate filters | 1 | Planned HITO 6 | `/orders` | Filter interaction tests | Pending |
-| P1-FE-003 | Work-order pagination | 1 | Planned HITO 6 | `/orders` | Pagination interaction test | Pending |
-| P1-FE-004 | Create order selecting bike by plate | 1 | Planned HITO 6 | `/orders/new` | Creation workflow test | Pending |
-| P1-FE-005 | Quick client and bike registration | 1 | Planned HITO 6 | `/orders/new` | Quick registration test | Pending |
-| P1-FE-006 | Detail shows client, bike, items and total | 1 | Planned HITO 6 | `/orders/:id` | Detail rendering test | Pending |
-| P1-FE-007 | Detail exposes valid transition actions only | 1 | Planned HITO 6 | `/orders/:id` | Transition-action test | Pending |
-| P1-FE-008 | Detail manages items | 1 | Planned HITO 6 | `/orders/:id` | Item interaction tests | Pending |
-| P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
-| P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
-| P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
-| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 5; later modules pending | Implemented API subset | Status request examples + manual/Postman smoke at final gate | Pending |
+| P1-FE-001 | Work-order list table: plate/client/status/date/total | 1 | `WorkOrdersPage`, `OrderTable`, localized formatters and `StatusBadge` | `/orders` | `WorkOrdersPage.test.jsx` rendering test | Done |
+| P1-FE-002 | Status and plate filters | 1 | Controlled `OrderFilters` + server query through `workOrdersApi` | `/orders` | Filter request/trim/reset interaction test | Done |
+| P1-FE-003 | Work-order pagination | 1 | Backend metadata-driven `Pagination` | `/orders` | Next-page request and disabled boundary test | Done |
+| P1-FE-004 | Create order selecting bike by plate | 1 | `BikeLookup`, local workflow state and explicit create payload | `/orders/new` | Existing-bike creation/navigation test | Done |
+| P1-FE-005 | Quick client and bike registration | 1 | Sequential `QuickRegistration`, Client/Bike API modules and automatic selection | `/orders/new` | Full client→bike chain test | Done |
+| P1-FE-006 | Detail shows client, bike, items and total | 1 | `WorkOrderDetailPage`, resource cards and exact decimal presentation | `/orders/:id` | Detail/related data/items/subtotal/total rendering test | Done |
+| P1-FE-007 | Detail exposes valid transition actions only | 1 | Central frontend transition map + `StatusActions`; backend remains authoritative | `/orders/:id` | Allowed/hidden/terminal/error tests | Done |
+| P1-FE-008 | Detail manages items | 1 | Item form/table, delete confirmation and authoritative refetch after mutation | `/orders/:id` | Add/delete/payload/refetch tests | Done |
+| P1-UX-001 | Clear errors and loading indicators | 1 | Shared loading/error panels plus scoped mutation feedback | Required views | List/detail/create loading and API error tests | Done |
+| P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Empty panels, submit locks, terminal state and responsive CSS system | Required views | Empty/retry/double-submit/terminal tests | Done |
+| P1-DOC-001 | Source, migrations and setup README | 1 | Backend/frontend source, Sequelize migrations and current root README | Repository delivery | Clean migration, boot, build and E2E verification | Done |
+| P1-DOC-002 | Postman collection | Project contract | Complete Phase 1 Client/Bike/Work Orders/Items/Status collection | Phase 1 API | Collection structure review + E2E API smoke | Done |
 | P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |
