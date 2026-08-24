@@ -13,8 +13,9 @@ Import `PAVAS-Moto-Workshop.postman_collection.json` and run requests in folder 
 9. Work Orders / List Work Orders
 10. Work Orders / Filter Work Orders
 11. Work Orders / Get Work Order
-12. Work Orders / Delete Work Order Item
+12. Work Orders / Update Work Order Status
+13. Work Orders / Delete Work Order Item
 
-The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify the exact recalculated total after creation and deletion.
+The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify exact totals. `toStatus` defaults to `DIAGNOSTICO`; change it to each next legal target (`EN_PROCESO`, `LISTA`, `ENTREGADA`) or use `CANCELADA` from a non-terminal order.
 
-Only endpoints implemented through HITO 4 are present. Status changes, authentication, history and other future modules will be added when implemented.
+Only endpoints implemented through HITO 5 are present. Authentication, history and other future modules will be added when implemented.

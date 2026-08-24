@@ -42,7 +42,7 @@ export const workOrderRepository = {
 
   findByIdForUpdate(id, transaction) {
     return models.WorkOrder.findByPk(id, {
-      attributes: ['id'],
+      attributes: ['id', 'status'],
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -52,6 +52,13 @@ export const workOrderRepository = {
     return models.WorkOrder.update(
       { total },
       { where: { id }, fields: ['total'], transaction },
+    );
+  },
+
+  updateStatus(id, status, transaction) {
+    return models.WorkOrder.update(
+      { status },
+      { where: { id }, fields: ['status'], transaction },
     );
   },
 

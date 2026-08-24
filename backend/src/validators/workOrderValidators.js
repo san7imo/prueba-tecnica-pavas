@@ -13,6 +13,7 @@ import {
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
+const MAX_STATUS_NOTE_LENGTH = 1000;
 const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/;
 
 const parseEntryDate = (value, details) => {
@@ -69,6 +70,28 @@ const paginationInteger = ({ value, field, defaultValue, max, details }) => {
   }
 
   return parsed;
+};
+
+const optionalStatusNote = (value, details) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    details.push({ field: 'note', message: 'Note must be a string or null.' });
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length > MAX_STATUS_NOTE_LENGTH) {
+    details.push({
+      field: 'note',
+      message: `Note must be at most ${MAX_STATUS_NOTE_LENGTH} characters.`,
+    });
+    return undefined;
+  }
+
+  return normalized || null;
 };
 
 export const validateCreateWorkOrder = (request, _response, next) => {
@@ -162,4 +185,41 @@ export const validateWorkOrderId = (request, _response, next) => {
     details,
     next,
   });
+};
+
+export const validateWorkOrderStatusUpdate = (request, _response, next) => {
+  const body = asObject(request.body);
+  const details = [];
+  const id = positiveId({
+    value: request.params.id,
+    field: 'id',
+    label: 'Work order id',
+    details,
+  });
+  const toStatus = requiredString({
+    value: body.toStatus,
+    field: 'toStatus',
+    label: 'Target status',
+    maxLength: 30,
+    details,
+  });
+  const note = optionalStatusNote(body.note, details);
+
+  if (toStatus !== undefined && !WORK_ORDER_STATUSES.includes(toStatus)) {
+    details.push({
+      field: 'toStatus',
+      message: 'Target status must be a contractual work-order status.',
+    });
+  }
+
+  if (details.length > 0) {
+    completeValidation({ request, section: 'body', value: {}, details, next });
+    return;
+  }
+
+  request.validated = {
+    params: { id },
+    body: { toStatus, note },
+  };
+  next();
 };

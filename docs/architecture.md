@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules, HITO 3 added WorkOrder creation/list/detail and HITO 4 adds transactional item mutation and authoritative totals through the complete layered request flow. Status transitions and Phase 2 security controls remain unimplemented.
+This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules, HITO 3 added WorkOrder creation/list/detail, HITO 4 added transactional item totals and HITO 5 adds concurrency-safe status transitions through the complete layered request flow. Phase 1 frontend and Phase 2 security/audit controls remain unimplemented.
 
 ## Architectural Style
 
@@ -73,6 +73,8 @@ Application errors carry a safe code, status and message. A single error middlew
 Multi-write business operations must be atomic. HITO 4 item-total mutations run through a service-owned Sequelize transaction and lock their target work-order row with `SELECT ... FOR UPDATE`. Create then inserts the item; delete resolves the immutable owning order, locks that order, revalidates the item with a locking read and removes it. Both paths aggregate persisted item rows and update the order before commit. This common order lock serializes competing create/create and create/delete operations. Audit insertion will occur in the same transaction as the status update in its later milestone.
 
 MySQL performs the HITO 4 `SUM(count * unit_value)` using exact `DECIMAL` operands and casts the aggregate to `DECIMAL(15,2)`. The application carries the result as a string and never performs monetary arithmetic with JavaScript `Number`. See ADR-004.
+
+HITO 5 status changes reuse the same WorkOrder row-lock query. The service starts a transaction, reads the current status with `FOR UPDATE`, invokes the HTTP/Sequelize-independent state-machine utility and persists only an allowed target. A waiting transition reads and validates the state committed by the preceding transaction. The workflow intentionally contains no history insert yet, but HITO 9 can add it before the existing commit boundary. See ADR-003.
 
 ## Database and migrations
 

@@ -4,6 +4,7 @@ import {
   createWorkOrder,
   getWorkOrder,
   listWorkOrders,
+  updateWorkOrderStatus,
 } from '../controllers/workOrderController.js';
 import {
   createWorkOrderItem,
@@ -17,6 +18,7 @@ import {
   validateCreateWorkOrder,
   validateWorkOrderId,
   validateWorkOrderList,
+  validateWorkOrderStatusUpdate,
 } from '../validators/workOrderValidators.js';
 
 export const workOrderRouter = Router();
@@ -28,5 +30,10 @@ workOrderRouter.delete(
   '/items/:itemId',
   validateDeleteWorkOrderItem,
   deleteWorkOrderItem,
+);
+workOrderRouter.patch(
+  '/:id/status',
+  validateWorkOrderStatusUpdate,
+  updateWorkOrderStatus,
 );
 workOrderRouter.get('/:id', validateWorkOrderId, getWorkOrder);

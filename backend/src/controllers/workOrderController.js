@@ -18,3 +18,11 @@ export const getWorkOrder = async (request, response) => {
   const workOrder = await workOrderService.getWorkOrder(request.validated.params.id);
   response.json({ data: serializeWorkOrder(workOrder) });
 };
+
+export const updateWorkOrderStatus = async (request, response) => {
+  const result = await workOrderService.transitionStatus(
+    request.validated.params.id,
+    request.validated.body,
+  );
+  response.json({ data: result });
+};

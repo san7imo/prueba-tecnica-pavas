@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The API currently exposes the technical health route and Phase 1 Client, Bike and WorkOrder routes through HITO 4. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
+The API currently exposes the technical health route and Phase 1 Client, Bike and WorkOrder routes through HITO 5. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
 
 ```text
 GET  /api/health
@@ -18,11 +18,12 @@ GET  /api/bikes/:id
 POST /api/work-orders
 GET  /api/work-orders?status=&plate=&page=&pageSize=
 GET  /api/work-orders/:id
+PATCH /api/work-orders/:id/status
 POST /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
 ```
 
-Status changes, history, authentication and user-administration endpoints are not implemented yet.
+History, authentication and user-administration endpoints are not implemented yet.
 
 ## General conventions
 
@@ -172,7 +173,7 @@ POST /api/work-orders
 Content-Type: application/json
 ```
 
-Authentication/roles: none through HITO 4.
+Authentication/roles: none through HITO 5.
 
 ```json
 {
@@ -196,7 +197,7 @@ Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 GET /api/work-orders?status=RECIBIDA&plate=abc%20123&page=1&pageSize=20
 ```
 
-Authentication/roles: none through HITO 4.
+Authentication/roles: none through HITO 5.
 
 All parameters are optional:
 
@@ -252,11 +253,66 @@ Errors: `400 VALIDATION_ERROR` for invalid status/pagination/filter values.
 GET /api/work-orders/:id
 ```
 
-Authentication/roles: none through HITO 4. `id` must be a positive integer.
+Authentication/roles: none through HITO 5. `id` must be a positive integer.
 
 Success: `200 OK` with the public order, full Bike/Client graph, authoritative persisted total and an `items` array. Items expose `id`, `type`, `description`, `count` and `unitValue`; their mutations use the endpoints below.
 
 Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`.
+
+### Update work-order status
+
+```http
+PATCH /api/work-orders/:id/status
+Content-Type: application/json
+```
+
+Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will apply the ADMIN/MECANICO policy. `id` must be a positive integer.
+
+```json
+{
+  "toStatus": "DIAGNOSTICO",
+  "note": "Initial diagnosis completed"
+}
+```
+
+`toStatus` is required and must be one of the six canonical states. `note` is optional, accepts a string or `null`, is trimmed and is limited to 1000 characters. HITO 5 accepts but does not persist or return the note; Phase 2 audit history will consume the same body shape.
+
+Allowed transitions:
+
+| Current | Allowed targets |
+|---|---|
+| `RECIBIDA` | `DIAGNOSTICO`, `CANCELADA` |
+| `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
+| `EN_PROCESO` | `LISTA`, `CANCELADA` |
+| `LISTA` | `ENTREGADA`, `CANCELADA` |
+| `ENTREGADA` | none |
+| `CANCELADA` | none |
+
+The service starts a transaction and locks the WorkOrder before reading and validating its current status. Same-state requests and every known but disallowed edge return the stable business error below.
+
+Success: `200 OK`.
+
+```json
+{
+  "data": {
+    "id": 10,
+    "status": "DIAGNOSTICO"
+  }
+}
+```
+
+Invalid transition: `400 Bad Request`.
+
+```json
+{
+  "error": {
+    "code": "INVALID_STATUS_TRANSITION",
+    "message": "Cannot transition work order from ENTREGADA to CANCELADA."
+  }
+}
+```
+
+Errors: `400 VALIDATION_ERROR` for an unknown target/malformed input, `400 INVALID_STATUS_TRANSITION` for a known disallowed edge, `404 WORK_ORDER_NOT_FOUND` for a missing order, and safe `500 INTERNAL_ERROR` for an unexpected transactional failure.
 
 ### Add work-order item
 
@@ -329,6 +385,7 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_ITEM_NOT_FOUND`, safe `500 INTER
 | Successful read | 200 |
 | Successful creation | 201 |
 | Validation failure | 400 |
+| Invalid or same-state WorkOrder transition | 400 |
 | Missing Client/Bike/WorkOrder/WorkOrderItem | 404 |
 | Duplicate normalized plate | 409 |
 | Unknown route | 404 |
@@ -339,7 +396,6 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_ITEM_NOT_FOUND`, safe `500 INTER
 The remaining contract is intentionally deferred to its approved milestones:
 
 ```text
-PATCH  /api/work-orders/:id/status
 GET    /api/work-orders/:id/history?page=&pageSize=
 
 POST /api/auth/register

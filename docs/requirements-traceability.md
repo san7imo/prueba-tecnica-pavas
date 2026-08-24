@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-Phase 1 persistence and backend requirements through HITO 4 are marked Done. Status workflow, frontend and all Phase 2 requirements remain pending.
+All mandatory Phase 1 backend requirements through HITO 5 are marked Done. Frontend and all Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -40,11 +40,11 @@ Phase 1 persistence and backend requirements through HITO 4 are marked Done. Sta
 | P1-BE-012 | Delete work-order item | 1 | Transactional item service with locked revalidation | `DELETE /api/work-orders/items/:itemId` | Delete/last-item/404/invalid-ID tests | Done |
 | P1-BE-013 | Backend calculates total after add/delete | 1 | MySQL DECIMAL aggregate + persisted server-controlled total, ADR-004 | Order detail/items | 130000, 0.30, rollback and delete-total tests | Done |
 | P1-BE-014 | Concurrent item mutations preserve total | Project contract | Service transactions + WorkOrder `FOR UPDATE` lock | Items API | Independent add/add transactions and add/delete race tests | Done |
-| P1-STATE-001 | Canonical forward state flow | 1 | Planned state machine HITO 5 | `PATCH /api/work-orders/:id/status` | Every valid transition | Pending |
-| P1-STATE-002 | Cancel from RECIBIDA/DIAGNOSTICO/EN_PROCESO/LISTA | 1 | Planned state machine HITO 5 | Status endpoint | Cancellation matrix tests | Pending |
-| P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Planned state machine HITO 5 | Status endpoint | Terminal-state tests | Pending |
-| P1-STATE-004 | Invalid/idempotent transition returns clear 400 | 1/2 | Planned state service/error | Status endpoint | Invalid and same-state tests | Pending |
-| P1-STATE-005 | Concurrent transitions are serialized | Project contract | Planned WorkOrder row lock | Status endpoint | Competing transition test | Pending |
+| P1-STATE-001 | Canonical forward state flow | 1 | Central transition map + transactional WorkOrder service | `PATCH /api/work-orders/:id/status` | Full path and 6×6 matrix in `workOrderStatus.integration.test.js` | Done |
+| P1-STATE-002 | Cancel from RECIBIDA/DIAGNOSTICO/EN_PROCESO/LISTA | 1 | Explicit cancellation edges in domain utility | Status endpoint | Four-state cancellation matrix | Done |
+| P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Empty terminal transition sets, no rollback | Status endpoint | Terminal rows in complete matrix + explicit tests | Done |
+| P1-STATE-004 | Invalid/idempotent transition returns clear 400 | 1/2 | `BusinessRuleError` with stable `INVALID_STATUS_TRANSITION` | Status endpoint | Known-invalid, same-state and unknown-state distinction | Done |
+| P1-STATE-005 | Concurrent transitions are serialized | Project contract | Service transaction + shared WorkOrder `FOR UPDATE` repository query | Status endpoint | Serial-valid race + mutually exclusive terminal race | Done |
 | P1-FE-001 | Work-order list table: plate/client/status/date/total | 1 | Planned HITO 6 | `/orders` | List UI tests | Pending |
 | P1-FE-002 | Status and plate filters | 1 | Planned HITO 6 | `/orders` | Filter interaction tests | Pending |
 | P1-FE-003 | Work-order pagination | 1 | Planned HITO 6 | `/orders` | Pagination interaction test | Pending |
@@ -56,7 +56,7 @@ Phase 1 persistence and backend requirements through HITO 4 are marked Done. Sta
 | P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
-| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 4; later modules pending | Implemented API subset | Item request tests + manual/Postman smoke at final gate | Pending |
+| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 5; later modules pending | Implemented API subset | Status request examples + manual/Postman smoke at final gate | Pending |
 | P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |

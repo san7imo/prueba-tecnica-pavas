@@ -29,6 +29,10 @@
     {
       "key": "itemId",
       "value": ""
+    },
+    {
+      "key": "toStatus",
+      "value": "DIAGNOSTICO"
     }
   ],
   "item": [
@@ -351,6 +355,43 @@
                   "const data = pm.response.json().data;",
                   "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('workOrderId')));",
                   "pm.expect(data).to.have.property('items');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Work Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toStatus\": \"{{toStatus}}\",\n  \"note\": \"Phase 1 accepts this note without persisting history\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}/status",
+            "description": "Updates status transactionally. Examples: DIAGNOSTICO, EN_PROCESO, LISTA, ENTREGADA and CANCELADA. Set toStatus to a target valid from the order's current state."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('workOrderId')));",
+                  "pm.expect(data.status).to.eql(pm.collectionVariables.get('toStatus'));"
                 ],
                 "type": "text/javascript"
               }

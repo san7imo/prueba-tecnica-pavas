@@ -87,7 +87,7 @@ The existing direct persistence test continues to prove that MySQL's `uq_bikes_p
 - validation and not-found errors;
 - a query-hook assertion proving list query count remains two (count + page data) for multiple orders, with no per-row reads.
 
-Tests may insert non-`RECIBIDA` states directly as deterministic read fixtures. Status-transition HTTP behavior remains deferred to HITO 5.
+Tests may insert non-`RECIBIDA` states directly as deterministic read fixtures. HITO 3 itself did not mutate statuses; the dedicated HITO 5 suite below now owns that HTTP behavior.
 
 ## HITO 4 item/total HTTP suite
 
@@ -104,9 +104,25 @@ Tests may insert non-`RECIBIDA` states directly as deterministic read fixtures. 
 
 Concurrency fixtures are committed before the requests and the requests run through separate pooled connections. Deterministic table cleanup is used rather than a suite-wide rollback transaction.
 
+## HITO 5 state-machine HTTP suite
+
+`tests/workOrderStatus.integration.test.js` exercises the status endpoint through Express and the dedicated MySQL database. It covers:
+
+- the complete forward workflow while checking persisted status after every transition;
+- cancellation from `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` and `LISTA`;
+- an explicit 6 × 6 matrix comparing every current/target pair against the contractual graph, including every same-state request;
+- terminal-state, unknown-target, malformed body/ID, missing-order and stable error behavior;
+- optional/null note compatibility without history persistence;
+- rollback and safe error serialization on a forced repository failure;
+- preservation of item total during status changes;
+- a concurrent serially valid `RECIBIDA → DIAGNOSTICO/CANCELADA` scenario;
+- a competing `LISTA → ENTREGADA/CANCELADA` race that produces exactly one success and one HTTP 400.
+
+The terminal race captures SQL evidence of two independent transactions and two WorkOrder `FOR UPDATE` reads. Its losing response names the terminal state committed by the winner, proving revalidation occurred after the lock rather than against stale `LISTA` state.
+
 ## Critical future suites
 
-Later milestones must cover the full matrix in `AGENTS.md`: authentication and token-family reuse, RBAC, clients/bikes, order filters and pagination, item totals, all state transitions, concurrent mutations, audit contents/order/pagination and ADMIN user management.
+Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: authentication and token-family reuse, RBAC, audit contents/order/pagination and ADMIN user management. The Phase 1 backend client, bike, order, item/total and complete state-transition risks already point to concrete integration evidence above.
 
 Passing existing tests alone is insufficient at release: each traceability row and HITO 12 matrix entry must point to a concrete passing test.
 

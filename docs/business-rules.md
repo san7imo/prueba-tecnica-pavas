@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. HITO 4 implements WorkOrder item mutation and authoritative total recalculation over the existing creation/read behavior. Transition orchestration and authorization remain assigned to later milestones.
+These rules are the approved domain contract. HITO 5 implements the Phase 1 WorkOrder state machine over the existing creation, read, item and total behavior. Authorization and audit history remain assigned to Phase 2 milestones.
 
 ## Work-order state machine
 
@@ -32,10 +32,21 @@ Canonical transition map:
 }
 ```
 
+| From | Allowed targets |
+|---|---|
+| `RECIBIDA` | `DIAGNOSTICO`, `CANCELADA` |
+| `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
+| `EN_PROCESO` | `LISTA`, `CANCELADA` |
+| `LISTA` | `ENTREGADA`, `CANCELADA` |
+| `ENTREGADA` | — |
+| `CANCELADA` | — |
+
 - `ENTREGADA` and `CANCELADA` are terminal.
 - ADMIN rollback from `ENTREGADA` is optional in the source and deliberately excluded.
-- Invalid transitions return HTTP 400 with a clear application error.
+- Unknown target states are request validation errors; known but disallowed transitions return HTTP 400 with `INVALID_STATUS_TRANSITION`.
 - A same-state request is rejected and never creates history.
+- The service locks the WorkOrder row inside a transaction and validates from the status read under that lock. Competing transitions therefore behave as a legal serial ordering rather than overwriting from stale state.
+- The optional `note` field is accepted, trimmed and capped at 1000 characters for Phase 2 body compatibility, but HITO 5 does not persist it.
 
 ## Work-order creation
 

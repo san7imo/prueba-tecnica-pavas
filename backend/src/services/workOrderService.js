@@ -1,9 +1,12 @@
 import { ForeignKeyConstraintError } from 'sequelize';
 
+import { sequelize } from '../config/databaseContext.js';
 import { WORK_ORDER_STATUS } from '../constants/workOrder.js';
+import { BusinessRuleError } from '../errors/BusinessRuleError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { bikeRepository } from '../repositories/bikeRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
+import { canTransition } from '../utils/workOrderStateMachine.js';
 
 const bikeNotFound = () =>
   new NotFoundError({
@@ -15,6 +18,12 @@ const workOrderNotFound = () =>
   new NotFoundError({
     code: 'WORK_ORDER_NOT_FOUND',
     message: 'Work order not found.',
+  });
+
+const invalidStatusTransition = (fromStatus, toStatus) =>
+  new BusinessRuleError({
+    code: 'INVALID_STATUS_TRANSITION',
+    message: `Cannot transition work order from ${fromStatus} to ${toStatus}.`,
   });
 
 export const workOrderService = {
@@ -59,5 +68,24 @@ export const workOrderService = {
       throw workOrderNotFound();
     }
     return workOrder;
+  },
+
+  transitionStatus(id, { toStatus }) {
+    return sequelize.transaction(async (transaction) => {
+      const workOrder = await workOrderRepository.findByIdForUpdate(
+        id,
+        transaction,
+      );
+      if (!workOrder) {
+        throw workOrderNotFound();
+      }
+
+      if (!canTransition(workOrder.status, toStatus)) {
+        throw invalidStatusTransition(workOrder.status, toStatus);
+      }
+
+      await workOrderRepository.updateStatus(id, toStatus, transaction);
+      return { id: workOrder.id, status: toStatus };
+    });
   },
 };
