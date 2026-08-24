@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The API currently exposes the technical health route and Phase 1 Client, Bike and HITO 3 WorkOrder routes. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
+The API currently exposes the technical health route and Phase 1 Client, Bike and WorkOrder routes through HITO 4. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
 
 ```text
 GET  /api/health
@@ -18,9 +18,11 @@ GET  /api/bikes/:id
 POST /api/work-orders
 GET  /api/work-orders?status=&plate=&page=&pageSize=
 GET  /api/work-orders/:id
+POST /api/work-orders/:id/items
+DELETE /api/work-orders/items/:itemId
 ```
 
-Work-order item mutation, status changes, history, authentication and user-administration endpoints are not implemented yet.
+Status changes, history, authentication and user-administration endpoints are not implemented yet.
 
 ## General conventions
 
@@ -170,7 +172,7 @@ POST /api/work-orders
 Content-Type: application/json
 ```
 
-Authentication/roles: none in HITO 3.
+Authentication/roles: none through HITO 4.
 
 ```json
 {
@@ -194,7 +196,7 @@ Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 GET /api/work-orders?status=RECIBIDA&plate=abc%20123&page=1&pageSize=20
 ```
 
-Authentication/roles: none in HITO 3.
+Authentication/roles: none through HITO 4.
 
 All parameters are optional:
 
@@ -250,11 +252,75 @@ Errors: `400 VALIDATION_ERROR` for invalid status/pagination/filter values.
 GET /api/work-orders/:id
 ```
 
-Authentication/roles: none in HITO 3. `id` must be a positive integer.
+Authentication/roles: none through HITO 4. `id` must be a positive integer.
 
-Success: `200 OK` with the public order, full Bike/Client graph and an `items` array. Existing items are read-only in this milestone and expose `id`, `type`, `description`, `count` and `unitValue`.
+Success: `200 OK` with the public order, full Bike/Client graph, authoritative persisted total and an `items` array. Items expose `id`, `type`, `description`, `count` and `unitValue`; their mutations use the endpoints below.
 
 Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`.
+
+### Add work-order item
+
+```http
+POST /api/work-orders/:id/items
+Content-Type: application/json
+```
+
+Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will allow ADMIN and MECANICO.
+
+```json
+{
+  "type": "MANO_OBRA",
+  "description": "General inspection",
+  "count": "1.50",
+  "unitValue": "50000.00"
+}
+```
+
+`type` is `MANO_OBRA` or `REPUESTO`; description is required and capped at 255 characters. `count` must be greater than zero and fit `DECIMAL(10,2)`. `unitValue` may be zero and must fit `DECIMAL(15,2)`. Numeric JSON values and decimal strings are accepted, normalized to two-decimal strings and never used as an authoritative total.
+
+The service starts a transaction, locks the WorkOrder row, inserts the item, recalculates from all persisted items using MySQL decimal arithmetic and persists the total before commit.
+
+Success: `201 Created`.
+
+```json
+{
+  "data": {
+    "item": {
+      "id": 1,
+      "type": "MANO_OBRA",
+      "description": "General inspection",
+      "count": "1.50",
+      "unitValue": "50000.00"
+    },
+    "workOrderTotal": "75000.00"
+  }
+}
+```
+
+Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`, safe `500 INTERNAL_ERROR` on unexpected transactional failure.
+
+### Delete work-order item
+
+```http
+DELETE /api/work-orders/items/:itemId
+```
+
+Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will restrict this operation to ADMIN. `itemId` must be a positive integer.
+
+The owning WorkOrder is resolved, then its row is locked inside a transaction. The item is revalidated with a locking read, deleted, and the exact total is recalculated before commit. Deleting the last item returns and persists `0.00`.
+
+Success: `200 OK`.
+
+```json
+{
+  "data": {
+    "deletedItemId": 1,
+    "workOrderTotal": "0.00"
+  }
+}
+```
+
+Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_ITEM_NOT_FOUND`, safe `500 INTERNAL_ERROR` on unexpected transactional failure.
 
 ## HTTP status mapping
 
@@ -263,7 +329,7 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`.
 | Successful read | 200 |
 | Successful creation | 201 |
 | Validation failure | 400 |
-| Missing Client/Bike/WorkOrder | 404 |
+| Missing Client/Bike/WorkOrder/WorkOrderItem | 404 |
 | Duplicate normalized plate | 409 |
 | Unknown route | 404 |
 | Unexpected failure | 500 |
@@ -274,8 +340,6 @@ The remaining contract is intentionally deferred to its approved milestones:
 
 ```text
 PATCH  /api/work-orders/:id/status
-POST   /api/work-orders/:id/items
-DELETE /api/work-orders/items/:itemId
 GET    /api/work-orders/:id/history?page=&pageSize=
 
 POST /api/auth/register

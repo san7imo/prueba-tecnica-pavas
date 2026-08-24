@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "Implemented Client, Bike and HITO 3 Work Order API requests.",
+    "description": "Implemented Client, Bike and HITO 4 Work Order API requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -24,6 +24,10 @@
     },
     {
       "key": "workOrderId",
+      "value": ""
+    },
+    {
+      "key": "itemId",
       "value": ""
     }
   ],
@@ -248,6 +252,43 @@
           ]
         },
         {
+          "name": "Add Work Order Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"MANO_OBRA\",\n  \"description\": \"General inspection\",\n  \"count\": \"2.00\",\n  \"unitValue\": \"50000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}/items",
+            "description": "Creates an item transactionally, captures itemId and verifies the server-calculated total."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(data.workOrderTotal).to.eql('100000.00');",
+                  "pm.collectionVariables.set('itemId', data.item.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
           "name": "List Work Orders",
           "request": {
             "method": "GET",
@@ -310,6 +351,29 @@
                   "const data = pm.response.json().data;",
                   "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('workOrderId')));",
                   "pm.expect(data).to.have.property('items');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Work Order Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders/items/{{itemId}}",
+            "description": "Deletes the captured item and verifies that the final total returns to zero."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(String(data.deletedItemId)).to.eql(String(pm.collectionVariables.get('itemId')));",
+                  "pm.expect(data.workOrderTotal).to.eql('0.00');"
                 ],
                 "type": "text/javascript"
               }

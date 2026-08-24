@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-Phase 1 persistence, Client/Bike APIs and HITO 3 WorkOrder create/list/detail requirements are marked Done. Item mutation, status workflow, frontend and all Phase 2 requirements remain pending.
+Phase 1 persistence and backend requirements through HITO 4 are marked Done. Status workflow, frontend and all Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -23,8 +23,8 @@ Phase 1 persistence, Client/Bike APIs and HITO 3 WorkOrder create/list/detail re
 | P1-DATA-003 | Plate normalization and two-level uniqueness | 1 | Bike validator/service/setter + `uq_bikes_plate` | `POST /api/bikes` | HTTP normalized duplicate matrix + schema constraint test | Done |
 | P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | WorkOrder model/migration + `fk_work_orders_bike` | Persistence layer | FK + association tests | Done |
 | P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Item model/migration + `fk_work_order_items_order` | Persistence layer | FK + association tests | Done |
-| P1-DATA-006 | Item count greater than zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for zero/negative | Done |
-| P1-DATA-007 | Item unit value greater/equal zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for negative | Done |
+| P1-DATA-006 | Item count greater than zero | 1 | Exact request/model validator + MySQL CHECK | Items API + persistence | HTTP zero/negative/scale/range + DB rejection tests | Done |
+| P1-DATA-007 | Item unit value greater/equal zero | 1 | Exact request/model validator + MySQL CHECK | Items API + persistence | HTTP negative/scale/range/zero + DB rejection tests | Done |
 | P1-DATA-008 | Money uses DECIMAL | 1 | `DECIMAL(15,2)` migration/models | Persistence layer | Reloaded exact DECIMAL test | Done |
 | P1-BE-001 | Create client | 1 | Client route/validator/controller/service/repository | `POST /api/clients` | `clientsBikes.integration.test.js` create/validation tests | Done |
 | P1-BE-002 | Search clients | 1 | Parameterized Client repository partial search | `GET /api/clients?search=` | Unfiltered + name/phone/email/empty tests | Done |
@@ -36,10 +36,10 @@ Phase 1 persistence, Client/Bike APIs and HITO 3 WorkOrder create/list/detail re
 | P1-BE-008 | List/filter orders by status and plate | 1 | WorkOrder eager query with validated combined filters | `GET /api/work-orders` | Status/plate/combined/N+1 tests | Done |
 | P1-BE-009 | Paginate work orders with metadata | 1 | `findAndCountAll`, max 100, stable entry-date/ID order | `GET /api/work-orders` | Defaults/invalid/page/meta/order tests | Done |
 | P1-BE-010 | Get order with client, bike and items | 1 | WorkOrder detail include graph + explicit serializer | `GET /api/work-orders/:id` | Detail graph/404/invalid-ID tests | Done |
-| P1-BE-011 | Add MANO_OBRA/REPUESTO item | 1 | Planned transactional service HITO 4 | `POST /api/work-orders/:id/items` | Item creation test | Pending |
-| P1-BE-012 | Delete work-order item | 1 | Planned transactional service HITO 4 | `DELETE /api/work-orders/items/:itemId` | Item deletion test | Pending |
-| P1-BE-013 | Backend calculates total after add/delete | 1 | Planned transactional total service | Order detail/items | Add/delete total tests | Pending |
-| P1-BE-014 | Concurrent item mutations preserve total | Project contract | Planned row lock HITO 4 | Items API | Concurrency integration test | Pending |
+| P1-BE-011 | Add MANO_OBRA/REPUESTO item | 1 | Item validator/controller/service/repository with explicit fields | `POST /api/work-orders/:id/items` | Creation/type/validation/404 tests in `workOrders.integration.test.js` | Done |
+| P1-BE-012 | Delete work-order item | 1 | Transactional item service with locked revalidation | `DELETE /api/work-orders/items/:itemId` | Delete/last-item/404/invalid-ID tests | Done |
+| P1-BE-013 | Backend calculates total after add/delete | 1 | MySQL DECIMAL aggregate + persisted server-controlled total, ADR-004 | Order detail/items | 130000, 0.30, rollback and delete-total tests | Done |
+| P1-BE-014 | Concurrent item mutations preserve total | Project contract | Service transactions + WorkOrder `FOR UPDATE` lock | Items API | Independent add/add transactions and add/delete race tests | Done |
 | P1-STATE-001 | Canonical forward state flow | 1 | Planned state machine HITO 5 | `PATCH /api/work-orders/:id/status` | Every valid transition | Pending |
 | P1-STATE-002 | Cancel from RECIBIDA/DIAGNOSTICO/EN_PROCESO/LISTA | 1 | Planned state machine HITO 5 | Status endpoint | Cancellation matrix tests | Pending |
 | P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Planned state machine HITO 5 | Status endpoint | Terminal-state tests | Pending |
@@ -56,7 +56,7 @@ Phase 1 persistence, Client/Bike APIs and HITO 3 WorkOrder create/list/detail re
 | P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
-| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 3; remaining modules pending | Implemented API subset | Manual/Postman smoke at final gate | Pending |
+| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 4; later modules pending | Implemented API subset | Item request tests + manual/Postman smoke at final gate | Pending |
 | P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |

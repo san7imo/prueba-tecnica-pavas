@@ -40,6 +40,21 @@ export const workOrderRepository = {
     });
   },
 
+  findByIdForUpdate(id, transaction) {
+    return models.WorkOrder.findByPk(id, {
+      attributes: ['id'],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
+  updateTotal(id, total, transaction) {
+    return models.WorkOrder.update(
+      { total },
+      { where: { id }, fields: ['total'], transaction },
+    );
+  },
+
   findById(id) {
     return models.WorkOrder.findByPk(id, {
       attributes: WORK_ORDER_ATTRIBUTES,

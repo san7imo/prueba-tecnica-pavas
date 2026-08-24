@@ -2,7 +2,7 @@
 
 ## Status
 
-The Phase 1 physical schema is implemented in HITO 1 for Client, Bike, WorkOrder and WorkOrderItem. Phase 2 entities remain conceptual until their approved milestones.
+The Phase 1 physical schema is implemented for Client, Bike, WorkOrder and WorkOrderItem. HITO 4 uses that schema for transactional item mutation and exact total aggregation; no schema migration was required. Phase 2 entities remain conceptual until their approved milestones.
 
 ## Conventions
 
@@ -153,6 +153,16 @@ HITO 3 creates orders with explicit backend-controlled `RECIBIDA` and `0.00` val
 | timestamps | DATETIME(3) | required |
 
 `DECIMAL(15,2)` supports exact monetary values up to 9,999,999,999,999.99, which is comfortably above assessment-scale Colombian-peso work orders. `DECIMAL(10,2)` permits fractional quantities without forcing binary floating-point arithmetic.
+
+## Item-total consistency
+
+Each item mutation locks the owning `work_orders` row in an InnoDB transaction. The repository recalculates from persisted rows using:
+
+```sql
+CAST(COALESCE(SUM(`count` * `unit_value`), 0) AS DECIMAL(15,2))
+```
+
+The `COALESCE` defines an empty order as `0.00`; the cast matches `work_orders.total`. MySQL performs multiplication and summation on exact decimal values, and Sequelize/mysql2 returns the result as a string. The backend does not convert it to binary floating point. This bounded aggregate is documented in ADR-004 and requires no new dependency.
 
 ## Phase 1 referential policy
 

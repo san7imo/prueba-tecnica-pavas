@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository currently includes the Phase 1 database domain, Client/Bike APIs and HITO 3 WorkOrder creation, filtering, pagination and detail. Item mutation, status transitions, operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
+The repository currently includes the Phase 1 database domain and backend APIs through HITO 4: Client/Bike operations, WorkOrder creation/read/filtering and transactional item totals. Status transitions, operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
 
 ## Features
 
-Implemented through HITO 3:
+Implemented through HITO 4:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -23,11 +23,14 @@ Implemented through HITO 3:
 - application and database enforcement of unique normalized plates;
 - WorkOrder creation with validated Bike, server-controlled `RECIBIDA`/`0.00` defaults and optional server entry time;
 - paginated WorkOrder listing with status/normalized-plate filters and eager Bike/Client data;
-- WorkOrder detail with Bike, Client and read-only existing items;
+- WorkOrder detail with Bike, Client, persisted total and existing items;
+- WorkOrder item creation/deletion with validation, atomic recalculation and safe decimal strings;
+- WorkOrder row locking plus tested add/add and add/delete concurrency consistency;
+- server-authoritative `SUM(count * unitValue)` totals and rollback coverage;
 - guarded MySQL integration tests for the persistence and HTTP layers;
-- Postman folders for all Client, Bike and HITO 3 WorkOrder requests.
+- Postman folders for all Client, Bike and HITO 4 WorkOrder requests.
 
-Item, state-transition and Phase 2 capabilities remain pending for later approved milestones.
+State-transition and Phase 2 capabilities remain pending for later approved milestones.
 
 ## Assessment Scope
 
@@ -151,7 +154,7 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Implemented endpoints are `GET /api/health` plus create/list/detail routes for clients, bikes and work orders. Work-order listing supports status/plate filters and pagination. Payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md); items, status changes and Phase 2 endpoints remain explicitly planned.
+Implemented endpoints are `GET /api/health`, create/list/detail routes for clients, bikes and work orders, plus transactional item creation/deletion. Work-order listing supports status/plate filters and pagination. Payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md); status changes and Phase 2 endpoints remain explicitly planned.
 
 ## Authentication
 
@@ -163,7 +166,7 @@ Not enforced yet. The approved ADMIN/MECANICO policy is documented in [docs/busi
 
 ## Business Rules
 
-The canonical state machine, totals, roles and audit behavior are documented in [docs/business-rules.md](docs/business-rules.md) for later milestones. Plate normalization is already active in the HITO 2 Bike API.
+The canonical total rule is active through transactional item APIs; the state machine, roles and audit behavior remain documented for their later milestones in [docs/business-rules.md](docs/business-rules.md).
 
 ## Testing
 
@@ -172,7 +175,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints, migration reversal, Client/Bike behavior and the HITO 3 WorkOrder matrix. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints, migration reversal, Client/Bike behavior, WorkOrder reads and HITO 4 transaction/precision/concurrency behavior. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -189,14 +192,15 @@ Backend tests require the dedicated MySQL test database and verify the Phase 1 s
 - [Testing strategy](docs/testing.md)
 - [Requirements traceability](docs/requirements-traceability.md)
 - [ADR-001](docs/decisions/ADR-001-modular-monolith.md)
+- [ADR-004](docs/decisions/ADR-004-server-side-order-total.md)
 
 ## Architectural Decisions
 
-Accepted decisions are stored under `docs/decisions/`. Only ADR-001 is created in HITO 0; later ADRs will be created with their implementation milestones.
+Accepted decisions are stored under `docs/decisions/`. ADR-001 defines the modular monolith and ADR-004 records the implemented server-side total strategy; ADR-002 and ADR-003 remain tied to their later implementation milestones.
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the Client, Bike and WorkOrder flows implemented through HITO 3. It grows milestone by milestone and deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the Client, Bike and WorkOrder flows implemented through HITO 4, including item add/delete and total assertions. It deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
@@ -209,13 +213,13 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 
 ## Known Limitations
 
-Work-order item/status endpoints, domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones.
+Work-order status endpoints, domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 3 — Work Orders API completed locally.** The milestone is ready for review and commit after its verification evidence is accepted. HITO 4 has not started.
+**HITO 4 — Work-Order Items and Transactional Totals completed locally.** It is ready for review and commit with the verification evidence reported for this milestone. HITO 5 has not started.
 
 ## Roadmap
 

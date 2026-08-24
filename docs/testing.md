@@ -87,7 +87,22 @@ The existing direct persistence test continues to prove that MySQL's `uq_bikes_p
 - validation and not-found errors;
 - a query-hook assertion proving list query count remains two (count + page data) for multiple orders, with no per-row reads.
 
-Tests may insert non-`RECIBIDA` states and items directly as deterministic read fixtures. No status-transition or item-management HTTP behavior is implemented by HITO 3.
+Tests may insert non-`RECIBIDA` states directly as deterministic read fixtures. Status-transition HTTP behavior remains deferred to HITO 5.
+
+## HITO 4 item/total HTTP suite
+
+`tests/workOrders.integration.test.js` now also exercises the two item endpoints through Express and the dedicated MySQL test database. Coverage includes:
+
+- both item types, fractional quantities, zero unit value and explicit response contracts;
+- missing/invalid fields, decimal scale/range, missing orders/items and mass-assignment protection;
+- the canonical `2 × 50,000 + 1 × 30,000 = 130,000` calculation;
+- exact `0.10 + 0.20 = 0.30` behavior without JavaScript monetary arithmetic;
+- deletion recalc, detail regression and final-item `0.00` behavior;
+- an injected repository failure after insertion that proves the real database transaction rolls the item and total back together without production-only hooks;
+- two concurrent HTTP additions using distinct transactions, with SQL evidence of two `START TRANSACTION` and two WorkOrder `FOR UPDATE` reads;
+- a concurrent create/delete race that verifies the remaining row and stored total stay consistent.
+
+Concurrency fixtures are committed before the requests and the requests run through separate pooled connections. Deterministic table cleanup is used rather than a suite-wide rollback transaction.
 
 ## Critical future suites
 

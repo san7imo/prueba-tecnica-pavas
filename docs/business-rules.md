@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. HITO 3 implements WorkOrder creation/read rules over the HITO 1 persistence constraints. Transition orchestration, item total recalculation and authorization remain assigned to their later milestones.
+These rules are the approved domain contract. HITO 4 implements WorkOrder item mutation and authoritative total recalculation over the existing creation/read behavior. Transition orchestration and authorization remain assigned to later milestones.
 
 ## Work-order state machine
 
@@ -63,9 +63,11 @@ count > 0
 unitValue >= 0
 ```
 
-Item mutation and total recalculation are atomic and lock the work order against competing total mutations.
+Both item types can be created through `POST /api/work-orders/:id/items`. In the current pre-auth Phase 1 API, items can be deleted through `DELETE /api/work-orders/items/:itemId`; HITO 8 will restrict deletion to ADMIN without changing this domain operation.
 
-HITO 1 enforces `count > 0` and `unitValue >= 0` in both Sequelize model validation and named MySQL CHECK constraints; it does not yet implement item mutation workflows.
+Inputs accept at most two decimal places and are normalized to fixed-scale decimal strings. `count` must fit `DECIMAL(10,2)` and `unitValue` must fit `DECIMAL(15,2)`. HITO 1 model validation and named MySQL CHECK constraints remain the persistence barriers.
+
+Item mutation and total recalculation are atomic. The owning WorkOrder row is locked with `FOR UPDATE`, and the mutation, aggregate and stored total either all commit or all roll back. A deletion revalidates the item after acquiring the order lock so a concurrent change cannot produce a stale total.
 
 ## Total
 
@@ -73,7 +75,7 @@ HITO 1 enforces `count > 0` and `unitValue >= 0` in both Sequelize model validat
 total = SUM(item.count * item.unitValue)
 ```
 
-The backend is authoritative. The frontend may display a preview but cannot submit an authoritative persisted total. SQL `DECIMAL` and safe arithmetic avoid floating-point loss.
+The backend is authoritative. The frontend may display a preview but cannot submit an authoritative persisted total. MySQL evaluates the aggregate with `DECIMAL`, casts the final value to `DECIMAL(15,2)` and returns a string; JavaScript `Number` is never used for monetary calculation. Deleting the final item produces `0.00`.
 
 Example:
 

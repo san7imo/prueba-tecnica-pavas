@@ -1,20 +1,39 @@
 import { DataTypes, Model } from 'sequelize';
 
 import { WORK_ORDER_ITEM_TYPES } from '../constants/workOrder.js';
+import { normalizeDecimal } from '../utils/normalizeDecimal.js';
 
 const greaterThanZero = (value) => {
-  const numericValue = Number(value);
+  const details = [];
+  normalizeDecimal({
+    value,
+    field: 'count',
+    label: 'Count',
+    precision: 10,
+    scale: 2,
+    allowZero: false,
+    details,
+  });
 
-  if (!Number.isFinite(numericValue) || numericValue <= 0) {
-    throw new Error('count must be greater than zero.');
+  if (details.length > 0) {
+    throw new Error(details[0].message);
   }
 };
 
 const nonNegative = (value) => {
-  const numericValue = Number(value);
+  const details = [];
+  normalizeDecimal({
+    value,
+    field: 'unitValue',
+    label: 'Unit value',
+    precision: 15,
+    scale: 2,
+    allowZero: true,
+    details,
+  });
 
-  if (!Number.isFinite(numericValue) || numericValue < 0) {
-    throw new Error('unitValue must be greater than or equal to zero.');
+  if (details.length > 0) {
+    throw new Error(details[0].message);
   }
 };
 

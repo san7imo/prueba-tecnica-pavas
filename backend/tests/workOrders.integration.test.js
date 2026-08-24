@@ -1,5 +1,14 @@
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { app } from '../src/app.js';
 import { env } from '../src/config/env.js';
@@ -10,6 +19,7 @@ import {
   WORK_ORDER_ITEM_TYPE,
   WORK_ORDER_STATUS,
 } from '../src/constants/workOrder.js';
+import { workOrderRepository } from '../src/repositories/workOrderRepository.js';
 
 let migrator;
 
@@ -57,6 +67,14 @@ const validPayload = (bikeId, overrides = {}) => ({
   ...overrides,
 });
 
+const validItemPayload = (overrides = {}) => ({
+  type: WORK_ORDER_ITEM_TYPE.LABOR,
+  description: 'Workshop diagnosis',
+  count: '1.00',
+  unitValue: '50000.00',
+  ...overrides,
+});
+
 beforeAll(async () => {
   assertSafeTestDatabase({
     nodeEnv: env.nodeEnv,
@@ -72,6 +90,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await cleanDomainData();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -389,16 +411,13 @@ describe('Work Orders API', () => {
   });
 
   describe('GET /api/work-orders/:id', () => {
-    it('returns the order with its bike, client and existing items', async () => {
+    it('returns the order with its bike, client, persisted total and items', async () => {
       const { bike, client } = await createBike();
       const workOrder = await createWorkOrder(bike.id);
-      const item = await models.WorkOrderItem.create({
-        workOrderId: workOrder.id,
-        type: WORK_ORDER_ITEM_TYPE.LABOR,
-        description: 'Diagnosis',
-        count: '1.00',
-        unitValue: '50000.00',
-      });
+      const itemResponse = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ description: 'Diagnosis' }));
+      const item = itemResponse.body.data.item;
 
       const response = await request(app).get(`/api/work-orders/${workOrder.id}`);
 
@@ -407,7 +426,7 @@ describe('Work Orders API', () => {
         id: workOrder.id,
         bikeId: bike.id,
         status: WORK_ORDER_STATUS.RECEIVED,
-        total: '0.00',
+        total: '50000.00',
         bike: {
           id: bike.id,
           plate: 'ABC123',
@@ -445,6 +464,356 @@ describe('Work Orders API', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('POST /api/work-orders/:id/items', () => {
+    it('creates both item types and recalculates the authoritative total', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      const laborResponse = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ count: '2.00', unitValue: '50000.00' }));
+      const partResponse = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(
+          validItemPayload({
+            type: WORK_ORDER_ITEM_TYPE.PART,
+            description: 'Oil filter',
+            count: '1.00',
+            unitValue: '30000.00',
+          }),
+        );
+
+      expect(laborResponse.status).toBe(201);
+      expect(laborResponse.body.data).toEqual({
+        item: {
+          id: expect.any(Number),
+          type: WORK_ORDER_ITEM_TYPE.LABOR,
+          description: 'Workshop diagnosis',
+          count: '2.00',
+          unitValue: '50000.00',
+        },
+        workOrderTotal: '100000.00',
+      });
+      expect(laborResponse.body.data.item).not.toHaveProperty('workOrderId');
+      expect(partResponse.status).toBe(201);
+      expect(partResponse.body.data.item.type).toBe(WORK_ORDER_ITEM_TYPE.PART);
+      expect(partResponse.body.data.workOrderTotal).toBe('130000.00');
+
+      await workOrder.reload();
+      expect(workOrder.total).toBe('130000.00');
+      expect(
+        await models.WorkOrderItem.count({ where: { workOrderId: workOrder.id } }),
+      ).toBe(2);
+    });
+
+    it('supports fractional quantities and zero-value items exactly', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      const fractionalResponse = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ count: 1.5, unitValue: '50000.00' }));
+      const zeroResponse = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ unitValue: 0 }));
+
+      expect(fractionalResponse.status).toBe(201);
+      expect(fractionalResponse.body.data.item.count).toBe('1.50');
+      expect(fractionalResponse.body.data.workOrderTotal).toBe('75000.00');
+      expect(zeroResponse.status).toBe(201);
+      expect(zeroResponse.body.data.item.unitValue).toBe('0.00');
+      expect(zeroResponse.body.data.workOrderTotal).toBe('75000.00');
+    });
+
+    it('preserves exact decimal addition for 0.10 plus 0.20', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ unitValue: '0.10' }));
+      const response = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ unitValue: '0.20' }));
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.workOrderTotal).toBe('0.30');
+      await workOrder.reload();
+      expect(workOrder.total).toBe('0.30');
+    });
+
+    it.each([
+      ['count', { count: 0 }],
+      ['count', { count: '-1.00' }],
+      ['count', { count: '1.001' }],
+      ['count', { count: '100000000.00' }],
+      ['unitValue', { unitValue: '-0.01' }],
+      ['unitValue', { unitValue: '1.001' }],
+      ['unitValue', { unitValue: '10000000000000.00' }],
+      ['type', { type: 'SERVICIO' }],
+      ['description', { description: '   ' }],
+    ])('rejects invalid %s input', async (field, overrides) => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      const response = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload(overrides));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed.',
+      });
+      expect(response.body.error.details).toContainEqual(
+        expect.objectContaining({ field }),
+      );
+      expect(await models.WorkOrderItem.count()).toBe(0);
+    });
+
+    it.each(['count', 'unitValue', 'type', 'description'])(
+      'rejects missing %s input',
+      async (field) => {
+        const { bike } = await createBike();
+        const workOrder = await createWorkOrder(bike.id);
+        const payload = validItemPayload();
+        delete payload[field];
+
+        const response = await request(app)
+          .post(`/api/work-orders/${workOrder.id}/items`)
+          .send(payload);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.details).toContainEqual(
+          expect.objectContaining({ field }),
+        );
+      },
+    );
+
+    it('returns 404 and creates nothing when the work order does not exist', async () => {
+      const response = await request(app)
+        .post('/api/work-orders/999999/items')
+        .send(validItemPayload());
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        error: {
+          code: 'WORK_ORDER_NOT_FOUND',
+          message: 'Work order not found.',
+        },
+      });
+      expect(await models.WorkOrderItem.count()).toBe(0);
+    });
+
+    it('rejects a malformed work-order id before opening a transaction', async () => {
+      const response = await request(app)
+        .post('/api/work-orders/not-an-id/items')
+        .send(validItemPayload());
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.details).toContainEqual(
+        expect.objectContaining({ field: 'id' }),
+      );
+      expect(await models.WorkOrderItem.count()).toBe(0);
+    });
+
+    it('ignores internal item and total fields through explicit whitelists', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      const response = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send({
+          ...validItemPayload(),
+          id: 700,
+          workOrderId: 999999,
+          workOrderTotal: '999999.00',
+          createdAt: '2000-01-01T00:00:00.000Z',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.item.id).not.toBe(700);
+      expect(response.body.data.item).not.toHaveProperty('workOrderId');
+      expect(response.body.data.workOrderTotal).toBe('50000.00');
+      expect(
+        await models.WorkOrderItem.count({ where: { workOrderId: workOrder.id } }),
+      ).toBe(1);
+    });
+
+    it('rolls back the inserted item when total persistence fails', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+      vi.spyOn(workOrderRepository, 'updateTotal').mockRejectedValueOnce(
+        new Error('simulated downstream persistence failure'),
+      );
+
+      const response = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload());
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'An unexpected error occurred.',
+        },
+      });
+      expect(JSON.stringify(response.body)).not.toContain('simulated');
+      expect(await models.WorkOrderItem.count()).toBe(0);
+      await workOrder.reload();
+      expect(workOrder.total).toBe('0.00');
+    });
+
+    it('serializes concurrent additions with independent transactions and a row lock', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+      const sqlStatements = [];
+      const previousLogging = sequelize.options.logging;
+      sequelize.options.logging = (statement) => sqlStatements.push(statement);
+
+      let responses;
+      try {
+        responses = await Promise.all([
+          request(app)
+            .post(`/api/work-orders/${workOrder.id}/items`)
+            .send(validItemPayload({ count: '1.00', unitValue: '100.00' })),
+          request(app)
+            .post(`/api/work-orders/${workOrder.id}/items`)
+            .send(validItemPayload({ count: '2.00', unitValue: '50.00' })),
+        ]);
+      } finally {
+        sequelize.options.logging = previousLogging;
+      }
+
+      expect(responses.map(({ status }) => status)).toEqual([201, 201]);
+      expect(
+        responses.map(({ body }) => body.data.workOrderTotal).sort(),
+      ).toEqual(['100.00', '200.00']);
+      expect(
+        sqlStatements.filter((statement) => /START TRANSACTION/i.test(statement)),
+      ).toHaveLength(2);
+      const lockingQueries = sqlStatements.filter((statement) =>
+        /FROM `work_orders`.*FOR UPDATE/i.test(statement),
+      );
+      expect(lockingQueries).toHaveLength(2);
+      const transactionIds = lockingQueries
+        .map((statement) => /Executing \(([^)]+)\)/.exec(statement)?.[1])
+        .filter(Boolean);
+      expect(new Set(transactionIds).size).toBe(2);
+
+      await workOrder.reload();
+      expect(workOrder.total).toBe('200.00');
+      expect(
+        await models.WorkOrderItem.count({ where: { workOrderId: workOrder.id } }),
+      ).toBe(2);
+    });
+  });
+
+  describe('DELETE /api/work-orders/items/:itemId', () => {
+    it('deletes items and recalculates the total down to exact zero', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+      const first = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ count: '2.00', unitValue: '50000.00' }));
+      const second = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(
+          validItemPayload({
+            type: WORK_ORDER_ITEM_TYPE.PART,
+            unitValue: '30000.00',
+          }),
+        );
+
+      const firstDelete = await request(app).delete(
+        `/api/work-orders/items/${first.body.data.item.id}`,
+      );
+      const detailAfterFirstDelete = await request(app).get(
+        `/api/work-orders/${workOrder.id}`,
+      );
+      const secondDelete = await request(app).delete(
+        `/api/work-orders/items/${second.body.data.item.id}`,
+      );
+
+      expect(firstDelete.status).toBe(200);
+      expect(firstDelete.body).toEqual({
+        data: {
+          deletedItemId: first.body.data.item.id,
+          workOrderTotal: '30000.00',
+        },
+      });
+      expect(detailAfterFirstDelete.body.data.total).toBe('30000.00');
+      expect(detailAfterFirstDelete.body.data.items).toHaveLength(1);
+      expect(secondDelete.status).toBe(200);
+      expect(secondDelete.body.data).toEqual({
+        deletedItemId: second.body.data.item.id,
+        workOrderTotal: '0.00',
+      });
+
+      await workOrder.reload();
+      expect(workOrder.total).toBe('0.00');
+      expect(await models.WorkOrderItem.count()).toBe(0);
+    });
+
+    it('returns 404 for a missing item without changing the order total', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+
+      const response = await request(app).delete(
+        '/api/work-orders/items/999999',
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        error: {
+          code: 'WORK_ORDER_ITEM_NOT_FOUND',
+          message: 'Work-order item not found.',
+        },
+      });
+      await workOrder.reload();
+      expect(workOrder.total).toBe('0.00');
+    });
+
+    it('rejects an invalid item id', async () => {
+      const response = await request(app).delete(
+        '/api/work-orders/items/not-an-id',
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      expect(response.body.error.details).toContainEqual(
+        expect.objectContaining({ field: 'itemId' }),
+      );
+    });
+
+    it('keeps create/delete races consistent under the same work-order lock', async () => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id);
+      const existing = await request(app)
+        .post(`/api/work-orders/${workOrder.id}/items`)
+        .send(validItemPayload({ unitValue: '100.00' }));
+
+      const [createResponse, deleteResponse] = await Promise.all([
+        request(app)
+          .post(`/api/work-orders/${workOrder.id}/items`)
+          .send(validItemPayload({ count: '2.00', unitValue: '50.00' })),
+        request(app).delete(
+          `/api/work-orders/items/${existing.body.data.item.id}`,
+        ),
+      ]);
+
+      expect(createResponse.status).toBe(201);
+      expect(deleteResponse.status).toBe(200);
+      await workOrder.reload();
+      expect(workOrder.total).toBe('100.00');
+      const remainingItems = await models.WorkOrderItem.findAll({
+        where: { workOrderId: workOrder.id },
+      });
+      expect(remainingItems).toHaveLength(1);
+      expect(remainingItems[0].id).toBe(createResponse.body.data.item.id);
     });
   });
 });
