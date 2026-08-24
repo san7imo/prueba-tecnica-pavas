@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. They are documented in HITO 0 and implemented only in their later milestones.
+These rules are the approved domain contract. HITO 1 enforces persistence-level enums, item bounds and defaults only. Transition orchestration, total recalculation and authorization remain assigned to their later milestones.
 
 ## Work-order state machine
 
@@ -57,6 +57,8 @@ unitValue >= 0
 
 Item mutation and total recalculation are atomic and lock the work order against competing total mutations.
 
+HITO 1 enforces `count > 0` and `unitValue >= 0` in both Sequelize model validation and named MySQL CHECK constraints; it does not yet implement item mutation workflows.
+
 ## Total
 
 ```text
@@ -102,4 +104,3 @@ All business endpoints require authentication in Phase 2. UI hiding is not an au
 - Access JWTs are short-lived.
 - Refresh tokens are HttpOnly, persisted only as digests, rotated and revocable.
 - Reuse of a rotated token revokes its active token family and returns 401.
-

@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. In HITO 0 only the technical application shell, health endpoint, error boundary, configuration and tests exist. Domain modules and security controls described as future behavior are not implemented yet.
+This document defines the target architecture. HITO 1 adds the four Phase 1 persistence models, associations, migrations and schema integration tests to the HITO 0 foundation. Business services/endpoints and Phase 2 security controls described here remain unimplemented.
 
 ## Architectural Style
 
@@ -74,7 +74,7 @@ Multi-write business operations must be atomic. Status transitions and item-tota
 
 ## Database and migrations
 
-MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. Deterministic migrations are the only schema evolution mechanism; the application must not use `sequelize.sync({ alter: true })` as a schema strategy.
+MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. HITO 1 implements deterministic ESM migrations through Umzug/`SequelizeMeta`; the application does not use `sequelize.sync` as a schema strategy.
 
 Development and integration tests use separate databases. See [testing.md](testing.md).
 
@@ -125,4 +125,3 @@ The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. 
 - MySQL is the only required infrastructure service.
 - No cache, queue, WebSocket or event bus is needed.
 - The source `.docx` assessment files remain preserved at repository root.
-

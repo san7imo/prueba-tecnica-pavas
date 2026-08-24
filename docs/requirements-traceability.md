@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-No Phase 1 or Phase 2 business requirement is marked Done in HITO 0.
+Phase 1 persistence requirements completed in HITO 1 are marked Done. API, workflow, frontend and all Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -14,18 +14,18 @@ No Phase 1 or Phase 2 business requirement is marked Done in HITO 0.
 | P0-INF-002 | React frontend boots/builds | Foundation | Vite React shell | Technical foundation screen | `tests/App.test.jsx` | Foundation |
 | P0-INF-003 | Central technical error handling | Foundation | `AppError`, 404 and error middleware | Error envelope | `tests/notFound.test.js` | Foundation |
 | P0-INF-004 | MySQL reproducible locally | Foundation | `docker-compose.yml` | N/A | Compose health verification | Foundation |
-| P0-INF-005 | Dedicated test DB strategy | Foundation | `docs/testing.md`, `DB_NAME_TEST` | N/A | Safeguards implemented in HITO 1 | Foundation |
+| P0-INF-005 | Dedicated test DB strategy | Foundation | `testDatabaseGuard.js`, `DB_NAME_TEST`, Umzug | N/A | Guard + schema integration suite | Done |
 | P0-DOC-001 | Modular monolith documented | Foundation | `docs/architecture.md`, ADR-001 | N/A | Documentation review | Foundation |
 | P0-DOC-002 | Full ER model documented | Foundation | `docs/database.md` | N/A | Documentation review | Foundation |
 | P0-DOC-003 | API/error conventions documented | Foundation | `docs/api.md` | `/api` | Documentation review | Foundation |
-| P1-DATA-001 | Client entity and Client 1:N Bike | 1 | Planned model/migration HITO 1 | N/A | Client/bike integration suite | Pending |
-| P1-DATA-002 | Bike entity with valid Client FK | 1 | Planned model/migration HITO 1 | N/A | Bike FK tests | Pending |
-| P1-DATA-003 | Normalized bike plate unique in app and DB | 1 | Planned constraint + service HITO 1/2 | Bikes API | Unique/normalized duplicate tests | Pending |
-| P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | Planned model/migration HITO 1 | Work-order API | Invalid bike test | Pending |
-| P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Planned model/migration HITO 1 | Items API | Item integration tests | Pending |
-| P1-DATA-006 | Item count greater than zero | 1 | Planned validation + DB constraint | Add item | `count <= 0` rejection | Pending |
-| P1-DATA-007 | Item unit value greater/equal zero | 1 | Planned validation + DB constraint | Add item | Negative unit value rejection | Pending |
-| P1-DATA-008 | Money uses DECIMAL | 1 | Planned migration HITO 1 | Order total | Decimal total tests | Pending |
+| P1-DATA-001 | Client entity and Client 1:N Bike | 1 | Client model/migration + association | N/A | `schema.integration.test.js` | Done |
+| P1-DATA-002 | Bike entity with valid Client FK | 1 | Bike model/migration + `fk_bikes_client` | N/A | FK + association tests | Done |
+| P1-DATA-003 | Plate normalization infrastructure and DB uniqueness | 1 | Bike setter + `uq_bikes_plate` | Persistence layer | Normalized duplicate test | Done |
+| P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | WorkOrder model/migration + `fk_work_orders_bike` | Persistence layer | FK + association tests | Done |
+| P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Item model/migration + `fk_work_order_items_order` | Persistence layer | FK + association tests | Done |
+| P1-DATA-006 | Item count greater than zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for zero/negative | Done |
+| P1-DATA-007 | Item unit value greater/equal zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for negative | Done |
+| P1-DATA-008 | Money uses DECIMAL | 1 | `DECIMAL(15,2)` migration/models | Persistence layer | Reloaded exact DECIMAL test | Done |
 | P1-BE-001 | Create client | 1 | Planned client module HITO 2 | `POST /api/clients` | Client create integration test | Pending |
 | P1-BE-002 | Search clients | 1 | Planned client module HITO 2 | `GET /api/clients?search=` | Client search integration test | Pending |
 | P1-BE-003 | Get client detail | 1 | Planned client module HITO 2 | `GET /api/clients/:id` | Client detail integration test | Pending |
@@ -95,4 +95,3 @@ No Phase 1 or Phase 2 business requirement is marked Done in HITO 0.
 ## Maintenance rule
 
 Every milestone must replace planned implementation/test references with concrete files and mark a row Done only after its automated evidence passes. Source requirements and project-contract enhancements remain distinguishable in the Phase column.
-

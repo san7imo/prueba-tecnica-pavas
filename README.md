@@ -103,7 +103,14 @@ See the comments in each example file. Test integration suites must use `DB_NAME
 
 ## Database Setup
 
-HITO 0 starts MySQL and creates separate `pavas_workshop` and `pavas_workshop_test` databases. Domain schema migrations begin in HITO 1; Sequelize `sync({ alter: true })` is not an accepted schema strategy.
+MySQL uses separate `pavas_workshop` and `pavas_workshop_test` databases. HITO 1 implements deterministic Phase 1 migrations:
+
+```bash
+cd backend
+npm run db:migrate
+```
+
+Sequelize `sync({ alter: true })` is not an accepted schema strategy.
 
 ## Seed / Demo Accounts
 
@@ -152,11 +159,11 @@ The canonical state machine, totals, roles and audit behavior are documented in 
 ## Testing
 
 ```bash
-cd backend && npm test
+cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-The backend currently verifies the technical health endpoint. The frontend currently verifies that `App` renders. The isolated MySQL integration-test strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints and migration reversal. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -197,7 +204,7 @@ HITO 0 deliberately has no domain schema, business endpoints, authentication or 
 
 ## Current Milestone
 
-**HITO 0 — Repository Foundation and Architecture completed.** The foundation verification passes. HITO 1 must not begin without explicit approval.
+**HITO 1 — Phase 1 Database Domain completed.** Persistence verification passes. HITO 2 must not begin without explicit approval.
 
 ## Roadmap
 

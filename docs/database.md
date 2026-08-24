@@ -2,15 +2,16 @@
 
 ## Status
 
-This is the approved conceptual target model. HITO 0 does not create domain models, tables or migrations. Physical types are finalized in the corresponding schema milestones.
+The Phase 1 physical schema is implemented in HITO 1 for Client, Bike, WorkOrder and WorkOrderItem. Phase 2 entities remain conceptual until their approved milestones.
 
 ## Conventions
 
 - MySQL 8 and InnoDB.
 - `snake_case` table and column names.
-- Numeric primary keys.
+- `BIGINT UNSIGNED` auto-increment primary keys.
 - Foreign keys enforced by the database.
-- Money stored with a suitable `DECIMAL`, never binary floating point.
+- Money stored as `DECIMAL(15,2)`, never binary floating point.
+- Item quantity stored as `DECIMAL(10,2)` to support both discrete parts and fractional labor hours.
 - Schema changes applied only through deterministic migrations.
 - Timestamps stored consistently and exposed as ISO 8601 values.
 
@@ -94,18 +95,18 @@ erDiagram
     }
 ```
 
-Conceptual types do not substitute for migrations. For example, the exact precision of money and count is decided and tested in HITO 1.
+The diagram includes the full target domain. Phase 1 migrations are the source of truth for the four implemented tables.
 
 ## Client
 
 | Column | Conceptual type | Rules |
 |---|---|---|
-| `id` | BIGINT | PK |
-| `name` | VARCHAR | required |
-| `phone` | VARCHAR | required |
-| `email` | VARCHAR | nullable |
-| `created_at` | DATETIME | required |
-| `updated_at` | DATETIME | required |
+| `id` | BIGINT UNSIGNED | PK, auto increment |
+| `name` | VARCHAR(150) | required |
+| `phone` | VARCHAR(30) | required |
+| `email` | VARCHAR(254) | nullable |
+| `created_at` | DATETIME(3) | required |
+| `updated_at` | DATETIME(3) | required |
 
 Relationship: one client owns many bikes.
 
@@ -113,27 +114,27 @@ Relationship: one client owns many bikes.
 
 | Column | Conceptual type | Rules |
 |---|---|---|
-| `id` | BIGINT | PK |
-| `plate` | VARCHAR | required, normalized, UNIQUE |
-| `brand` | VARCHAR | required |
-| `model` | VARCHAR | required |
-| `cylinder` | VARCHAR | nullable |
-| `client_id` | BIGINT | FK to `clients.id`, required |
-| timestamps | DATETIME | required |
+| `id` | BIGINT UNSIGNED | PK, auto increment |
+| `plate` | VARCHAR(20) | required, normalized, UNIQUE `uq_bikes_plate` |
+| `brand` | VARCHAR(100) | required |
+| `model` | VARCHAR(100) | required |
+| `cylinder` | VARCHAR(50) | nullable |
+| `client_id` | BIGINT UNSIGNED | FK `fk_bikes_client` to `clients.id`, required |
+| timestamps | DATETIME(3) | required |
 
-Plate normalization is trim, uppercase and removal of unnecessary spaces. The application checks duplicates and the database unique constraint remains authoritative. No country-specific regex is assumed.
+The model setter trims, uppercases and removes whitespace before persistence. The database unique index remains authoritative. HITO 2 will map duplicate persistence errors to the API contract; no country-specific regex is assumed.
 
 ## WorkOrder
 
 | Column | Conceptual type | Rules |
 |---|---|---|
-| `id` | BIGINT | PK |
-| `bike_id` | BIGINT | FK to `bikes.id`, required |
-| `entry_date` | DATETIME | required |
+| `id` | BIGINT UNSIGNED | PK, auto increment |
+| `bike_id` | BIGINT UNSIGNED | FK `fk_work_orders_bike` to `bikes.id`, required |
+| `entry_date` | DATETIME(3) | required |
 | `fault_description` | TEXT | required |
 | `status` | ENUM | canonical status values, required |
-| `total` | DECIMAL | required, backend-controlled, default zero |
-| timestamps | DATETIME | required |
+| `total` | DECIMAL(15,2) | required, backend-controlled, default `0.00` |
+| timestamps | DATETIME(3) | required |
 
 Relationships: one bike has many work orders; one work order has many items and history records.
 
@@ -141,13 +142,39 @@ Relationships: one bike has many work orders; one work order has many items and 
 
 | Column | Conceptual type | Rules |
 |---|---|---|
-| `id` | BIGINT | PK |
-| `work_order_id` | BIGINT | FK to `work_orders.id`, required |
+| `id` | BIGINT UNSIGNED | PK, auto increment |
+| `work_order_id` | BIGINT UNSIGNED | FK `fk_work_order_items_order` to `work_orders.id`, required |
 | `type` | ENUM | `MANO_OBRA` or `REPUESTO` |
-| `description` | VARCHAR/TEXT | required |
-| `count` | DECIMAL | greater than zero |
-| `unit_value` | DECIMAL | greater than or equal to zero |
-| timestamps | DATETIME | required |
+| `description` | VARCHAR(255) | required |
+| `count` | DECIMAL(10,2) | CHECK `chk_work_order_items_count_positive`: greater than zero |
+| `unit_value` | DECIMAL(15,2) | CHECK `chk_work_order_items_unit_value_nonnegative`: greater/equal zero |
+| timestamps | DATETIME(3) | required |
+
+`DECIMAL(15,2)` supports exact monetary values up to 9,999,999,999,999.99, which is comfortably above assessment-scale Colombian-peso work orders. `DECIMAL(10,2)` permits fractional quantities without forcing binary floating-point arithmetic.
+
+## Phase 1 referential policy
+
+All Phase 1 foreign keys use:
+
+```text
+ON DELETE RESTRICT
+ON UPDATE CASCADE
+```
+
+`RESTRICT` prevents removing a client, bike or order while dependent operational/history-bearing data exists. `CASCADE` on key update keeps references consistent, although primary-key updates are not part of the application workflow. No aggressive delete cascade is introduced.
+
+## Phase 1 migrations
+
+The schema is created in dependency order:
+
+```text
+202608240001-create-clients.js
+202608240002-create-bikes.js
+202608240003-create-work-orders.js
+202608240004-create-work-order-items.js
+```
+
+Umzug executes ESM migrations and records them in `SequelizeMeta`. Each migration provides `up` and `down`. Sequelize `sync` is not used.
 
 ## User
 
@@ -200,5 +227,4 @@ Raw refresh tokens are never persisted. Rotation retains the family identifier. 
 
 ## Database environments
 
-Development uses `pavas_workshop`; integration tests use `pavas_workshop_test`. Test setup must refuse production execution and apply migrations to the dedicated test database. See [testing.md](testing.md).
-
+Development uses `pavas_workshop`; integration tests use `pavas_workshop_test`. The implemented guard requires `NODE_ENV=test`, requires a name explicitly containing `test`, and rejects the development target. Integration tests apply and revert the full migration stack and close Sequelize connections. See [testing.md](testing.md).
