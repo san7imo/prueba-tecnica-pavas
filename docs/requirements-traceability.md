@@ -1,0 +1,98 @@
+# Requirements Traceability
+
+## Status legend
+
+- **Foundation:** architecture/tooling or contract is established in HITO 0; business behavior is not implemented.
+- **Pending:** implementation and automated evidence belong to a later milestone.
+- **Done:** reserved for implemented behavior with passing evidence.
+
+No Phase 1 or Phase 2 business requirement is marked Done in HITO 0.
+
+| ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
+|---|---|---|---|---|---|---|
+| P0-INF-001 | Node/Express backend boots | Foundation | `backend/server.js`, `src/app.js` | `GET /api/health` | `tests/health.test.js` | Foundation |
+| P0-INF-002 | React frontend boots/builds | Foundation | Vite React shell | Technical foundation screen | `tests/App.test.jsx` | Foundation |
+| P0-INF-003 | Central technical error handling | Foundation | `AppError`, 404 and error middleware | Error envelope | `tests/notFound.test.js` | Foundation |
+| P0-INF-004 | MySQL reproducible locally | Foundation | `docker-compose.yml` | N/A | Compose health verification | Foundation |
+| P0-INF-005 | Dedicated test DB strategy | Foundation | `docs/testing.md`, `DB_NAME_TEST` | N/A | Safeguards implemented in HITO 1 | Foundation |
+| P0-DOC-001 | Modular monolith documented | Foundation | `docs/architecture.md`, ADR-001 | N/A | Documentation review | Foundation |
+| P0-DOC-002 | Full ER model documented | Foundation | `docs/database.md` | N/A | Documentation review | Foundation |
+| P0-DOC-003 | API/error conventions documented | Foundation | `docs/api.md` | `/api` | Documentation review | Foundation |
+| P1-DATA-001 | Client entity and Client 1:N Bike | 1 | Planned model/migration HITO 1 | N/A | Client/bike integration suite | Pending |
+| P1-DATA-002 | Bike entity with valid Client FK | 1 | Planned model/migration HITO 1 | N/A | Bike FK tests | Pending |
+| P1-DATA-003 | Normalized bike plate unique in app and DB | 1 | Planned constraint + service HITO 1/2 | Bikes API | Unique/normalized duplicate tests | Pending |
+| P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | Planned model/migration HITO 1 | Work-order API | Invalid bike test | Pending |
+| P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Planned model/migration HITO 1 | Items API | Item integration tests | Pending |
+| P1-DATA-006 | Item count greater than zero | 1 | Planned validation + DB constraint | Add item | `count <= 0` rejection | Pending |
+| P1-DATA-007 | Item unit value greater/equal zero | 1 | Planned validation + DB constraint | Add item | Negative unit value rejection | Pending |
+| P1-DATA-008 | Money uses DECIMAL | 1 | Planned migration HITO 1 | Order total | Decimal total tests | Pending |
+| P1-BE-001 | Create client | 1 | Planned client module HITO 2 | `POST /api/clients` | Client create integration test | Pending |
+| P1-BE-002 | Search clients | 1 | Planned client module HITO 2 | `GET /api/clients?search=` | Client search integration test | Pending |
+| P1-BE-003 | Get client detail | 1 | Planned client module HITO 2 | `GET /api/clients/:id` | Client detail integration test | Pending |
+| P1-BE-004 | Create bike | 1 | Planned bike module HITO 2 | `POST /api/bikes` | Bike create integration test | Pending |
+| P1-BE-005 | Search bikes by plate | 1 | Planned bike module HITO 2 | `GET /api/bikes?plate=` | Plate search integration test | Pending |
+| P1-BE-006 | Get bike detail | 1 | Planned bike module HITO 2 | `GET /api/bikes/:id` | Bike detail integration test | Pending |
+| P1-BE-007 | Create order only for valid bike, initial `RECIBIDA` | 1 | Planned WorkOrder service HITO 3 | `POST /api/work-orders` | Valid/invalid bike tests | Pending |
+| P1-BE-008 | List/filter orders by status and plate | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Status/plate filter tests | Pending |
+| P1-BE-009 | Paginate work orders with metadata | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Pagination test | Pending |
+| P1-BE-010 | Get order with client, bike and items | 1 | Planned repository HITO 3 | `GET /api/work-orders/:id` | Detail integration test | Pending |
+| P1-BE-011 | Add MANO_OBRA/REPUESTO item | 1 | Planned transactional service HITO 4 | `POST /api/work-orders/:id/items` | Item creation test | Pending |
+| P1-BE-012 | Delete work-order item | 1 | Planned transactional service HITO 4 | `DELETE /api/work-orders/items/:itemId` | Item deletion test | Pending |
+| P1-BE-013 | Backend calculates total after add/delete | 1 | Planned transactional total service | Order detail/items | Add/delete total tests | Pending |
+| P1-BE-014 | Concurrent item mutations preserve total | Project contract | Planned row lock HITO 4 | Items API | Concurrency integration test | Pending |
+| P1-STATE-001 | Canonical forward state flow | 1 | Planned state machine HITO 5 | `PATCH /api/work-orders/:id/status` | Every valid transition | Pending |
+| P1-STATE-002 | Cancel from RECIBIDA/DIAGNOSTICO/EN_PROCESO/LISTA | 1 | Planned state machine HITO 5 | Status endpoint | Cancellation matrix tests | Pending |
+| P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Planned state machine HITO 5 | Status endpoint | Terminal-state tests | Pending |
+| P1-STATE-004 | Invalid/idempotent transition returns clear 400 | 1/2 | Planned state service/error | Status endpoint | Invalid and same-state tests | Pending |
+| P1-STATE-005 | Concurrent transitions are serialized | Project contract | Planned WorkOrder row lock | Status endpoint | Competing transition test | Pending |
+| P1-FE-001 | Work-order list table: plate/client/status/date/total | 1 | Planned HITO 6 | `/orders` | List UI tests | Pending |
+| P1-FE-002 | Status and plate filters | 1 | Planned HITO 6 | `/orders` | Filter interaction tests | Pending |
+| P1-FE-003 | Work-order pagination | 1 | Planned HITO 6 | `/orders` | Pagination interaction test | Pending |
+| P1-FE-004 | Create order selecting bike by plate | 1 | Planned HITO 6 | `/orders/new` | Creation workflow test | Pending |
+| P1-FE-005 | Quick client and bike registration | 1 | Planned HITO 6 | `/orders/new` | Quick registration test | Pending |
+| P1-FE-006 | Detail shows client, bike, items and total | 1 | Planned HITO 6 | `/orders/:id` | Detail rendering test | Pending |
+| P1-FE-007 | Detail exposes valid transition actions only | 1 | Planned HITO 6 | `/orders/:id` | Transition-action test | Pending |
+| P1-FE-008 | Detail manages items | 1 | Planned HITO 6 | `/orders/:id` | Item interaction tests | Pending |
+| P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
+| P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
+| P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
+| P1-DOC-002 | Postman collection | Project contract | Planned after endpoints | `postman/` | Postman smoke test | Pending |
+| P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
+| P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
+| P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |
+| P2-AUTH-002 | ADMIN-only user registration | 2 | Planned auth/RBAC HITO 8 | `POST /api/auth/register` | ADMIN success, MECANICO 403 | Pending |
+| P2-AUTH-003 | Generic login with bcrypt cost >=10 and signed JWT | 2 | Planned AuthService HITO 7 | `POST /api/auth/login` | Success/invalid/inactive tests | Pending |
+| P2-AUTH-004 | Authenticated current profile, safe payload | 2 | Planned AuthService HITO 7 | `GET /api/auth/me` | 401/safe profile tests | Pending |
+| P2-AUTH-005 | Refresh rotation via HttpOnly cookie | Project option | Planned AuthService HITO 7 | `POST /api/auth/refresh` | Rotation/expiry tests | Pending |
+| P2-AUTH-006 | Logout revokes refresh and clears cookie | Project option | Planned AuthService HITO 7 | `POST /api/auth/logout` | Logout revocation test | Pending |
+| P2-AUTH-007 | Rotated-token reuse revokes active family | Project contract | Planned family model/service HITO 7 | Refresh endpoint | Replay/family revocation test | Pending |
+| P2-RBAC-001 | All business endpoints require authentication | 2 | Planned middleware HITO 8 | All business endpoints | Missing token 401 tests | Pending |
+| P2-RBAC-002 | Wrong role returns 403 | 2 | Planned authorize middleware | Restricted endpoints | Role boundary tests | Pending |
+| P2-RBAC-003 | MECANICO may add items and move to three states | 2 | Planned service authorization | Items/status | Allowed action tests | Pending |
+| P2-RBAC-004 | MECANICO cannot deliver, cancel or delete item | 2 | Planned service authorization | Items/status | Forbidden action tests | Pending |
+| P2-USER-001 | ADMIN lists users | 2 | Planned UserService HITO 8 | `GET /api/users` | ADMIN/MECANICO tests | Pending |
+| P2-USER-002 | ADMIN changes user role | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/role` | Update/validation tests | Pending |
+| P2-USER-003 | ADMIN activates/deactivates users | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/active` | Update/inactive-login tests | Pending |
+| P2-USER-004 | Password/hash never returned | 2 | Safe model/service serialization | Auth/users APIs | Payload assertions | Pending |
+| P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Planned migration/model HITO 9 | History endpoint | Schema/content tests | Pending |
+| P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | Planned creation transaction HITO 9 | Create/history | Initial audit test | Pending |
+| P2-AUDIT-003 | Every valid change, including cancel, creates one row | 2 | Planned transition transaction | Status/history | Exact row-count tests | Pending |
+| P2-AUDIT-004 | Rejected/idempotent changes create no history | 2 | Planned transition transaction | Status/history | Absence tests | Pending |
+| P2-AUDIT-005 | History immutable and newest first | 2 | No mutation routes; ordered repository | History endpoint | Ordering tests | Pending |
+| P2-AUDIT-006 | History index includes required source prefix | 2 | Planned migration HITO 9 | N/A | Index metadata test | Pending |
+| P2-AUDIT-007 | History pagination, max 100 and stable tie order | 2 | Planned repository HITO 9 | `GET /api/work-orders/:id/history` | More-than-100 test | Pending |
+| P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded query + UI | Detail timeline | Local query-plan/performance check | Pending |
+| P2-FE-001 | Login and protected/role routes | 2 | Planned HITO 10 | `/login`, protected views | Guard/login tests | Pending |
+| P2-FE-002 | Session restore, renewal and logout | 2 | Planned AuthContext/Axios flow | Application shell | Refresh/recovery UI tests | Pending |
+| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | Planned HITO 10 | `/admin/users` | User-management UI tests | Pending |
+| P2-FE-004 | Role-aware work-order actions | 2 | Planned HITO 10 | `/orders/:id` | MECANICO UI tests | Pending |
+| P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Planned HITO 10 | `/orders/:id` | Timeline rendering test | Pending |
+| P2-SEC-001 | Login rate limiting | 2 | Planned HITO 11 | `POST /api/auth/login` | 429 security test | Pending |
+| P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | Planned HITO 11 | API boundary | Security configuration tests | Pending |
+| P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | Planned HITO 11 | Auth startup/cookies | Environment/cookie tests | Pending |
+| P2-SEC-004 | No stack, SQL, JWT or secret leakage | Project contract | Planned error hardening | Error responses/logs | Sanitization tests | Pending |
+
+## Maintenance rule
+
+Every milestone must replace planned implementation/test references with concrete files and mark a row Done only after its automated evidence passes. Source requirements and project-contract enhancements remain distinguishable in the Phase column.
+

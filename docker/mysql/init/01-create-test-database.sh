@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
+  CREATE DATABASE IF NOT EXISTS \`${MYSQL_TEST_DATABASE}\`;
+  GRANT ALL PRIVILEGES ON \`${MYSQL_TEST_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
+  FLUSH PRIVILEGES;
+EOSQL
+
