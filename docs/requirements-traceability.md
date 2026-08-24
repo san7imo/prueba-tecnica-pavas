@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 requirements and the approved HITO 7 authentication/session requirements are Done. RBAC, user administration, audit and Phase 2 frontend requirements remain pending.
+All mandatory Phase 1, HITO 7 authentication and HITO 8 backend RBAC/user-administration requirements are Done. Audit and Phase 2 frontend requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -60,19 +60,19 @@ All mandatory Phase 1 requirements and the approved HITO 7 authentication/sessio
 | P2-DATA-001 | User model with unique email, role and active | 2 | User model + `202608240005-create-users.js` | Auth APIs | Schema/auth integration tests | Done |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | RefreshToken model/migration + SHA-256 lookup | Refresh/logout | Persistence inspection test | Done |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Idempotent env-driven `seedInitialAdmin` | Login | Seed/hash/idempotency test | Done |
-| P2-AUTH-002 | ADMIN-only user registration | 2 | Planned auth/RBAC HITO 8 | `POST /api/auth/register` | ADMIN success, MECANICO 403 | Pending |
+| P2-AUTH-002 | ADMIN-only user registration | 2 | UserService + authenticate/authorize + validation | `POST /api/auth/register` | Roles/401/403/duplicate/hash tests | Done |
 | P2-AUTH-003 | Generic login with bcrypt cost >=10 and signed JWT | 2 | AuthService + login validator/controller | `POST /api/auth/login` | Success/normalized/invalid/inactive tests | Done |
 | P2-AUTH-004 | Authenticated current profile, safe payload | 2 | `authenticate` + DB active-user lookup | `GET /api/auth/me` | Bearer matrix + safe profile tests | Done |
 | P2-AUTH-005 | Refresh rotation via HttpOnly cookie | Project option | Transactional AuthService rotation | `POST /api/auth/refresh` | Cookie/rotation/expiry/concurrency tests | Done |
 | P2-AUTH-006 | Logout revokes refresh and clears cookie | Project option | Current-token transactional revocation | `POST /api/auth/logout` | Logout/idempotency/session-scope test | Done |
 | P2-AUTH-007 | Rotated-token reuse revokes active family | Project contract | Family tracking + replay revocation | Refresh endpoint | Replay/independent-family/concurrency tests | Done |
-| P2-RBAC-001 | All business endpoints require authentication | 2 | Planned middleware HITO 8 | All business endpoints | Missing token 401 tests | Pending |
-| P2-RBAC-002 | Wrong role returns 403 | 2 | Planned authorize middleware | Restricted endpoints | Role boundary tests | Pending |
-| P2-RBAC-003 | MECANICO may add items and move to three states | 2 | Planned service authorization | Items/status | Allowed action tests | Pending |
-| P2-RBAC-004 | MECANICO cannot deliver, cancel or delete item | 2 | Planned service authorization | Items/status | Forbidden action tests | Pending |
-| P2-USER-001 | ADMIN lists users | 2 | Planned UserService HITO 8 | `GET /api/users` | ADMIN/MECANICO tests | Pending |
-| P2-USER-002 | ADMIN changes user role | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/role` | Update/validation tests | Pending |
-| P2-USER-003 | ADMIN activates/deactivates users | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/active` | Update/inactive-login tests | Pending |
+| P2-RBAC-001 | All business endpoints require authentication | 2 | Router-level authenticate before authorization/validation | All business endpoints | Missing/invalid/inactive token tests | Done |
+| P2-RBAC-002 | Wrong role returns 403 | 2 | Reusable `authorize(...roles)` + AuthorizationError | Restricted endpoints | Middleware and HTTP boundary tests | Done |
+| P2-RBAC-003 | MECANICO may add items and move to three states | 2 | Item route + transactional status actor policy | Items/status | Complete allowed-action path | Done |
+| P2-RBAC-004 | MECANICO cannot deliver, cancel or delete item | 2 | Static item role guard + status service authorization | Items/status | 403 and persistence tests | Done |
+| P2-USER-001 | ADMIN lists users | 2 | UserService/UserRepository safe ordered listing | `GET /api/users` | ADMIN/401/403/deep-payload tests | Done |
+| P2-USER-002 | ADMIN changes user role | 2 | Validated UserService update | `PATCH /api/users/:id/role` | Update/validation/404/403/immediate-effect tests | Done |
+| P2-USER-003 | ADMIN activates/deactivates users | 2 | Strict boolean UserService update | `PATCH /api/users/:id/active` | Deactivate/reactivate/validation/404/403 tests | Done |
 | P2-USER-004 | Password/hash never returned | 2 | Safe User model + explicit auth serializers/attributes | Auth APIs | Deep JSON payload/model assertions | Done |
 | P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Planned migration/model HITO 9 | History endpoint | Schema/content tests | Pending |
 | P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | Planned creation transaction HITO 9 | Create/history | Initial audit test | Pending |

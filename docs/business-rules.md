@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. Phase 1 behavior and HITO 7 authentication are implemented. Authorization and audit history remain assigned to later Phase 2 milestones.
+These rules are the approved domain contract. Phase 1 behavior, authentication and HITO 8 backend authorization are implemented. Audit history remains assigned to HITO 9.
 
 ## Work-order state machine
 
@@ -74,7 +74,7 @@ count > 0
 unitValue >= 0
 ```
 
-Both item types can be created through `POST /api/work-orders/:id/items`. In the current pre-auth Phase 1 API, items can be deleted through `DELETE /api/work-orders/items/:itemId`; HITO 8 will restrict deletion to ADMIN without changing this domain operation.
+Both roles can create either item type through `POST /api/work-orders/:id/items`. Only ADMIN can call `DELETE /api/work-orders/items/:itemId`; MECANICO receives HTTP 403 without changing the item or total.
 
 Inputs accept at most two decimal places and are normalized to fixed-scale decimal strings. `count` must fit `DECIMAL(10,2)` and `unitValue` must fit `DECIMAL(15,2)`. HITO 1 model validation and named MySQL CHECK constraints remain the persistence barriers.
 
@@ -103,7 +103,7 @@ Plate values are trimmed, uppercased and stripped of unnecessary spaces before s
 | Action | ADMIN | MECANICO |
 |---|---:|---:|
 | Read clients/bikes/orders | Yes | Yes |
-| Create clients/bikes/orders | Yes | No |
+| Create clients/bikes/orders | Yes | Yes |
 | Create items | Yes | Yes |
 | Delete items | Yes | No |
 | Move to `DIAGNOSTICO` | Yes | Yes |
@@ -114,7 +114,9 @@ Plate values are trimmed, uppercased and stripped of unnecessary spaces before s
 | View history | Yes | Yes |
 | Administer users | Yes | No |
 
-All business endpoints require authentication in Phase 2. UI hiding is not an authorization boundary.
+All business endpoints require authentication. Static role middleware runs before request validators. For state changes, the locked service validates the workflow before actor permission: invalid graph edge is 400, while a workflow-valid forbidden target is 403. UI hiding is not an authorization boundary.
+
+User self-deactivation and self-role change are allowed. The affected access token fails its next request; preserving a last ADMIN is an operational concern deliberately outside this MVP milestone.
 
 ## Authentication rules
 

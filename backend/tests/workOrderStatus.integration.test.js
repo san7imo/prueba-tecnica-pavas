@@ -1,4 +1,3 @@
-import request from 'supertest';
 import {
   afterAll,
   afterEach,
@@ -21,8 +20,15 @@ import {
   WORK_ORDER_STATUS,
 } from '../src/constants/workOrder.js';
 import { workOrderRepository } from '../src/repositories/workOrderRepository.js';
+import { USER_ROLE } from '../src/constants/auth.js';
+import {
+  createAuthenticatedRequest,
+  createTestIdentity,
+} from './helpers/authenticatedRequest.js';
 
 let migrator;
+let adminAccessToken;
+const request = createAuthenticatedRequest(() => adminAccessToken);
 
 const EXPECTED_TRANSITIONS = Object.freeze({
   [WORK_ORDER_STATUS.RECEIVED]: [
@@ -98,6 +104,11 @@ beforeAll(async () => {
   migrator = createMigrator(sequelize);
   await migrator.down({ to: 0 });
   await migrator.up();
+  ({ accessToken: adminAccessToken } = await createTestIdentity({
+    name: 'Status Admin',
+    email: 'status-admin@example.test',
+    role: USER_ROLE.ADMIN,
+  }));
 });
 
 beforeEach(async () => {

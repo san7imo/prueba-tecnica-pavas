@@ -144,13 +144,19 @@ The terminal race captures SQL evidence of two independent transactions and two 
 
 ## Critical future suites
 
-Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: RBAC, audit contents/order/pagination and ADMIN user management. Phase 1 risks and HITO 7 authentication now point to concrete integration evidence.
+Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: audit contents/order/pagination and the Phase 2 frontend. Phase 1, authentication and backend RBAC/user administration now point to concrete integration evidence.
 
 ## HITO 7 authentication suite
 
 `tests/auth.integration.test.js` applies all six migrations to guarded MySQL and covers bcrypt storage/cost/comparison, normalized ADMIN and MECANICO login, generic failures, safe payloads, access claims, `/me`, missing/malformed/expired/wrong-signature/stale-user/inactive-user access, HttpOnly cookie properties, digest-only persistence, refresh expiry/invalidity, rotation links, family-scoped replay revocation, independent families, idempotent logout, login HTTP 429 and idempotent ADMIN seed behavior.
 
 The concurrent-refresh test sends two requests with the same token through separate transactions. The token-row `FOR UPDATE` lock permits exactly one rotation; the waiter detects the committed replacement, revokes that family and leaves zero active descendants. This intentionally conservative outcome treats simultaneous second use as possible theft.
+
+## HITO 8 RBAC and user-administration suite
+
+`tests/rbac.integration.test.js` covers unauthenticated/invalid/inactive 401 boundaries; ADMIN/MECANICO access to Client, Bike and WorkOrder create/read; item add for both roles and delete only for ADMIN; registration of both roles, mass-assignment protection, password minimum and normalized duplicate 409; safe ADMIN user listing; role/active validation, 404 and 403 paths; immediate invalidation of old tokens; all MECANICO intermediate transitions; forbidden delivery/cancellation; ADMIN terminal transitions; and the 400 workflow versus 403 permission distinction.
+
+`tests/authorize.test.js` verifies the middleware's direct 401/403/pass behavior. Existing HITO 2–5 HTTP suites use a shared helper that creates a real persisted ADMIN and signed access JWT, so their original domain assertions continue through the production authentication middleware rather than a bypass. Protected list-query evidence now expects one user-auth lookup plus the same two count/data queries.
 
 Passing existing tests alone is insufficient at release: each traceability row and HITO 12 matrix entry must point to a concrete passing test.
 

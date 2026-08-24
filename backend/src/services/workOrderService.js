@@ -1,7 +1,9 @@
 import { ForeignKeyConstraintError } from 'sequelize';
 
 import { sequelize } from '../config/databaseContext.js';
+import { USER_ROLE } from '../constants/auth.js';
 import { WORK_ORDER_STATUS } from '../constants/workOrder.js';
+import { AuthorizationError } from '../errors/AuthorizationError.js';
 import { BusinessRuleError } from '../errors/BusinessRuleError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { bikeRepository } from '../repositories/bikeRepository.js';
@@ -70,7 +72,7 @@ export const workOrderService = {
     return workOrder;
   },
 
-  transitionStatus(id, { toStatus }) {
+  transitionStatus(id, { toStatus }, actor) {
     return sequelize.transaction(async (transaction) => {
       const workOrder = await workOrderRepository.findByIdForUpdate(
         id,
@@ -82,6 +84,17 @@ export const workOrderService = {
 
       if (!canTransition(workOrder.status, toStatus)) {
         throw invalidStatusTransition(workOrder.status, toStatus);
+      }
+
+      if (
+        actor.role === USER_ROLE.MECHANIC &&
+        ![
+          WORK_ORDER_STATUS.DIAGNOSIS,
+          WORK_ORDER_STATUS.IN_PROGRESS,
+          WORK_ORDER_STATUS.READY,
+        ].includes(toStatus)
+      ) {
+        throw new AuthorizationError();
       }
 
       await workOrderRepository.updateStatus(id, toStatus, transaction);

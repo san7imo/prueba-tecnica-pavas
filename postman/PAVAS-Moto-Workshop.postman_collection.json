@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "HITO 7 Auth plus complete Phase 1 Client, Bike and Work Order API requests.",
+    "description": "HITO 8 Auth, Users and protected Client, Bike and Work Order API requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -21,6 +21,18 @@
     {
       "key": "accessToken",
       "value": ""
+    },
+    {
+      "key": "managedUserId",
+      "value": ""
+    },
+    {
+      "key": "managedUserRole",
+      "value": "ADMIN"
+    },
+    {
+      "key": "managedUserActive",
+      "value": "false"
     },
     {
       "key": "clientId",
@@ -47,6 +59,16 @@
       "value": "DIAGNOSTICO"
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
   "item": [
     {
       "name": "Auth",
@@ -137,6 +159,43 @@
           ]
         },
         {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Mechanic\",\n  \"email\": \"postman.mechanic@example.test\",\n  \"password\": \"Replace-this-password-123\",\n  \"role\": \"MECANICO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "ADMIN-only registration. Stores the created id for Users requests; replace the example password locally."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).not.to.have.property('passwordHash');",
+                  "pm.collectionVariables.set('managedUserId', body.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
           "name": "Logout",
           "request": {
             "method": "POST",
@@ -152,6 +211,104 @@
                   "pm.test('OK', () => pm.response.to.have.status(200));",
                   "pm.expect(pm.response.json().data.loggedOut).to.eql(true);",
                   "pm.collectionVariables.unset('accessToken');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users",
+            "description": "ADMIN-only safe user listing."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.be.an('array');",
+                  "pm.expect(JSON.stringify(body)).not.to.include('passwordHash');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{managedUserRole}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/users/{{managedUserId}}/role",
+            "description": "ADMIN-only role update. Use ADMIN or MECANICO."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().data.role).to.eql(pm.collectionVariables.get('managedUserRole'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change User Active",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": {{managedUserActive}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/users/{{managedUserId}}/active",
+            "description": "ADMIN-only activation/deactivation using a real JSON boolean."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(String(pm.response.json().data.active)).to.eql(pm.collectionVariables.get('managedUserActive'));"
                 ],
                 "type": "text/javascript"
               }

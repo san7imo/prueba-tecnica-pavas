@@ -1,6 +1,6 @@
 # Security
 
-## Implemented in HITO 7
+## Implemented authentication and authorization
 
 Passwords are hashed with `bcrypt`; `BCRYPT_ROUNDS` is validated between 10 and 15 and defaults to 12. Only `password_hash` is persisted. User model serialization, API serializers and explicit repository attribute lists prevent the hash from entering responses.
 
@@ -26,4 +26,10 @@ No token, password, hash or secret is intentionally logged. Public auth errors d
 
 ## Deferred hardening
 
-HITO 8 will add authorization, protect business endpoints and administer users. HITO 11 retains the global Helmet/restricted-CORS review, broader security-header checks, dependency remediation and production deployment review. The local frontend currently uses Vite's same-origin `/api` proxy, so no broad CORS policy was introduced in this milestone.
+HITO 8 adds a reusable `authorize(...roles)` boundary. Business routers execute authentication and role authorization before validators, so unauthenticated/forbidden callers do not receive body, ID or resource validation details. Health, login, refresh and logout remain public; `/me` remains authenticated.
+
+Users and registration are ADMIN-only. MECANICO cannot administer users, delete items, deliver or cancel orders. Status authorization is evaluated in the locked WorkOrder transaction after workflow validity, preserving 400 for an invalid graph edge and 403 for a valid target forbidden to the actor.
+
+Because authentication reloads the user and compares the JWT role on every request, deactivation and role changes invalidate existing access tokens immediately. Self-deactivation and self-role changes are allowed by the contract; last-ADMIN protection is explicitly outside this MVP milestone.
+
+HITO 11 retains the global Helmet/restricted-CORS review, broader security-header checks, dependency remediation and production deployment review. The local frontend currently uses Vite's same-origin `/api` proxy, so no broad CORS policy was introduced in this milestone.

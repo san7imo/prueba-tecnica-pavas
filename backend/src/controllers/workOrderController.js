@@ -23,6 +23,7 @@ export const updateWorkOrderStatus = async (request, response) => {
   const result = await workOrderService.transitionStatus(
     request.validated.params.id,
     request.validated.body,
+    request.user,
   );
   response.json({ data: result });
 };

@@ -1,4 +1,3 @@
-import request from 'supertest';
 import {
   afterAll,
   afterEach,
@@ -20,8 +19,15 @@ import {
   WORK_ORDER_STATUS,
 } from '../src/constants/workOrder.js';
 import { workOrderRepository } from '../src/repositories/workOrderRepository.js';
+import { USER_ROLE } from '../src/constants/auth.js';
+import {
+  createAuthenticatedRequest,
+  createTestIdentity,
+} from './helpers/authenticatedRequest.js';
 
 let migrator;
+let adminAccessToken;
+const request = createAuthenticatedRequest(() => adminAccessToken);
 
 const cleanDomainData = async () => {
   await models.WorkOrderItem.destroy({ where: {}, force: true });
@@ -86,6 +92,11 @@ beforeAll(async () => {
   migrator = createMigrator(sequelize);
   await migrator.down({ to: 0 });
   await migrator.up();
+  ({ accessToken: adminAccessToken } = await createTestIdentity({
+    name: 'Work Orders Admin',
+    email: 'work-orders-admin@example.test',
+    role: USER_ROLE.ADMIN,
+  }));
 });
 
 beforeEach(async () => {
@@ -385,7 +396,7 @@ describe('Work Orders API', () => {
       ]);
     });
 
-    it('uses a constant two-query count/list strategy without N+1 reads', async () => {
+    it('uses one auth plus two count/list queries without N+1 reads', async () => {
       const { bike } = await createBike();
       await Promise.all([
         createWorkOrder(bike.id),
@@ -406,7 +417,7 @@ describe('Work Orders API', () => {
         sequelize.removeHook('beforeQuery', 'workOrderListQueryCount');
       }
 
-      expect(queryCount).toBe(2);
+      expect(queryCount).toBe(3);
     });
   });
 

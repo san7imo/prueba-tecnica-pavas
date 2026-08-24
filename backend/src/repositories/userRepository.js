@@ -1,6 +1,7 @@
 import { models } from '../config/databaseContext.js';
 
 const SAFE_ATTRIBUTES = ['id', 'name', 'email', 'role', 'active'];
+const MANAGED_ATTRIBUTES = [...SAFE_ATTRIBUTES, 'createdAt', 'updatedAt'];
 
 export const userRepository = {
   findForAuthentication(email, options = {}) {
@@ -21,7 +22,7 @@ export const userRepository = {
   findByEmail(email, options = {}) {
     return models.User.findOne({
       where: { email },
-      attributes: [...SAFE_ATTRIBUTES, 'passwordHash'],
+      attributes: SAFE_ATTRIBUTES,
       transaction: options.transaction,
     });
   },
@@ -31,5 +32,28 @@ export const userRepository = {
       fields: ['name', 'email', 'passwordHash', 'role', 'active'],
       transaction: options.transaction,
     });
+  },
+
+  findManagedById(id) {
+    return models.User.findByPk(id, { attributes: MANAGED_ATTRIBUTES });
+  },
+
+  listManaged() {
+    return models.User.findAll({
+      attributes: MANAGED_ATTRIBUTES,
+      order: [
+        ['name', 'ASC'],
+        ['email', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+  },
+
+  updateRole(id, role) {
+    return models.User.update({ role }, { where: { id }, fields: ['role'] });
+  },
+
+  updateActive(id, active) {
+    return models.User.update({ active }, { where: { id }, fields: ['active'] });
   },
 };

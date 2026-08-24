@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product and HITO 7 backend authentication: Client/Bike/WorkOrder workflows, the operational React screens, users, short-lived access JWTs and rotating refresh sessions. Authorization, user administration, audit history and Phase 2 frontend work remain assigned to later milestones.
+The repository includes the complete Phase 1 product plus HITO 7 sessions and HITO 8 backend RBAC/user administration. Audit history and Phase 2 frontend work remain assigned to later milestones.
 
 ## Features
 
-Implemented through HITO 7:
+Implemented through HITO 8:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -43,8 +43,13 @@ Implemented through HITO 7:
 - short-lived access JWTs and HttpOnly refresh cookies;
 - transactional refresh rotation, replacement links, family replay detection and session-scoped logout;
 - login-specific rate limiting plus MySQL replay/concurrency tests.
+- authenticated Client, Bike and WorkOrder API boundaries;
+- reusable ADMIN/MECANICO authorization middleware with stable 401/403 semantics;
+- ADMIN registration, safe user listing and role/active administration;
+- immediate access-token rejection after role or active changes;
+- MECANICO item/status permissions enforced in backend with workflow/RBAC separation.
 
-Phase 2 RBAC, user administration, audit and frontend authentication remain pending.
+Phase 2 audit history and frontend authentication/user management remain pending.
 
 ## Assessment Scope
 
@@ -175,7 +180,7 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Implemented endpoints include health, Phase 1 resources/status/items and `POST /api/auth/login|refresh|logout` plus `GET /api/auth/me`. Payloads, cookies and errors are documented in [docs/api.md](docs/api.md). Registration and user APIs remain pending.
+Implemented endpoints include health, protected Phase 1 resources/status/items, all contractual Auth endpoints and ADMIN-only user list/role/active APIs. Payloads, cookies, authorization and errors are documented in [docs/api.md](docs/api.md).
 
 ## Authentication
 
@@ -183,11 +188,11 @@ Login issues a 15-minute-by-default access JWT and a longer refresh JWT in an Ht
 
 ## Role Permissions
 
-Not enforced yet. The approved ADMIN/MECANICO policy is documented in [docs/business-rules.md](docs/business-rules.md).
+Enforced in the backend. Both roles can create/read current business resources and add items; only ADMIN can delete items, deliver/cancel orders, register or administer users. See [docs/business-rules.md](docs/business-rules.md).
 
 ## Business Rules
 
-The canonical total and state-machine rules are active in the backend. Roles and audit behavior remain documented for their later Phase 2 milestones in [docs/business-rules.md](docs/business-rules.md).
+The canonical total, state machine and role matrix are active in the backend. Audit behavior remains documented for HITO 9 in [docs/business-rules.md](docs/business-rules.md).
 
 ## Testing
 
@@ -196,13 +201,13 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1 plus HITO 7 schema, seed, login/access, rotation, replay, logout and refresh concurrency. Frontend tests remain the Phase 1 gate. See [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, immediate token invalidation and concurrency. Frontend tests remain the Phase 1 gate until HITO 10. See [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
 - Never commit `.env` files or real credentials.
 - Do not log passwords, tokens, cookies, hashes or secrets.
-- Authentication and login rate limiting are active. Authorization, Helmet and restricted CORS remain explicitly deferred.
+- Authentication, backend authorization and login rate limiting are active. Helmet and restricted CORS remain explicitly deferred to HITO 11.
 - Raw refresh tokens exist only in HttpOnly cookies; password hashes and token digests never appear in API payloads.
 
 ## Documentation
@@ -225,7 +230,7 @@ Accepted decisions are stored under `docs/decisions/`. ADR-002 records the imple
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) for HITO 7 Auth plus the complete Phase 1 API. Login captures `accessToken`; Postman manages the HttpOnly cookie. No real credentials are included. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) for Auth, Users and protected business APIs. Login captures `accessToken`; Postman manages the HttpOnly cookie and sends Bearer authorization collection-wide. No real credentials are included. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
@@ -239,13 +244,13 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 
 ## Known Limitations
 
-Authorization, registration, user administration, business-route protection, audit history and Phase 2 frontend authentication remain intentionally absent. Status notes are not persisted until HITO 9. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
+Audit history and Phase 2 frontend authentication/role guards remain intentionally absent. Until HITO 10, the existing Phase 1 React UI has no login/session context and therefore cannot call the newly protected business API end-to-end. Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. Status notes are not persisted until HITO 9. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 7 — Authentication and Refresh Tokens implemented locally.** Awaiting milestone review; no HITO 8 work is included.
+**HITO 8 — Role-Based Access Control implemented locally.** Awaiting milestone review; no HITO 9 work is included.
 
 ## Roadmap
 

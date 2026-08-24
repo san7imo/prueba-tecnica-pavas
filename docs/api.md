@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The API exposes the technical health route, complete Phase 1 Client/Bike/WorkOrder routes and the HITO 7 authentication/session routes. HITO 8 will protect business endpoints and add RBAC without changing their resource shapes.
+The API exposes complete Phase 1 business routes plus HITO 7 sessions and HITO 8 backend RBAC/user administration. Every Client, Bike and WorkOrder endpoint requires a valid access JWT.
 
 ```text
 GET  /api/health
@@ -11,6 +11,11 @@ POST /api/auth/login
 POST /api/auth/refresh
 POST /api/auth/logout
 GET  /api/auth/me
+POST /api/auth/register
+
+GET   /api/users
+PATCH /api/users/:id/role
+PATCH /api/users/:id/active
 
 POST /api/clients
 GET  /api/clients?search=
@@ -28,7 +33,7 @@ POST /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
 ```
 
-History, registration and user-administration endpoints are not implemented yet.
+Work-order history remains deferred to HITO 9.
 
 ## General conventions
 
@@ -91,6 +96,35 @@ Authorization: Bearer <accessToken>
 
 Returns `id`, `name`, `email`, `role` and `active`. The middleware verifies the JWT then reloads the active user from MySQL. Missing credentials return `401 AUTHENTICATION_REQUIRED`; malformed/expired/stale tokens return `401 INVALID_ACCESS_TOKEN`. No password/hash field is serialized.
 
+### Register user
+
+```http
+POST /api/auth/register
+Authorization: Bearer <ADMIN accessToken>
+Content-Type: application/json
+
+{
+  "name": "Carlos Perez",
+  "email": "carlos@example.com",
+  "password": "password of at least 8 characters",
+  "role": "MECANICO"
+}
+```
+
+ADMIN only. Name, normalized email, password and contractual role are required. Password length is at least eight characters without invented composition rules; bcrypt remains the storage protection. New users are active. Undocumented `id`, `passwordHash`, `active` and timestamp inputs are ignored. Success returns `201`; duplicate normalized email returns `409 USER_EMAIL_ALREADY_EXISTS`; MECANICO returns `403 FORBIDDEN`.
+
+## User administration
+
+All `/api/users` routes require ADMIN. Responses expose only `id`, `name`, `email`, `role`, `active`, `createdAt` and `updatedAt`.
+
+```text
+GET   /api/users
+PATCH /api/users/:id/role    { "role": "ADMIN" | "MECANICO" }
+PATCH /api/users/:id/active  { "active": true | false }
+```
+
+Listing is intentionally unpaginated for this bounded MVP and ordered by name, email and ID. Invalid role/boolean/ID input returns 400; an absent user returns `404 USER_NOT_FOUND`. The contract allows self-role and self-active changes; last-ADMIN protection is outside the current scope. A role or active change invalidates the affected user's existing access JWT on its next request.
+
 Validation error:
 
 ```json
@@ -114,7 +148,7 @@ POST /api/clients
 Content-Type: application/json
 ```
 
-Authentication/roles: none in HITO 2.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 ```json
 {
@@ -136,7 +170,7 @@ Errors: `400 VALIDATION_ERROR`.
 GET /api/clients?search=juan
 ```
 
-Authentication/roles: none in HITO 2.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 `search` is optional. A non-empty value performs a partial, parameterized MySQL search across name, phone and email. Omitting it returns all clients ordered by name then ID. This assessment endpoint is intentionally unpaginated.
 
@@ -150,7 +184,7 @@ Errors: `400 VALIDATION_ERROR` for malformed query values.
 GET /api/clients/:id
 ```
 
-Authentication/roles: none in HITO 2. `id` must be a positive integer.
+Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` must be a positive integer.
 
 Success: `200 OK` with the public client under `data`.
 
@@ -165,7 +199,7 @@ POST /api/bikes
 Content-Type: application/json
 ```
 
-Authentication/roles: none in HITO 2.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 ```json
 {
@@ -189,7 +223,7 @@ Errors: `400 VALIDATION_ERROR`, `404 CLIENT_NOT_FOUND`, `409 BIKE_PLATE_ALREADY_
 GET /api/bikes?plate=abc%20123
 ```
 
-Authentication/roles: none in HITO 2.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 `plate` is optional and receives the same normalization as persisted plates. A non-empty value performs a partial plate search; omitting it returns all bikes. Results are ordered by plate then ID and include the client relation. No extra brand/model filters or pagination are introduced.
 
@@ -203,7 +237,7 @@ Errors: `400 VALIDATION_ERROR` for malformed query values.
 GET /api/bikes/:id
 ```
 
-Authentication/roles: none in HITO 2. `id` must be a positive integer.
+Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` must be a positive integer.
 
 Success: `200 OK` with `id`, `plate`, `brand`, `model`, nullable `cylinder`, `clientId` and nested `client`.
 
@@ -218,7 +252,7 @@ POST /api/work-orders
 Content-Type: application/json
 ```
 
-Authentication/roles: none through HITO 5.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 ```json
 {
@@ -242,7 +276,7 @@ Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 GET /api/work-orders?status=RECIBIDA&plate=abc%20123&page=1&pageSize=20
 ```
 
-Authentication/roles: none through HITO 5.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 All parameters are optional:
 
@@ -298,7 +332,7 @@ Errors: `400 VALIDATION_ERROR` for invalid status/pagination/filter values.
 GET /api/work-orders/:id
 ```
 
-Authentication/roles: none through HITO 5. `id` must be a positive integer.
+Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` must be a positive integer.
 
 Success: `200 OK` with the public order, full Bike/Client graph, authoritative persisted total and an `items` array. Items expose `id`, `type`, `description`, `count` and `unitValue`; their mutations use the endpoints below.
 
@@ -311,7 +345,7 @@ PATCH /api/work-orders/:id/status
 Content-Type: application/json
 ```
 
-Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will apply the ADMIN/MECANICO policy. `id` must be a positive integer.
+Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` must be a positive integer.
 
 ```json
 {
@@ -332,6 +366,8 @@ Allowed transitions:
 | `LISTA` | `ENTREGADA`, `CANCELADA` |
 | `ENTREGADA` | none |
 | `CANCELADA` | none |
+
+ADMIN may execute every workflow-valid target. MECANICO may target only `DIAGNOSTICO`, `EN_PROCESO` and `LISTA`; a workflow-valid `ENTREGADA` or `CANCELADA` request returns 403. The service checks the locked workflow edge before the actor permission, so an edge invalid for everyone remains `400 INVALID_STATUS_TRANSITION` rather than 403.
 
 The service starts a transaction and locks the WorkOrder before reading and validating its current status. Same-state requests and every known but disallowed edge return the stable business error below.
 
@@ -357,7 +393,7 @@ Invalid transition: `400 Bad Request`.
 }
 ```
 
-Errors: `400 VALIDATION_ERROR` for an unknown target/malformed input, `400 INVALID_STATUS_TRANSITION` for a known disallowed edge, `404 WORK_ORDER_NOT_FOUND` for a missing order, and safe `500 INTERNAL_ERROR` for an unexpected transactional failure.
+Errors: `400 VALIDATION_ERROR` for an unknown target/malformed input, `400 INVALID_STATUS_TRANSITION` for a known disallowed edge, `403 FORBIDDEN` for a workflow-valid target denied to MECANICO, `404 WORK_ORDER_NOT_FOUND` for a missing order, and safe `500 INTERNAL_ERROR` for an unexpected transactional failure.
 
 ### Add work-order item
 
@@ -366,7 +402,7 @@ POST /api/work-orders/:id/items
 Content-Type: application/json
 ```
 
-Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will allow ADMIN and MECANICO.
+Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 ```json
 {
@@ -406,7 +442,7 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`, safe `500 INTERNAL_E
 DELETE /api/work-orders/items/:itemId
 ```
 
-Authentication/roles: none in the current pre-auth Phase 1 API. HITO 8 will restrict this operation to ADMIN. `itemId` must be a positive integer.
+Authentication/roles: Bearer token required; ADMIN only. MECANICO receives 403 before item-ID validation. `itemId` must be a positive integer for an authorized caller.
 
 The owning WorkOrder is resolved, then its row is locked inside a transaction. The item is revalidated with a locking read, deleted, and the exact total is recalculated before commit. Deleting the last item returns and persists `0.00`.
 
@@ -431,25 +467,18 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_ITEM_NOT_FOUND`, safe `500 INTER
 | Successful creation | 201 |
 | Validation failure | 400 |
 | Invalid or same-state WorkOrder transition | 400 |
-| Missing Client/Bike/WorkOrder/WorkOrderItem | 404 |
-| Duplicate normalized plate | 409 |
+| Missing/invalid/expired authentication | 401 |
+| Authenticated role not permitted | 403 |
+| Missing Client/Bike/WorkOrder/WorkOrderItem/User | 404 |
+| Duplicate normalized plate or user email | 409 |
 | Unknown route | 404 |
 | Unexpected failure | 500 |
 
-## Planned assessment endpoints
+## Planned assessment endpoint
 
 The remaining contract is intentionally deferred to its approved milestones:
 
 ```text
 GET    /api/work-orders/:id/history?page=&pageSize=
 
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/refresh
-POST /api/auth/logout
-GET  /api/auth/me
-
-GET   /api/users
-PATCH /api/users/:id/role
-PATCH /api/users/:id/active
 ```

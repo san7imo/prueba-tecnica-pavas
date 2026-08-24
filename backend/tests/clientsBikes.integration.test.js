@@ -1,4 +1,3 @@
-import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { app } from '../src/app.js';
@@ -6,8 +5,15 @@ import { models, sequelize } from '../src/config/databaseContext.js';
 import { env } from '../src/config/env.js';
 import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
+import { USER_ROLE } from '../src/constants/auth.js';
+import {
+  createAuthenticatedRequest,
+  createTestIdentity,
+} from './helpers/authenticatedRequest.js';
 
 let migrator;
+let adminAccessToken;
+const request = createAuthenticatedRequest(() => adminAccessToken);
 
 const cleanDomainData = async () => {
   await models.WorkOrderItem.destroy({ where: {}, force: true });
@@ -57,6 +63,11 @@ beforeAll(async () => {
   migrator = createMigrator(sequelize);
   await migrator.down({ to: 0 });
   await migrator.up();
+  ({ accessToken: adminAccessToken } = await createTestIdentity({
+    name: 'Clients Bikes Admin',
+    email: 'clients-bikes-admin@example.test',
+    role: USER_ROLE.ADMIN,
+  }));
 });
 
 beforeEach(async () => {

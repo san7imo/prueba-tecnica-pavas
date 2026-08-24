@@ -22,6 +22,15 @@ export const serializeUser = (resource) => {
   };
 };
 
+export const serializeManagedUser = (resource) => {
+  const user = plain(resource);
+  return {
+    ...serializeUser(user),
+    createdAt: new Date(user.createdAt).toISOString(),
+    updatedAt: new Date(user.updatedAt).toISOString(),
+  };
+};
+
 export const serializeBike = (resource) => {
   const bike = plain(resource);
   return {

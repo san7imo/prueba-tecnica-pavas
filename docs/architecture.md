@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1–6 implement the complete Phase 1 persistence, API and React interface. HITO 7 adds User/RefreshToken persistence, authentication and refresh-session lifecycle. Authorization, audit and frontend authentication remain assigned to later Phase 2 milestones.
+This document defines the target architecture. HITO 1–6 implement the complete Phase 1 persistence, API and React interface; HITO 7 adds sessions; HITO 8 adds business-route authentication, RBAC and user administration. Audit and frontend authentication remain assigned to later Phase 2 milestones.
 
 ## Architectural Style
 
@@ -17,9 +17,11 @@ HTTP Request
      ↓
 Route
      ↓
-Validation Middleware
+Authentication
      ↓
-Authentication (HITO 7) / Authorization (HITO 8)
+Authorization when role-restricted
+     ↓
+Validation Middleware
      ↓
 Controller
      ↓
@@ -32,7 +34,7 @@ Sequelize
 MySQL
 ```
 
-Authentication is active for `/api/auth/me`; authorization and business-route protection remain deliberately deferred to HITO 8.
+This security-first order applies to every protected endpoint so unauthorized callers receive 401/403 before validation details. Public health/login/refresh/logout skip the boundary; `/me` authenticates without a role restriction. Workflow-specific status authorization remains in the locked service after transition validation.
 
 ## Backend responsibilities
 
@@ -80,7 +82,7 @@ HITO 5 status changes reuse the same WorkOrder row-lock query. The service start
 
 MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. HITO 1 implements deterministic ESM migrations through Umzug/`SequelizeMeta`; the application does not use `sequelize.sync` as a schema strategy.
 
-HITO 7 extends the stack to six migrations with User and RefreshToken. Auth request flow remains layered: Route → Validator → Controller → AuthService → User/RefreshToken repositories → Sequelize. Controllers only set/clear cookies and serialize service results; cryptography and transactional lifecycle rules remain in service/utilities.
+HITO 7 extends the stack to six migrations with User and RefreshToken. HITO 8 adds `UserService`/UserRepository administration without schema changes. Auth request flow remains layered: Route → security middleware → Validator → Controller → Service → Repository → Sequelize. Controllers only set/clear cookies or serialize service results; cryptography and domain authorization remain outside controllers.
 
 Development and integration tests use separate databases. See [testing.md](testing.md).
 
@@ -135,7 +137,7 @@ See [api.md](api.md).
 
 ## Work-order query strategy
 
-The HITO 3 list uses one paginated Sequelize `findAndCountAll` operation with eager `WorkOrder → Bike → Client` includes. `distinct: true` keeps the order count correct if the include graph later introduces row multiplication. It executes one count and one data query, independent of result count, and therefore avoids N+1 reads.
+The HITO 3 list uses one paginated Sequelize `findAndCountAll` operation with eager `WorkOrder → Bike → Client` includes. `distinct: true` keeps the order count correct if the include graph later introduces row multiplication. The protected HITO 8 request executes one active-user authentication query followed by one count and one data query, independent of result count, and therefore avoids N+1 reads.
 
 Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results use `entry_date DESC, id DESC`: entry date is the operational date shown by the assessment UI, while ID provides deterministic ordering for equal timestamps.
 
@@ -143,7 +145,7 @@ Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results 
 
 The security boundary lives on the backend. HITO 7 implements bcrypt, short-lived signed access JWTs, database-checked active users, hashed rotating refresh tokens in HttpOnly cookies, family-scoped replay response and a login-specific rate limiter. Refresh rotation locks the presented token row in a transaction; replay revocation commits before the public 401 response. See ADR-002 and [security.md](security.md).
 
-UI visibility is never authorization. Business-route authentication/RBAC is HITO 8; restricted CORS, Helmet and the global production hardening review remain HITO 11.
+UI visibility is never authorization. HITO 8 protects every business route and enforces ADMIN/MECANICO boundaries in middleware plus the status service. Restricted CORS, Helmet and the global production hardening review remain HITO 11.
 
 ## Error handling
 

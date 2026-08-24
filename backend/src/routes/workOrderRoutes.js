@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { USER_ROLE } from '../constants/auth.js';
 import {
   createWorkOrder,
   getWorkOrder,
@@ -10,6 +11,7 @@ import {
   createWorkOrderItem,
   deleteWorkOrderItem,
 } from '../controllers/workOrderItemController.js';
+import { authorize } from '../middlewares/authorize.js';
 import {
   validateCreateWorkOrderItem,
   validateDeleteWorkOrderItem,
@@ -28,6 +30,7 @@ workOrderRouter.get('/', validateWorkOrderList, listWorkOrders);
 workOrderRouter.post('/:id/items', validateCreateWorkOrderItem, createWorkOrderItem);
 workOrderRouter.delete(
   '/items/:itemId',
+  authorize(USER_ROLE.ADMIN),
   validateDeleteWorkOrderItem,
   deleteWorkOrderItem,
 );
