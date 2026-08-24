@@ -2,12 +2,16 @@ import { initializeBike } from './Bike.js';
 import { initializeClient } from './Client.js';
 import { initializeWorkOrder } from './WorkOrder.js';
 import { initializeWorkOrderItem } from './WorkOrderItem.js';
+import { initializeRefreshToken } from './RefreshToken.js';
+import { initializeUser } from './User.js';
 
 export const initializeModels = (sequelize) => {
   const Client = initializeClient(sequelize);
   const Bike = initializeBike(sequelize);
   const WorkOrder = initializeWorkOrder(sequelize);
   const WorkOrderItem = initializeWorkOrderItem(sequelize);
+  const User = initializeUser(sequelize);
+  const RefreshToken = initializeRefreshToken(sequelize);
 
   Client.hasMany(Bike, {
     as: 'bikes',
@@ -56,6 +60,24 @@ export const initializeModels = (sequelize) => {
     onUpdate: 'CASCADE',
   });
 
-  return { Client, Bike, WorkOrder, WorkOrderItem };
-};
+  User.hasMany(RefreshToken, {
+    as: 'refreshTokens',
+    foreignKey: { name: 'userId', field: 'user_id', allowNull: false },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  RefreshToken.belongsTo(User, {
+    as: 'user',
+    foreignKey: { name: 'userId', field: 'user_id', allowNull: false },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  RefreshToken.belongsTo(RefreshToken, {
+    as: 'replacement',
+    foreignKey: { name: 'replacedByTokenId', field: 'replaced_by_token_id', allowNull: true },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
 
+  return { Client, Bike, WorkOrder, WorkOrderItem, User, RefreshToken };
+};

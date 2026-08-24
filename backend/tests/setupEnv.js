@@ -5,4 +5,15 @@ process.env.DB_NAME ??= 'pavas_workshop';
 process.env.DB_NAME_TEST ??= 'pavas_workshop_test';
 process.env.DB_USER ??= 'pavas';
 process.env.DB_PASSWORD ??= 'change_me_for_local_development';
-
+process.env.JWT_ACCESS_SECRET ??= 'test-access-secret-with-at-least-32-characters-123';
+process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
+process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret-with-at-least-32-characters-456';
+process.env.JWT_REFRESH_EXPIRES_IN ??= '7d';
+process.env.BCRYPT_ROUNDS ??= '10';
+process.env.COOKIE_SECURE ??= 'false';
+process.env.COOKIE_SAME_SITE ??= 'lax';
+process.env.LOGIN_RATE_LIMIT_WINDOW_MS ??= '900000';
+process.env.LOGIN_RATE_LIMIT_MAX ??= '100';
+process.env.ADMIN_SEED_NAME ??= 'Test Administrator';
+process.env.ADMIN_SEED_EMAIL ??= 'admin.seed@example.test';
+process.env.ADMIN_SEED_PASSWORD ??= 'Test-only-password-123';

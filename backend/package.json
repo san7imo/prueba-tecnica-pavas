@@ -17,11 +17,15 @@
     "db:migrate:status": "node scripts/migrate.js status",
     "db:migrate:down": "node scripts/migrate.js down",
     "db:migrate:test": "NODE_ENV=test node scripts/migrate.js up",
-    "db:migrate:reset:test": "NODE_ENV=test node scripts/migrate.js reset"
+    "db:migrate:reset:test": "NODE_ENV=test node scripts/migrate.js reset",
+    "db:seed:admin": "node scripts/seedAdmin.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.24.2",
     "sequelize": "^6.37.8",
     "umzug": "^3.8.3"

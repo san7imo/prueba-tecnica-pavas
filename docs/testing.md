@@ -74,7 +74,9 @@ Transaction rollback may isolate ordinary tests. Concurrency tests need committe
 - reverts every migration, confirms the tables are absent and reapplies the stack;
 - removes domain data/reverts migrations and closes the connection in teardown.
 
-The four schema files run sequentially because they intentionally share one migration database. Ordinary HTTP tests remain independent.
+All MySQL integration files run sequentially because they intentionally share one migration database. Ordinary test cases within each HTTP suite remain isolated by deterministic cleanup.
+
+The backend Vitest hook timeout is 30 seconds because every integration file deliberately exercises a six-migration MySQL down/up lifecycle; file parallelism remains disabled so suites cannot mutate the shared schema concurrently.
 
 ## HITO 2 Client/Bike HTTP suite
 
@@ -142,7 +144,13 @@ The terminal race captures SQL evidence of two independent transactions and two 
 
 ## Critical future suites
 
-Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: authentication and token-family reuse, RBAC, audit contents/order/pagination and ADMIN user management. The Phase 1 backend client, bike, order, item/total and complete state-transition risks already point to concrete integration evidence above.
+Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: RBAC, audit contents/order/pagination and ADMIN user management. Phase 1 risks and HITO 7 authentication now point to concrete integration evidence.
+
+## HITO 7 authentication suite
+
+`tests/auth.integration.test.js` applies all six migrations to guarded MySQL and covers bcrypt storage/cost/comparison, normalized ADMIN and MECANICO login, generic failures, safe payloads, access claims, `/me`, missing/malformed/expired/wrong-signature/stale-user/inactive-user access, HttpOnly cookie properties, digest-only persistence, refresh expiry/invalidity, rotation links, family-scoped replay revocation, independent families, idempotent logout, login HTTP 429 and idempotent ADMIN seed behavior.
+
+The concurrent-refresh test sends two requests with the same token through separate transactions. The token-row `FOR UPDATE` lock permits exactly one rotation; the waiter detects the committed replacement, revokes that family and leaves zero active descendants. This intentionally conservative outcome treats simultaneous second use as possible theft.
 
 Passing existing tests alone is insufficient at release: each traceability row and HITO 12 matrix entry must point to a concrete passing test.
 

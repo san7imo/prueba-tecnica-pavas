@@ -15,7 +15,14 @@ import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
 import { initializeModels } from '../src/models/index.js';
 
-const DOMAIN_TABLES = ['clients', 'bikes', 'work_orders', 'work_order_items'];
+const DOMAIN_TABLES = [
+  'clients',
+  'bikes',
+  'work_orders',
+  'work_order_items',
+  'users',
+  'refresh_tokens',
+];
 
 let sequelize;
 let migrator;
@@ -35,6 +42,8 @@ const cleanDomainData = async () => {
   await models.WorkOrder.destroy({ where: {}, force: true });
   await models.Bike.destroy({ where: {}, force: true });
   await models.Client.destroy({ where: {}, force: true });
+  await models.RefreshToken.destroy({ where: {}, force: true });
+  await models.User.destroy({ where: {}, force: true });
 };
 
 const createClient = () =>
@@ -88,7 +97,7 @@ describe.sequential('Phase 1 persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(4);
+    expect(applied).toHaveLength(6);
     models = initializeModels(sequelize);
   });
 
@@ -107,7 +116,7 @@ describe.sequential('Phase 1 persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(4);
+    expect(await migrator.executed()).toHaveLength(6);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -117,6 +126,9 @@ describe.sequential('Phase 1 persistence schema', () => {
     expect(models.WorkOrder.associations.bike.target).toBe(models.Bike);
     expect(models.WorkOrder.associations.items.target).toBe(models.WorkOrderItem);
     expect(models.WorkOrderItem.associations.workOrder.target).toBe(models.WorkOrder);
+    expect(models.User.associations.refreshTokens.target).toBe(models.RefreshToken);
+    expect(models.RefreshToken.associations.user.target).toBe(models.User);
+    expect(models.RefreshToken.associations.replacement.target).toBe(models.RefreshToken);
 
     const { client, workOrder } = await createWorkOrder();
     await models.WorkOrderItem.create({
@@ -140,6 +152,43 @@ describe.sequential('Phase 1 persistence schema', () => {
     expect(loadedClient.bikes).toHaveLength(1);
     expect(loadedClient.bikes[0].workOrders).toHaveLength(1);
     expect(loadedClient.bikes[0].workOrders[0].items).toHaveLength(1);
+  });
+
+  it('enforces User and RefreshToken identity constraints', async () => {
+    const user = await models.User.create({
+      name: 'Identity Test',
+      email: '  IDENTITY@EXAMPLE.TEST ',
+      passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-123456789',
+      role: 'ADMIN',
+    });
+    expect(user.email).toBe('identity@example.test');
+
+    await expect(
+      models.User.create({
+        name: 'Duplicate',
+        email: 'identity@example.test',
+        passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-987654321',
+        role: 'MECANICO',
+      }),
+    ).rejects.toBeInstanceOf(UniqueConstraintError);
+
+    const token = await models.RefreshToken.create({
+      userId: user.id,
+      familyId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      tokenHash: 'a'.repeat(64),
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const replacement = await models.RefreshToken.create({
+      userId: user.id,
+      familyId: token.familyId,
+      tokenHash: 'b'.repeat(64),
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    token.replacedByTokenId = replacement.id;
+    await token.save();
+
+    expect(token.toJSON()).not.toHaveProperty('tokenHash');
+    expect(user.toJSON()).not.toHaveProperty('passwordHash');
   });
 
   it('normalizes plates and enforces their database uniqueness', async () => {
@@ -304,13 +353,26 @@ describe.sequential('Phase 1 persistence schema', () => {
     ).rejects.toBeInstanceOf(DatabaseError);
   });
 
-  it('reverts every domain table and can reapply the full migration stack', async () => {
+  it('reverts every populated domain table and can reapply the full migration stack', async () => {
+    const user = await models.User.create({
+      name: 'Populated down test',
+      email: 'populated.down@example.test',
+      passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-123456789',
+      role: 'ADMIN',
+    });
+    await models.RefreshToken.create({
+      userId: user.id,
+      familyId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      tokenHash: 'c'.repeat(64),
+      expiresAt: new Date(Date.now() + 60000),
+    });
+
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(4);
+    expect(reverted).toHaveLength(6);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(4);
+    expect(reapplied).toHaveLength(6);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-  });
+  }, 30000);
 });

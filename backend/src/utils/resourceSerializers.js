@@ -11,6 +11,17 @@ export const serializeClient = (resource) => {
   };
 };
 
+export const serializeUser = (resource) => {
+  const user = plain(resource);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    active: Boolean(user.active),
+  };
+};
+
 export const serializeBike = (resource) => {
   const bike = plain(resource);
   return {

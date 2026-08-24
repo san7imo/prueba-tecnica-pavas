@@ -2,10 +2,15 @@
 
 ## Current implementation
 
-The API currently exposes the technical health route and Phase 1 Client, Bike and WorkOrder routes through HITO 5. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
+The API exposes the technical health route, complete Phase 1 Client/Bike/WorkOrder routes and the HITO 7 authentication/session routes. HITO 8 will protect business endpoints and add RBAC without changing their resource shapes.
 
 ```text
 GET  /api/health
+
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/auth/me
 
 POST /api/clients
 GET  /api/clients?search=
@@ -23,7 +28,7 @@ POST /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
 ```
 
-History, authentication and user-administration endpoints are not implemented yet.
+History, registration and user-administration endpoints are not implemented yet.
 
 ## General conventions
 
@@ -45,6 +50,46 @@ Standard error:
   }
 }
 ```
+
+## Authentication
+
+### Login
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@example.test", "password": "..." }
+```
+
+Email is trimmed/lowercased. Valid credentials return `200` with `{ data: { user, accessToken } }` and set `pavas_refresh_token` as an HttpOnly cookie scoped to `/api/auth`. The refresh value is never returned in JSON. Unknown email, wrong password and inactive account all return `401 INVALID_CREDENTIALS`; malformed input returns `400 VALIDATION_ERROR`; excess attempts return `429 LOGIN_RATE_LIMITED`.
+
+### Refresh
+
+```http
+POST /api/auth/refresh
+Cookie: pavas_refresh_token=...
+```
+
+No access token is required. Success returns a new `{ data: { user, accessToken } }`, sets a rotated refresh cookie, revokes the predecessor and retains its family. Missing, invalid, expired, revoked or replayed tokens return `401 INVALID_REFRESH_TOKEN`. Replay of a rotated token revokes that family only.
+
+### Logout
+
+```http
+POST /api/auth/logout
+Cookie: pavas_refresh_token=...
+```
+
+Returns `200 { data: { loggedOut: true } }`, revokes the current token when found and clears the cookie. Missing, invalid or already-revoked cookies remain a safe, idempotent success.
+
+### Current user
+
+```http
+GET /api/auth/me
+Authorization: Bearer <accessToken>
+```
+
+Returns `id`, `name`, `email`, `role` and `active`. The middleware verifies the JWT then reloads the active user from MySQL. Missing credentials return `401 AUTHENTICATION_REQUIRED`; malformed/expired/stale tokens return `401 INVALID_ACCESS_TOKEN`. No password/hash field is serialized.
 
 Validation error:
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. HITO 5 implements the Phase 1 WorkOrder state machine over the existing creation, read, item and total behavior. Authorization and audit history remain assigned to Phase 2 milestones.
+These rules are the approved domain contract. Phase 1 behavior and HITO 7 authentication are implemented. Authorization and audit history remain assigned to later Phase 2 milestones.
 
 ## Work-order state machine
 
@@ -125,3 +125,6 @@ All business endpoints require authentication in Phase 2. UI hiding is not an au
 - Access JWTs are short-lived.
 - Refresh tokens are HttpOnly, persisted only as digests, rotated and revocable.
 - Reuse of a rotated token revokes its active token family and returns 401.
+- Each login creates an independent family; replay or logout never revokes other login families.
+- `/auth/me` reloads the user, so inactive users lose access immediately rather than only when the access JWT expires.
+- Refresh rotation is serialized with a row lock; a concurrent second use is treated as replay and leaves no active compromised descendant.

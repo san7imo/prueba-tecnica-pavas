@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository now includes the complete Phase 1 product through HITO 6: Client/Bike operations, WorkOrder creation/read/filtering, transactional item totals, concurrency-safe state transitions and the three required operational React screens. Authentication, authorization and audit history remain assigned to Phase 2 milestones.
+The repository includes the complete Phase 1 product and HITO 7 backend authentication: Client/Bike/WorkOrder workflows, the operational React screens, users, short-lived access JWTs and rotating refresh sessions. Authorization, user administration, audit history and Phase 2 frontend work remain assigned to later milestones.
 
 ## Features
 
-Implemented through HITO 6:
+Implemented through HITO 7:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -37,8 +37,14 @@ Implemented through HITO 6:
 - focused frontend behavior tests for the critical Phase 1 workflows;
 - guarded MySQL integration tests for the persistence and HTTP layers;
 - Postman folders for the complete Phase 1 Client, Bike and WorkOrder API.
+- User and hashed RefreshToken persistence with reversible migrations;
+- env-driven idempotent initial ADMIN seed;
+- generic bcrypt login, `/auth/me` and DB-backed inactive-user enforcement;
+- short-lived access JWTs and HttpOnly refresh cookies;
+- transactional refresh rotation, replacement links, family replay detection and session-scoped logout;
+- login-specific rate limiting plus MySQL replay/concurrency tests.
 
-Phase 2 capabilities remain pending for later approved milestones.
+Phase 2 RBAC, user administration, audit and frontend authentication remain pending.
 
 ## Assessment Scope
 
@@ -117,7 +123,7 @@ The API health endpoint is `http://localhost:3000/api/health`; Vite defaults to 
 
 ## Environment Variables
 
-Root `.env` configures the local MySQL container. `backend/.env` configures the API and future authentication settings. `frontend/.env` configures the API base URL; `/api` uses the Vite development proxy and a deployed environment may provide an absolute API URL. Only `.env.example` files belong in Git.
+Root `.env` configures local MySQL. `backend/.env` configures the API, separate access/refresh secrets, bcrypt, cookie, login limiter and ADMIN seed. `frontend/.env` configures the API base URL. Only `.env.example` files belong in Git; production secrets must be random, distinct and at least 32 characters.
 
 See the comments in each example file. Test integration suites must use `DB_NAME_TEST`, never the development or production database.
 
@@ -134,7 +140,14 @@ Sequelize `sync({ alter: true })` is not an accepted schema strategy.
 
 ## Seed / Demo Accounts
 
-No users or demo accounts exist yet. The initial ADMIN seed belongs to HITO 7.
+After migrations, define `ADMIN_SEED_NAME`, `ADMIN_SEED_EMAIL` and a password of at least 12 characters, then run:
+
+```bash
+cd backend
+npm run db:seed:admin
+```
+
+The command normalizes email, hashes the password and is idempotent for an existing ADMIN email. It never prints the password. No credential is committed.
 
 ## Execution
 
@@ -162,11 +175,11 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Implemented endpoints are `GET /api/health`, create/list/detail routes for clients, bikes and work orders, transactional item creation/deletion and validated status updates. Work-order listing supports status/plate filters and pagination. Payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md); Phase 2 endpoints remain explicitly planned.
+Implemented endpoints include health, Phase 1 resources/status/items and `POST /api/auth/login|refresh|logout` plus `GET /api/auth/me`. Payloads, cookies and errors are documented in [docs/api.md](docs/api.md). Registration and user APIs remain pending.
 
 ## Authentication
 
-Not implemented yet. Phase 2 will add short-lived access JWTs and rotating HttpOnly refresh-token cookies with family-based reuse detection.
+Login issues a 15-minute-by-default access JWT and a longer refresh JWT in an HttpOnly cookie. Refresh tokens are stored only by SHA-256 digest, rotate transactionally and use family-scoped replay detection. `/auth/me` verifies the access token and reloads the active user. See [docs/security.md](docs/security.md) and ADR-002.
 
 ## Role Permissions
 
@@ -183,13 +196,14 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, Client/Bike behavior, WorkOrder reads/items/totals and HITO 5 state-machine transaction/concurrency behavior. Frontend tests exercise list filters/pagination, creation and quick registration, detail/items/status operations, error/empty/loading states and decimal presentation. The strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1 plus HITO 7 schema, seed, login/access, rotation, replay, logout and refresh concurrency. Frontend tests remain the Phase 1 gate. See [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
 - Never commit `.env` files or real credentials.
 - Do not log passwords, tokens, cookies, hashes or secrets.
-- Authentication, authorization, Helmet, restricted CORS and rate limiting are Phase 2 work and are not claimed as active yet.
+- Authentication and login rate limiting are active. Authorization, Helmet and restricted CORS remain explicitly deferred.
+- Raw refresh tokens exist only in HttpOnly cookies; password hashes and token digests never appear in API payloads.
 
 ## Documentation
 
@@ -199,17 +213,19 @@ Backend tests require the dedicated MySQL test database and verify the Phase 1 s
 - [Business rules](docs/business-rules.md)
 - [Testing strategy](docs/testing.md)
 - [Requirements traceability](docs/requirements-traceability.md)
+- [Security](docs/security.md)
 - [ADR-001](docs/decisions/ADR-001-modular-monolith.md)
+- [ADR-002](docs/decisions/ADR-002-refresh-token-rotation.md)
 - [ADR-003](docs/decisions/ADR-003-work-order-state-machine.md)
 - [ADR-004](docs/decisions/ADR-004-server-side-order-total.md)
 
 ## Architectural Decisions
 
-Accepted decisions are stored under `docs/decisions/`. ADR-001 defines the modular monolith, ADR-003 records the implemented state machine and ADR-004 records the server-side total strategy. ADR-002 remains tied to refresh-token implementation.
+Accepted decisions are stored under `docs/decisions/`. ADR-002 records the implemented persisted refresh-token rotation and family replay response.
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the complete Phase 1 Client, Bike and WorkOrder API used by the HITO 6 frontend, including item totals and status-transition examples. It deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) for HITO 7 Auth plus the complete Phase 1 API. Login captures `accessToken`; Postman manages the HttpOnly cookie. No real credentials are included. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
@@ -223,13 +239,13 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 
 ## Known Limitations
 
-Authentication, authorization, user administration and audit history are intentionally absent until their approved Phase 2 milestones. Status notes are accepted but intentionally not persisted until audit history is implemented. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
+Authorization, registration, user administration, business-route protection, audit history and Phase 2 frontend authentication remain intentionally absent. Status notes are not persisted until HITO 9. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 6 — Phase 1 Frontend completed locally.** Phase 1 is ready for review once the completion-gate evidence reported for this milestone is accepted.
+**HITO 7 — Authentication and Refresh Tokens implemented locally.** Awaiting milestone review; no HITO 8 work is included.
 
 ## Roadmap
 

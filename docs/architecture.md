@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules, HITO 3 added WorkOrder creation/list/detail, HITO 4 added transactional item totals, HITO 5 added concurrency-safe status transitions and HITO 6 completes the Phase 1 React interface. Phase 2 security/audit controls remain unimplemented.
+This document defines the target architecture. HITO 1–6 implement the complete Phase 1 persistence, API and React interface. HITO 7 adds User/RefreshToken persistence, authentication and refresh-session lifecycle. Authorization, audit and frontend authentication remain assigned to later Phase 2 milestones.
 
 ## Architectural Style
 
@@ -19,7 +19,7 @@ Route
      ↓
 Validation Middleware
      ↓
-Authentication / Authorization (Phase 2)
+Authentication (HITO 7) / Authorization (HITO 8)
      ↓
 Controller
      ↓
@@ -32,7 +32,7 @@ Sequelize
 MySQL
 ```
 
-Authentication and authorization are shown to freeze the target flow but will not be implemented before Phase 2.
+Authentication is active for `/api/auth/me`; authorization and business-route protection remain deliberately deferred to HITO 8.
 
 ## Backend responsibilities
 
@@ -79,6 +79,8 @@ HITO 5 status changes reuse the same WorkOrder row-lock query. The service start
 ## Database and migrations
 
 MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. HITO 1 implements deterministic ESM migrations through Umzug/`SequelizeMeta`; the application does not use `sequelize.sync` as a schema strategy.
+
+HITO 7 extends the stack to six migrations with User and RefreshToken. Auth request flow remains layered: Route → Validator → Controller → AuthService → User/RefreshToken repositories → Sequelize. Controllers only set/clear cookies and serialize service results; cryptography and transactional lifecycle rules remain in service/utilities.
 
 Development and integration tests use separate databases. See [testing.md](testing.md).
 
@@ -139,9 +141,9 @@ Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results 
 
 ## Security architecture
 
-The final security boundary lives on the backend. UI visibility is never authorization. Phase 2 adds bcrypt, signed short-lived access JWTs, rotating hashed refresh tokens in HttpOnly cookies, token-family replay response, restricted CORS, Helmet, request limits and login rate limiting.
+The security boundary lives on the backend. HITO 7 implements bcrypt, short-lived signed access JWTs, database-checked active users, hashed rotating refresh tokens in HttpOnly cookies, family-scoped replay response and a login-specific rate limiter. Refresh rotation locks the presented token row in a transaction; replay revocation commits before the public 401 response. See ADR-002 and [security.md](security.md).
 
-HITO 0 only documents this target and prevents committed environment files; it does not claim these controls as active.
+UI visibility is never authorization. Business-route authentication/RBAC is HITO 8; restricted CORS, Helmet and the global production hardening review remain HITO 11.
 
 ## Error handling
 

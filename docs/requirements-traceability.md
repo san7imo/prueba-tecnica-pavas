@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 backend and frontend requirements through HITO 6 are marked Done. Phase 2 requirements remain pending.
+All mandatory Phase 1 requirements and the approved HITO 7 authentication/session requirements are Done. RBAC, user administration, audit and Phase 2 frontend requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -57,15 +57,15 @@ All mandatory Phase 1 backend and frontend requirements through HITO 6 are marke
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Empty panels, submit locks, terminal state and responsive CSS system | Required views | Empty/retry/double-submit/terminal tests | Done |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Backend/frontend source, Sequelize migrations and current root README | Repository delivery | Clean migration, boot, build and E2E verification | Done |
 | P1-DOC-002 | Postman collection | Project contract | Complete Phase 1 Client/Bike/Work Orders/Items/Status collection | Phase 1 API | Collection structure review + E2E API smoke | Done |
-| P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
-| P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
-| P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |
+| P2-DATA-001 | User model with unique email, role and active | 2 | User model + `202608240005-create-users.js` | Auth APIs | Schema/auth integration tests | Done |
+| P2-DATA-002 | Refresh tokens stored only as digests | Project option | RefreshToken model/migration + SHA-256 lookup | Refresh/logout | Persistence inspection test | Done |
+| P2-AUTH-001 | Initial ADMIN seed | 2 | Idempotent env-driven `seedInitialAdmin` | Login | Seed/hash/idempotency test | Done |
 | P2-AUTH-002 | ADMIN-only user registration | 2 | Planned auth/RBAC HITO 8 | `POST /api/auth/register` | ADMIN success, MECANICO 403 | Pending |
-| P2-AUTH-003 | Generic login with bcrypt cost >=10 and signed JWT | 2 | Planned AuthService HITO 7 | `POST /api/auth/login` | Success/invalid/inactive tests | Pending |
-| P2-AUTH-004 | Authenticated current profile, safe payload | 2 | Planned AuthService HITO 7 | `GET /api/auth/me` | 401/safe profile tests | Pending |
-| P2-AUTH-005 | Refresh rotation via HttpOnly cookie | Project option | Planned AuthService HITO 7 | `POST /api/auth/refresh` | Rotation/expiry tests | Pending |
-| P2-AUTH-006 | Logout revokes refresh and clears cookie | Project option | Planned AuthService HITO 7 | `POST /api/auth/logout` | Logout revocation test | Pending |
-| P2-AUTH-007 | Rotated-token reuse revokes active family | Project contract | Planned family model/service HITO 7 | Refresh endpoint | Replay/family revocation test | Pending |
+| P2-AUTH-003 | Generic login with bcrypt cost >=10 and signed JWT | 2 | AuthService + login validator/controller | `POST /api/auth/login` | Success/normalized/invalid/inactive tests | Done |
+| P2-AUTH-004 | Authenticated current profile, safe payload | 2 | `authenticate` + DB active-user lookup | `GET /api/auth/me` | Bearer matrix + safe profile tests | Done |
+| P2-AUTH-005 | Refresh rotation via HttpOnly cookie | Project option | Transactional AuthService rotation | `POST /api/auth/refresh` | Cookie/rotation/expiry/concurrency tests | Done |
+| P2-AUTH-006 | Logout revokes refresh and clears cookie | Project option | Current-token transactional revocation | `POST /api/auth/logout` | Logout/idempotency/session-scope test | Done |
+| P2-AUTH-007 | Rotated-token reuse revokes active family | Project contract | Family tracking + replay revocation | Refresh endpoint | Replay/independent-family/concurrency tests | Done |
 | P2-RBAC-001 | All business endpoints require authentication | 2 | Planned middleware HITO 8 | All business endpoints | Missing token 401 tests | Pending |
 | P2-RBAC-002 | Wrong role returns 403 | 2 | Planned authorize middleware | Restricted endpoints | Role boundary tests | Pending |
 | P2-RBAC-003 | MECANICO may add items and move to three states | 2 | Planned service authorization | Items/status | Allowed action tests | Pending |
@@ -73,7 +73,7 @@ All mandatory Phase 1 backend and frontend requirements through HITO 6 are marke
 | P2-USER-001 | ADMIN lists users | 2 | Planned UserService HITO 8 | `GET /api/users` | ADMIN/MECANICO tests | Pending |
 | P2-USER-002 | ADMIN changes user role | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/role` | Update/validation tests | Pending |
 | P2-USER-003 | ADMIN activates/deactivates users | 2 | Planned UserService HITO 8 | `PATCH /api/users/:id/active` | Update/inactive-login tests | Pending |
-| P2-USER-004 | Password/hash never returned | 2 | Safe model/service serialization | Auth/users APIs | Payload assertions | Pending |
+| P2-USER-004 | Password/hash never returned | 2 | Safe User model + explicit auth serializers/attributes | Auth APIs | Deep JSON payload/model assertions | Done |
 | P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Planned migration/model HITO 9 | History endpoint | Schema/content tests | Pending |
 | P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | Planned creation transaction HITO 9 | Create/history | Initial audit test | Pending |
 | P2-AUDIT-003 | Every valid change, including cancel, creates one row | 2 | Planned transition transaction | Status/history | Exact row-count tests | Pending |
@@ -87,9 +87,9 @@ All mandatory Phase 1 backend and frontend requirements through HITO 6 are marke
 | P2-FE-003 | ADMIN user list/create/role/active UI | 2 | Planned HITO 10 | `/admin/users` | User-management UI tests | Pending |
 | P2-FE-004 | Role-aware work-order actions | 2 | Planned HITO 10 | `/orders/:id` | MECANICO UI tests | Pending |
 | P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Planned HITO 10 | `/orders/:id` | Timeline rendering test | Pending |
-| P2-SEC-001 | Login rate limiting | 2 | Planned HITO 11 | `POST /api/auth/login` | 429 security test | Pending |
+| P2-SEC-001 | Login rate limiting | 2 | Dedicated configurable login limiter | `POST /api/auth/login` | Stable 429 endpoint test | Done |
 | P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | Planned HITO 11 | API boundary | Security configuration tests | Pending |
-| P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | Planned HITO 11 | Auth startup/cookies | Environment/cookie tests | Pending |
+| P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | HttpOnly/path/SameSite/Secure cookie + startup validator | Auth startup/cookies | Cookie and configuration tests | Done |
 | P2-SEC-004 | No stack, SQL, JWT or secret leakage | Project contract | Planned error hardening | Error responses/logs | Sanitization tests | Pending |
 
 ## Maintenance rule

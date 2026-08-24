@@ -2,13 +2,25 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "Complete Phase 1 Client, Bike and Work Order API requests.",
+    "description": "HITO 7 Auth plus complete Phase 1 Client, Bike and Work Order API requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@example.test"
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
     },
     {
       "key": "clientId",
@@ -36,6 +48,118 @@
     }
   ],
   "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Authenticates the seeded ADMIN. Postman stores the HttpOnly refresh cookie in its cookie jar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data.user).not.to.have.property('passwordHash');",
+                  "pm.collectionVariables.set('accessToken', body.data.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Returns the active user represented by the current access token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().data).not.to.have.property('passwordHash');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/refresh",
+            "description": "Uses and rotates the HttpOnly refresh cookie maintained by Postman's cookie jar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.data.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Revokes the current refresh session and clears its cookie."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().data.loggedOut).to.eql(true);",
+                  "pm.collectionVariables.unset('accessToken');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Clients",
       "item": [
