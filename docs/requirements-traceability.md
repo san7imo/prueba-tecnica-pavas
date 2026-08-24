@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-Phase 1 persistence requirements completed in HITO 1 are marked Done. API, workflow, frontend and all Phase 2 requirements remain pending.
+Phase 1 persistence requirements completed in HITO 1 and Client/Bike API requirements completed in HITO 2 are marked Done. Work-order workflow, frontend and all Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -20,18 +20,18 @@ Phase 1 persistence requirements completed in HITO 1 are marked Done. API, workf
 | P0-DOC-003 | API/error conventions documented | Foundation | `docs/api.md` | `/api` | Documentation review | Foundation |
 | P1-DATA-001 | Client entity and Client 1:N Bike | 1 | Client model/migration + association | N/A | `schema.integration.test.js` | Done |
 | P1-DATA-002 | Bike entity with valid Client FK | 1 | Bike model/migration + `fk_bikes_client` | N/A | FK + association tests | Done |
-| P1-DATA-003 | Plate normalization infrastructure and DB uniqueness | 1 | Bike setter + `uq_bikes_plate` | Persistence layer | Normalized duplicate test | Done |
+| P1-DATA-003 | Plate normalization and two-level uniqueness | 1 | Bike validator/service/setter + `uq_bikes_plate` | `POST /api/bikes` | HTTP normalized duplicate matrix + schema constraint test | Done |
 | P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | WorkOrder model/migration + `fk_work_orders_bike` | Persistence layer | FK + association tests | Done |
 | P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Item model/migration + `fk_work_order_items_order` | Persistence layer | FK + association tests | Done |
 | P1-DATA-006 | Item count greater than zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for zero/negative | Done |
 | P1-DATA-007 | Item unit value greater/equal zero | 1 | Model validator + MySQL CHECK | Persistence layer | DB rejection for negative | Done |
 | P1-DATA-008 | Money uses DECIMAL | 1 | `DECIMAL(15,2)` migration/models | Persistence layer | Reloaded exact DECIMAL test | Done |
-| P1-BE-001 | Create client | 1 | Planned client module HITO 2 | `POST /api/clients` | Client create integration test | Pending |
-| P1-BE-002 | Search clients | 1 | Planned client module HITO 2 | `GET /api/clients?search=` | Client search integration test | Pending |
-| P1-BE-003 | Get client detail | 1 | Planned client module HITO 2 | `GET /api/clients/:id` | Client detail integration test | Pending |
-| P1-BE-004 | Create bike | 1 | Planned bike module HITO 2 | `POST /api/bikes` | Bike create integration test | Pending |
-| P1-BE-005 | Search bikes by plate | 1 | Planned bike module HITO 2 | `GET /api/bikes?plate=` | Plate search integration test | Pending |
-| P1-BE-006 | Get bike detail | 1 | Planned bike module HITO 2 | `GET /api/bikes/:id` | Bike detail integration test | Pending |
+| P1-BE-001 | Create client | 1 | Client route/validator/controller/service/repository | `POST /api/clients` | `clientsBikes.integration.test.js` create/validation tests | Done |
+| P1-BE-002 | Search clients | 1 | Parameterized Client repository partial search | `GET /api/clients?search=` | Unfiltered + name/phone/email/empty tests | Done |
+| P1-BE-003 | Get client detail | 1 | Client service not-found boundary + repository | `GET /api/clients/:id` | Existing/404/invalid-ID tests | Done |
+| P1-BE-004 | Create bike | 1 | Bike layered module, client validation and conflict mapping | `POST /api/bikes` | Create/optional/validation/FK/duplicate tests | Done |
+| P1-BE-005 | Search bikes by plate | 1 | Normalized partial Bike repository search | `GET /api/bikes?plate=` | Unfiltered/lowercase/spaces/empty tests | Done |
+| P1-BE-006 | Get bike detail | 1 | Bike detail repository include + service not-found | `GET /api/bikes/:id` | Existing/client/404/invalid-ID tests | Done |
 | P1-BE-007 | Create order only for valid bike, initial `RECIBIDA` | 1 | Planned WorkOrder service HITO 3 | `POST /api/work-orders` | Valid/invalid bike tests | Pending |
 | P1-BE-008 | List/filter orders by status and plate | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Status/plate filter tests | Pending |
 | P1-BE-009 | Paginate work orders with metadata | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Pagination test | Pending |
@@ -56,7 +56,7 @@ Phase 1 persistence requirements completed in HITO 1 are marked Done. API, workf
 | P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
-| P1-DOC-002 | Postman collection | Project contract | Planned after endpoints | `postman/` | Postman smoke test | Pending |
+| P1-DOC-002 | Postman collection | Project contract | Client/Bike folders started in HITO 2; remaining modules pending | Implemented API subset | Manual/Postman smoke at final gate | Pending |
 | P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |

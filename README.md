@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The current repository contains foundation code only. Clients, bikes, work orders, authentication, authorization and audit history are not implemented yet.
+The repository currently includes the Phase 1 database domain plus the complete Client and Bike APIs from HITO 2. Work orders, operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
 
 ## Features
 
-Implemented in HITO 0:
+Implemented through HITO 2:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -16,9 +16,15 @@ Implemented in HITO 0:
 - environment-driven Sequelize connection factory;
 - MySQL development service through Docker Compose;
 - lint and smoke-test tooling;
-- architecture, data model, business-rule and traceability documentation.
+- architecture, data model, business-rule and traceability documentation;
+- deterministic Phase 1 migrations and Sequelize models for Client, Bike, WorkOrder and WorkOrderItem;
+- Client create/search/detail API;
+- Bike create/normalized-plate search/detail API with nested client data;
+- application and database enforcement of unique normalized plates;
+- guarded MySQL integration tests for the persistence and HTTP layers;
+- initial Postman folders for the six implemented business requests.
 
-Business features remain pending for later approved milestones.
+Work-order behavior and Phase 2 capabilities remain pending for later approved milestones.
 
 ## Assessment Scope
 
@@ -46,11 +52,11 @@ See [docs/architecture.md](docs/architecture.md).
 
 ```text
 .
-├── backend/      Express application and future migrations
+├── backend/      Express application, migrations and Client/Bike modules
 ├── frontend/     React application
 ├── docs/         Architecture and engineering documentation
 ├── docker/       Local MySQL initialization files
-├── postman/      Postman delivery placeholder
+├── postman/      Postman collection for implemented endpoints
 ├── AGENTS.md     Engineering execution contract
 └── docker-compose.yml
 ```
@@ -114,7 +120,7 @@ Sequelize `sync({ alter: true })` is not an accepted schema strategy.
 
 ## Seed / Demo Accounts
 
-No users or demo accounts exist in HITO 0. The initial ADMIN seed belongs to HITO 7.
+No users or demo accounts exist yet. The initial ADMIN seed belongs to HITO 7.
 
 ## Execution
 
@@ -142,19 +148,19 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Only `GET /api/health` is implemented. Planned business endpoints are documented as future contracts in [docs/api.md](docs/api.md); they must not be treated as available yet.
+Implemented endpoints are `GET /api/health` plus create/list/detail routes for clients and bikes. Their payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md). Work-order and Phase 2 endpoints shown there remain explicitly planned.
 
 ## Authentication
 
-Not implemented in HITO 0. Phase 2 will add short-lived access JWTs and rotating HttpOnly refresh-token cookies with family-based reuse detection.
+Not implemented yet. Phase 2 will add short-lived access JWTs and rotating HttpOnly refresh-token cookies with family-based reuse detection.
 
 ## Role Permissions
 
-Not enforced in HITO 0. The approved ADMIN/MECANICO policy is documented in [docs/business-rules.md](docs/business-rules.md).
+Not enforced yet. The approved ADMIN/MECANICO policy is documented in [docs/business-rules.md](docs/business-rules.md).
 
 ## Business Rules
 
-The canonical state machine, totals, roles and audit behavior are documented in [docs/business-rules.md](docs/business-rules.md). They are specifications only at this milestone.
+The canonical state machine, totals, roles and audit behavior are documented in [docs/business-rules.md](docs/business-rules.md) for later milestones. Plate normalization is already active in the HITO 2 Bike API.
 
 ## Testing
 
@@ -163,7 +169,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints and migration reversal. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints, migration reversal and all HITO 2 HTTP behavior. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -187,24 +193,24 @@ Accepted decisions are stored under `docs/decisions/`. Only ADR-001 is created i
 
 ## Postman
 
-The collection will be created after the endpoints exist. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the implemented Client and Bike flows. It will grow milestone by milestone and deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
 - MySQL 8 is the target database.
-- Dates will be persisted consistently and exposed in ISO 8601 form; the exact migration types are finalized in HITO 1.
+- Dates use the migration-defined MySQL `DATETIME(3)` representation and will be exposed in ISO 8601 form by their future APIs.
 - Plate normalization is technical only; no Colombian plate regex will be invented.
 - The first audit record will be `NULL -> RECIBIDA` once audit history is introduced in Phase 2.
 
 ## Known Limitations
 
-HITO 0 deliberately has no domain schema, business endpoints, authentication or operational screens.
+Work-order endpoints, domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 1 — Phase 1 Database Domain completed.** Persistence verification passes. HITO 2 must not begin without explicit approval.
+**HITO 2 — Clients and Bikes API completed locally.** The milestone is ready for review and commit after its verification evidence is accepted. HITO 3 has not started.
 
 ## Roadmap
 

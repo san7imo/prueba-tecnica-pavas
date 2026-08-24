@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1 adds the four Phase 1 persistence models, associations, migrations and schema integration tests to the HITO 0 foundation. Business services/endpoints and Phase 2 security controls described here remain unimplemented.
+This document defines the target architecture. HITO 1 added the four Phase 1 persistence models; HITO 2 adds the Client and Bike HTTP modules through the complete layered request flow. Work-order services/endpoints and Phase 2 security controls described here remain unimplemented.
 
 ## Architectural Style
 
@@ -117,7 +117,7 @@ HITO 0 only documents this target and prevents committed environment files; it d
 
 ## Error handling
 
-The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. Domain error subclasses are introduced only when their milestones need them. Unexpected failures return a generic 500 response.
+The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. HITO 2 adds explicit validation, not-found and conflict errors while preserving the same centralized public envelope. Unexpected failures return a generic 500 response.
 
 ## Operational assumptions
 

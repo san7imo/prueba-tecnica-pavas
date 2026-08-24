@@ -122,7 +122,7 @@ Relationship: one client owns many bikes.
 | `client_id` | BIGINT UNSIGNED | FK `fk_bikes_client` to `clients.id`, required |
 | timestamps | DATETIME(3) | required |
 
-The model setter trims, uppercases and removes whitespace before persistence. The database unique index remains authoritative. HITO 2 will map duplicate persistence errors to the API contract; no country-specific regex is assumed.
+The model setter and HITO 2 service trim, uppercase and remove whitespace before persistence/search. The service performs an application conflict check and maps a residual Sequelize/MySQL uniqueness error to HTTP 409; the database unique index remains authoritative. No country-specific regex is assumed.
 
 ## WorkOrder
 

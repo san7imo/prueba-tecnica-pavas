@@ -1,0 +1,206 @@
+{
+  "info": {
+    "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
+    "name": "PAVAS Moto Workshop",
+    "description": "Implemented HITO 2 Client and Bike API requests only.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "bikeId",
+      "value": ""
+    },
+    {
+      "key": "bikePlate",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Juan Perez\",\n  \"phone\": \"3001234567\",\n  \"email\": \"juan.hito2@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients",
+            "description": "Creates a client and stores its id as clientId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.have.property('id');",
+                  "pm.collectionVariables.set('clientId', body.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients?search=Juan",
+            "description": "Searches partially across name, phone and email."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().data).to.be.an('array');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients/{{clientId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(String(pm.response.json().data.id)).to.eql(String(pm.collectionVariables.get('clientId')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bikes",
+      "item": [
+        {
+          "name": "Create bike",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.variables.set('requestPlate', `h2 ${Date.now().toString().slice(-8)}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.have.property('client');",
+                  "pm.collectionVariables.set('bikeId', body.data.id);",
+                  "pm.collectionVariables.set('bikePlate', body.data.plate);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"{{requestPlate}}\",\n  \"brand\": \"Yamaha\",\n  \"model\": \"FZ 2.0\",\n  \"cylinder\": 149,\n  \"clientId\": {{clientId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/bikes",
+            "description": "Creates a bike for clientId and stores its id and normalized plate."
+          }
+        },
+        {
+          "name": "Search bikes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/bikes?plate={{bikePlate}}",
+            "description": "Searches by a normalized partial plate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().data).to.be.an('array').that.is.not.empty;"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get bike",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/bikes/{{bikeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(data).to.have.property('client');",
+                  "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('bikeId')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

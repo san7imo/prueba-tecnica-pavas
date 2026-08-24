@@ -1,11 +1,11 @@
 # Testing Strategy
 
-## HITO 0 baseline
+## Foundation baseline
 
 - Backend: Vitest + Supertest verifies `GET /api/health` and the technical 404 envelope.
 - Frontend: Vitest + React Testing Library renders `App` in a router context.
 - ESLint runs independently in each package.
-- No domain behavior is tested or claimed before implementation.
+- Domain behavior is added only by its approved milestone suites.
 
 Vitest is used for both packages to keep foundation tooling small and consistent. Supertest still exercises Express without binding a network port. This is a tooling choice, not an architectural change; later suites remain integration-focused.
 
@@ -55,6 +55,23 @@ Transaction rollback may isolate ordinary tests. Concurrency tests need committe
 - removes domain data/reverts migrations and closes the connection in teardown.
 
 The four schema files run sequentially because they intentionally share one migration database. Ordinary HTTP tests remain independent.
+
+## HITO 2 Client/Bike HTTP suite
+
+`tests/clientsBikes.integration.test.js` exercises the real Express request flow through MySQL. Its suite uses the guarded test database, reverts/applies all migrations before execution, removes dependent domain rows before each test, reverts migrations afterward and closes its Sequelize pool.
+
+Coverage includes:
+
+- valid client creation, optional email, normalization, field whitelisting and required/invalid inputs;
+- unfiltered client listing and partial name/phone/email searches, including empty results;
+- client detail, not-found and invalid-ID behavior;
+- valid bike creation, optional cylinder, nested client serialization and plate normalization;
+- exact/case/space-equivalent duplicate plates returning 409;
+- missing client and required bike-field behavior;
+- unfiltered bike listing and normalized partial plate searches;
+- bike detail, not-found and invalid-ID behavior.
+
+The existing direct persistence test continues to prove that MySQL's `uq_bikes_plate` constraint is the final barrier independently of the application pre-check.
 
 ## Critical future suites
 
