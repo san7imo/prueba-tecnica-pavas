@@ -23,6 +23,10 @@ export const bikeRepository = {
     });
   },
 
+  existsById(id) {
+    return models.Bike.findByPk(id, { attributes: ['id'] });
+  },
+
   findByPlate(plate) {
     return models.Bike.findOne({
       attributes: ['id'],

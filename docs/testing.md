@@ -73,6 +73,22 @@ Coverage includes:
 
 The existing direct persistence test continues to prove that MySQL's `uq_bikes_plate` constraint is the final barrier independently of the application pre-check.
 
+## HITO 3 WorkOrder HTTP suite
+
+`tests/workOrders.integration.test.js` uses the same guarded migration lifecycle and deterministic cleanup. It covers:
+
+- valid creation and missing Bike handling;
+- required fields, explicit/invalid/omitted entry dates and server-time default;
+- enforced `RECIBIDA`/`0.00` defaults and mass-assignment protection;
+- empty and populated lists with eager Bike/Client data;
+- contractual status and normalized exact/lowercase/spaced/partial plate filters;
+- combined filters, pagination validation/metadata and stable `entryDate DESC, id DESC` ordering;
+- detail graphs containing Bike, Client and existing WorkOrderItem rows;
+- validation and not-found errors;
+- a query-hook assertion proving list query count remains two (count + page data) for multiple orders, with no per-row reads.
+
+Tests may insert non-`RECIBIDA` states and items directly as deterministic read fixtures. No status-transition or item-management HTTP behavior is implemented by HITO 3.
+
 ## Critical future suites
 
 Later milestones must cover the full matrix in `AGENTS.md`: authentication and token-family reuse, RBAC, clients/bikes, order filters and pagination, item totals, all state transitions, concurrent mutations, audit contents/order/pagination and ADMIN user management.

@@ -138,6 +138,8 @@ The model setter and HITO 2 service trim, uppercase and remove whitespace before
 
 Relationships: one bike has many work orders; one work order has many items and history records.
 
+HITO 3 creates orders with explicit backend-controlled `RECIBIDA` and `0.00` values even though database defaults provide a second safety layer. The API accepts an unambiguous ISO 8601 entry date or uses current server time when omitted.
+
 ## WorkOrderItem
 
 | Column | Conceptual type | Rules |

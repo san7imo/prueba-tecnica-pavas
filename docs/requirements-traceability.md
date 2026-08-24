@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-Phase 1 persistence requirements completed in HITO 1 and Client/Bike API requirements completed in HITO 2 are marked Done. Work-order workflow, frontend and all Phase 2 requirements remain pending.
+Phase 1 persistence, Client/Bike APIs and HITO 3 WorkOrder create/list/detail requirements are marked Done. Item mutation, status workflow, frontend and all Phase 2 requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -32,10 +32,10 @@ Phase 1 persistence requirements completed in HITO 1 and Client/Bike API require
 | P1-BE-004 | Create bike | 1 | Bike layered module, client validation and conflict mapping | `POST /api/bikes` | Create/optional/validation/FK/duplicate tests | Done |
 | P1-BE-005 | Search bikes by plate | 1 | Normalized partial Bike repository search | `GET /api/bikes?plate=` | Unfiltered/lowercase/spaces/empty tests | Done |
 | P1-BE-006 | Get bike detail | 1 | Bike detail repository include + service not-found | `GET /api/bikes/:id` | Existing/client/404/invalid-ID tests | Done |
-| P1-BE-007 | Create order only for valid bike, initial `RECIBIDA` | 1 | Planned WorkOrder service HITO 3 | `POST /api/work-orders` | Valid/invalid bike tests | Pending |
-| P1-BE-008 | List/filter orders by status and plate | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Status/plate filter tests | Pending |
-| P1-BE-009 | Paginate work orders with metadata | 1 | Planned repository HITO 3 | `GET /api/work-orders` | Pagination test | Pending |
-| P1-BE-010 | Get order with client, bike and items | 1 | Planned repository HITO 3 | `GET /api/work-orders/:id` | Detail integration test | Pending |
+| P1-BE-007 | Create order only for valid bike, initial `RECIBIDA` | 1 | WorkOrder validator/service/repository with backend defaults | `POST /api/work-orders` | `workOrders.integration.test.js` create/default/FK tests | Done |
+| P1-BE-008 | List/filter orders by status and plate | 1 | WorkOrder eager query with validated combined filters | `GET /api/work-orders` | Status/plate/combined/N+1 tests | Done |
+| P1-BE-009 | Paginate work orders with metadata | 1 | `findAndCountAll`, max 100, stable entry-date/ID order | `GET /api/work-orders` | Defaults/invalid/page/meta/order tests | Done |
+| P1-BE-010 | Get order with client, bike and items | 1 | WorkOrder detail include graph + explicit serializer | `GET /api/work-orders/:id` | Detail graph/404/invalid-ID tests | Done |
 | P1-BE-011 | Add MANO_OBRA/REPUESTO item | 1 | Planned transactional service HITO 4 | `POST /api/work-orders/:id/items` | Item creation test | Pending |
 | P1-BE-012 | Delete work-order item | 1 | Planned transactional service HITO 4 | `DELETE /api/work-orders/items/:itemId` | Item deletion test | Pending |
 | P1-BE-013 | Backend calculates total after add/delete | 1 | Planned transactional total service | Order detail/items | Add/delete total tests | Pending |
@@ -56,7 +56,7 @@ Phase 1 persistence requirements completed in HITO 1 and Client/Bike API require
 | P1-UX-001 | Clear errors and loading indicators | 1 | Planned shared UI states | Required views | Loading/error tests | Pending |
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Planned shared UI states | Required views | Critical interaction tests | Pending |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Foundation README; final HITO 14 | Repository delivery | Clean setup verification | Foundation |
-| P1-DOC-002 | Postman collection | Project contract | Client/Bike folders started in HITO 2; remaining modules pending | Implemented API subset | Manual/Postman smoke at final gate | Pending |
+| P1-DOC-002 | Postman collection | Project contract | Client/Bike/Work Orders folders through HITO 3; remaining modules pending | Implemented API subset | Manual/Postman smoke at final gate | Pending |
 | P2-DATA-001 | User model with unique email, role and active | 2 | Planned migration/model HITO 7 | Auth/users APIs | Auth/user tests | Pending |
 | P2-DATA-002 | Refresh tokens stored only as digests | Project option | Planned migration/service HITO 7 | Refresh/logout | Persistence inspection test | Pending |
 | P2-AUTH-001 | Initial ADMIN seed | 2 | Planned seeder HITO 7 | Login | Seed/login verification | Pending |

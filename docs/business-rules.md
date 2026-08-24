@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. HITO 1 enforces persistence-level enums, item bounds and defaults only. Transition orchestration, total recalculation and authorization remain assigned to their later milestones.
+These rules are the approved domain contract. HITO 3 implements WorkOrder creation/read rules over the HITO 1 persistence constraints. Transition orchestration, item total recalculation and authorization remain assigned to their later milestones.
 
 ## Work-order state machine
 
@@ -36,6 +36,14 @@ Canonical transition map:
 - ADMIN rollback from `ENTREGADA` is optional in the source and deliberately excluded.
 - Invalid transitions return HTTP 400 with a clear application error.
 - A same-state request is rejected and never creates history.
+
+## Work-order creation
+
+- A valid existing Bike is required; the database FK remains the final integrity barrier.
+- `entryDate` accepts an unambiguous ISO 8601 date-time with timezone and defaults to current server time when omitted.
+- Every HITO 3 order starts in `RECIBIDA` with persisted total `0.00`.
+- Client-supplied `status`, `total`, IDs and timestamps are ignored through explicit whitelists.
+- Initial `NULL -> RECIBIDA` history remains deferred until authenticated audit history is implemented in HITO 9.
 
 ## Audit history
 

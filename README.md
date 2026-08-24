@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository currently includes the Phase 1 database domain plus the complete Client and Bike APIs from HITO 2. Work orders, operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
+The repository currently includes the Phase 1 database domain, Client/Bike APIs and HITO 3 WorkOrder creation, filtering, pagination and detail. Item mutation, status transitions, operational frontend screens, authentication, authorization and audit history remain assigned to later milestones.
 
 ## Features
 
-Implemented through HITO 2:
+Implemented through HITO 3:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -21,10 +21,13 @@ Implemented through HITO 2:
 - Client create/search/detail API;
 - Bike create/normalized-plate search/detail API with nested client data;
 - application and database enforcement of unique normalized plates;
+- WorkOrder creation with validated Bike, server-controlled `RECIBIDA`/`0.00` defaults and optional server entry time;
+- paginated WorkOrder listing with status/normalized-plate filters and eager Bike/Client data;
+- WorkOrder detail with Bike, Client and read-only existing items;
 - guarded MySQL integration tests for the persistence and HTTP layers;
-- initial Postman folders for the six implemented business requests.
+- Postman folders for all Client, Bike and HITO 3 WorkOrder requests.
 
-Work-order behavior and Phase 2 capabilities remain pending for later approved milestones.
+Item, state-transition and Phase 2 capabilities remain pending for later approved milestones.
 
 ## Assessment Scope
 
@@ -52,7 +55,7 @@ See [docs/architecture.md](docs/architecture.md).
 
 ```text
 .
-├── backend/      Express application, migrations and Client/Bike modules
+├── backend/      Express application, migrations and Phase 1 API modules
 ├── frontend/     React application
 ├── docs/         Architecture and engineering documentation
 ├── docker/       Local MySQL initialization files
@@ -148,7 +151,7 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Implemented endpoints are `GET /api/health` plus create/list/detail routes for clients and bikes. Their payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md). Work-order and Phase 2 endpoints shown there remain explicitly planned.
+Implemented endpoints are `GET /api/health` plus create/list/detail routes for clients, bikes and work orders. Work-order listing supports status/plate filters and pagination. Payloads, normalization and error contracts are documented in [docs/api.md](docs/api.md); items, status changes and Phase 2 endpoints remain explicitly planned.
 
 ## Authentication
 
@@ -169,7 +172,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints, migration reversal and all HITO 2 HTTP behavior. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify the Phase 1 schema, constraints, migration reversal, Client/Bike behavior and the HITO 3 WorkOrder matrix. The frontend verifies that `App` renders. The isolated strategy is documented in [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -193,24 +196,26 @@ Accepted decisions are stored under `docs/decisions/`. Only ADR-001 is created i
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the implemented Client and Bike flows. It will grow milestone by milestone and deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
+Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) to exercise the Client, Bike and WorkOrder flows implemented through HITO 3. It grows milestone by milestone and deliberately excludes endpoints that do not exist. See [postman/README.md](postman/README.md).
 
 ## Assumptions
 
 - MySQL 8 is the target database.
 - Dates use the migration-defined MySQL `DATETIME(3)` representation and will be exposed in ISO 8601 form by their future APIs.
 - Plate normalization is technical only; no Colombian plate regex will be invented.
+- WorkOrder `entryDate` requires an ISO 8601 date-time with timezone when provided and otherwise uses current server time.
+- WorkOrder pages default to 1/20, reject page sizes above 100 and use `entryDate DESC, id DESC`.
 - The first audit record will be `NULL -> RECIBIDA` once audit history is introduced in Phase 2.
 
 ## Known Limitations
 
-Work-order endpoints, domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones.
+Work-order item/status endpoints, domain frontend screens, authentication, authorization and audit history are intentionally absent until their approved milestones.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 2 — Clients and Bikes API completed locally.** The milestone is ready for review and commit after its verification evidence is accepted. HITO 3 has not started.
+**HITO 3 — Work Orders API completed locally.** The milestone is ready for review and commit after its verification evidence is accepted. HITO 4 has not started.
 
 ## Roadmap
 

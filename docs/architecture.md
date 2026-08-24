@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1 added the four Phase 1 persistence models; HITO 2 adds the Client and Bike HTTP modules through the complete layered request flow. Work-order services/endpoints and Phase 2 security controls described here remain unimplemented.
+This document defines the target architecture. HITO 1 added the Phase 1 persistence models, HITO 2 added Client/Bike HTTP modules and HITO 3 adds WorkOrder creation/list/detail through the complete layered request flow. Item mutation, status transitions and Phase 2 security controls remain unimplemented.
 
 ## Architectural Style
 
@@ -102,12 +102,18 @@ React Router owns navigation and future role guards. Axios provides a single HTT
 
 - JSON only under `/api`.
 - Single resources use `{ "data": {} }`.
-- Collections use `{ "data": [], "meta": {} }`.
+- Paginated collections use `{ "data": [], "meta": {} }`; unpaginated Client/Bike collections use `{ "data": [] }`.
 - Errors use `{ "error": { "code": "...", "message": "..." } }`.
 - Validation may add safe `details`.
 - History uses deterministic `created_at DESC, id DESC` ordering.
 
 See [api.md](api.md).
+
+## Work-order query strategy
+
+The HITO 3 list uses one paginated Sequelize `findAndCountAll` operation with eager `WorkOrder → Bike → Client` includes. `distinct: true` keeps the order count correct if the include graph later introduces row multiplication. It executes one count and one data query, independent of result count, and therefore avoids N+1 reads.
+
+Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results use `entry_date DESC, id DESC`: entry date is the operational date shown by the assessment UI, while ID provides deterministic ordering for equal timestamps.
 
 ## Security architecture
 

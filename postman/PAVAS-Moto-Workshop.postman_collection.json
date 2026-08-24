@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "Implemented HITO 2 Client and Bike API requests only.",
+    "description": "Implemented Client, Bike and HITO 3 Work Order API requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -20,6 +20,10 @@
     },
     {
       "key": "bikePlate",
+      "value": ""
+    },
+    {
+      "key": "workOrderId",
       "value": ""
     }
   ],
@@ -194,6 +198,118 @@
                   "const data = pm.response.json().data;",
                   "pm.expect(data).to.have.property('client');",
                   "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('bikeId')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Work Orders",
+      "item": [
+        {
+          "name": "Create Work Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bikeId\": {{bikeId}},\n  \"entryDate\": \"2026-08-24T15:00:00.000Z\",\n  \"faultDescription\": \"Abnormal transmission noise\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/work-orders",
+            "description": "Creates a RECIBIDA work order with total 0.00 and stores its id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(data.status).to.eql('RECIBIDA');",
+                  "pm.expect(data.total).to.eql('0.00');",
+                  "pm.collectionVariables.set('workOrderId', data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Work Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders",
+            "description": "Returns the default first page with metadata."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.be.an('array');",
+                  "pm.expect(body.meta.page).to.eql(1);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter Work Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders?status=RECIBIDA&plate={{bikePlate}}&page=1&pageSize=20",
+            "description": "Combines contractual status and normalized partial-plate filters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.be.an('array').that.is.not.empty;",
+                  "pm.expect(body.data[0].status).to.eql('RECIBIDA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Work Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}",
+            "description": "Returns the work order with Bike, Client and items."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('workOrderId')));",
+                  "pm.expect(data).to.have.property('items');"
                 ],
                 "type": "text/javascript"
               }

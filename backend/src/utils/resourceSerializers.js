@@ -23,3 +23,35 @@ export const serializeBike = (resource) => {
     client: bike.client ? serializeClient(bike.client) : undefined,
   };
 };
+
+export const serializeWorkOrderItem = (resource) => {
+  const item = plain(resource);
+  return {
+    id: item.id,
+    type: item.type,
+    description: item.description,
+    count: item.count,
+    unitValue: item.unitValue,
+  };
+};
+
+export const serializeWorkOrder = (resource) => {
+  const workOrder = plain(resource);
+  const serialized = {
+    id: workOrder.id,
+    bikeId: workOrder.bikeId,
+    entryDate: new Date(workOrder.entryDate).toISOString(),
+    faultDescription: workOrder.faultDescription,
+    status: workOrder.status,
+    total: workOrder.total,
+  };
+
+  if (workOrder.bike) {
+    serialized.bike = serializeBike(workOrder.bike);
+  }
+  if (Array.isArray(workOrder.items)) {
+    serialized.items = workOrder.items.map(serializeWorkOrderItem);
+  }
+
+  return serialized;
+};

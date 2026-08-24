@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-HITO 2 exposes the technical health route and the six Phase 1 Client/Bike routes. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
+The API currently exposes the technical health route and Phase 1 Client, Bike and HITO 3 WorkOrder routes. Authentication is intentionally absent until Phase 2; the later RBAC milestone will protect every business endpoint without changing these resource shapes.
 
 ```text
 GET  /api/health
@@ -14,9 +14,13 @@ GET  /api/clients/:id
 POST /api/bikes
 GET  /api/bikes?plate=
 GET  /api/bikes/:id
+
+POST /api/work-orders
+GET  /api/work-orders?status=&plate=&page=&pageSize=
+GET  /api/work-orders/:id
 ```
 
-Work-order, item, status, history, authentication and user-administration endpoints are not implemented yet.
+Work-order item mutation, status changes, history, authentication and user-administration endpoints are not implemented yet.
 
 ## General conventions
 
@@ -157,6 +161,101 @@ Success: `200 OK` with `id`, `plate`, `brand`, `model`, nullable `cylinder`, `cl
 
 Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 
+## Work Orders
+
+### Create work order
+
+```http
+POST /api/work-orders
+Content-Type: application/json
+```
+
+Authentication/roles: none in HITO 3.
+
+```json
+{
+  "bikeId": 1,
+  "entryDate": "2026-08-24T15:00:00.000Z",
+  "faultDescription": "Abnormal transmission noise"
+}
+```
+
+`bikeId` and a non-empty `faultDescription` are required. `entryDate` is optional: when present it must be a valid ISO 8601 date-time with an explicit `Z`/UTC offset and up to millisecond precision; when omitted, the backend uses current server time. The related Bike must exist.
+
+The backend always persists `status=RECIBIDA` and `total=0.00`. Input fields such as `id`, `status`, `total`, `createdAt` and `updatedAt` are ignored by explicit validator/service/repository whitelists.
+
+Success: `201 Created` with the order, nested Bike/Client and `items: []`.
+
+Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
+
+### List/filter work orders
+
+```http
+GET /api/work-orders?status=RECIBIDA&plate=abc%20123&page=1&pageSize=20
+```
+
+Authentication/roles: none in HITO 3.
+
+All parameters are optional:
+
+- `status`: one exact canonical value from `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
+- `plate`: partial search after trim, uppercase and whitespace removal;
+- `page`: positive integer, default 1;
+- `pageSize`: integer from 1 to 100, default 20.
+
+Status and plate filters combine with AND. Results include Bike and Client in one eager query graph and are ordered by `entryDate DESC, id DESC`. Items are omitted from list rows and exposed only by detail.
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "bikeId": 1,
+      "entryDate": "2026-08-24T15:00:00.000Z",
+      "faultDescription": "Abnormal transmission noise",
+      "status": "RECIBIDA",
+      "total": "0.00",
+      "bike": {
+        "id": 1,
+        "plate": "ABC123",
+        "brand": "Yamaha",
+        "model": "FZ 2.0",
+        "cylinder": "149",
+        "clientId": 1,
+        "client": {
+          "id": 1,
+          "name": "Juan Perez",
+          "phone": "3001234567",
+          "email": "juan@example.com"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+For an empty result, `totalItems` and `totalPages` are both zero.
+
+Errors: `400 VALIDATION_ERROR` for invalid status/pagination/filter values.
+
+### Get work-order detail
+
+```http
+GET /api/work-orders/:id
+```
+
+Authentication/roles: none in HITO 3. `id` must be a positive integer.
+
+Success: `200 OK` with the public order, full Bike/Client graph and an `items` array. Existing items are read-only in this milestone and expose `id`, `type`, `description`, `count` and `unitValue`.
+
+Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_NOT_FOUND`.
+
 ## HTTP status mapping
 
 | Condition | Status |
@@ -164,7 +263,7 @@ Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 | Successful read | 200 |
 | Successful creation | 201 |
 | Validation failure | 400 |
-| Missing Client/Bike | 404 |
+| Missing Client/Bike/WorkOrder | 404 |
 | Duplicate normalized plate | 409 |
 | Unknown route | 404 |
 | Unexpected failure | 500 |
@@ -174,9 +273,6 @@ Errors: `400 VALIDATION_ERROR`, `404 BIKE_NOT_FOUND`.
 The remaining contract is intentionally deferred to its approved milestones:
 
 ```text
-POST   /api/work-orders
-GET    /api/work-orders?status=&plate=&page=&pageSize=
-GET    /api/work-orders/:id
 PATCH  /api/work-orders/:id/status
 POST   /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
