@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product plus HITO 7 sessions, HITO 8 backend RBAC/user administration and HITO 9 work-order status audit history. Phase 2 frontend work remains assigned to HITO 10.
+The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history and the authenticated role-aware frontend delivered through HITO 10.
 
 ## Features
 
-Implemented through HITO 9:
+Implemented through HITO 10:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -54,8 +54,15 @@ Implemented through HITO 9:
 - authenticated ADMIN/MECANICO history API with safe actor serialization;
 - deterministic indexed history pagination (`createdAt DESC, id DESC`) tested with 150 tied events;
 - competing same-target transitions proven to create exactly one audit row.
-
-Phase 2 frontend authentication, user management and history visualization remain pending.
+- `/login` with generic credential errors, bootstrap loading and authenticated-user redirect;
+- memory-only access-token session state restored by the HttpOnly refresh cookie;
+- centralized Bearer injection, one controlled retry and single-flight refresh coordination for concurrent 401 responses;
+- protected business routes plus an ADMIN-only `/admin/users` guard;
+- identity/role navigation and logout that always clears local state;
+- ADMIN user list/create/role/active controls with deactivation and self-mutation confirmations;
+- role-aware order detail actions that hide delete/deliver/cancel controls from MECANICO;
+- optional transition notes and a paginated newest-first status-history timeline;
+- focused frontend tests for session restoration, guards, five concurrent 401 responses, users, permissions and history states.
 
 ## Assessment Scope
 
@@ -190,7 +197,7 @@ Implemented endpoints include health, protected Phase 1 resources/status/items, 
 
 ## Authentication
 
-Login issues a 15-minute-by-default access JWT and a longer refresh JWT in an HttpOnly cookie. Refresh tokens are stored only by SHA-256 digest, rotate transactionally and use family-scoped replay detection. `/auth/me` verifies the access token and reloads the active user. See [docs/security.md](docs/security.md) and ADR-002.
+Login issues a 15-minute-by-default access JWT and a longer refresh JWT in an HttpOnly cookie. The frontend keeps the access token only in memory, restores sessions with `/auth/refresh`, coordinates concurrent refresh attempts and clears state on logout/session expiry. Refresh tokens are stored by the backend only as SHA-256 digests, rotate transactionally and use family-scoped replay detection. See [docs/security.md](docs/security.md) and ADR-002.
 
 ## Role Permissions
 
@@ -207,7 +214,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, immediate token invalidation and concurrency. Frontend tests remain the Phase 1 gate until HITO 10. See [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -215,6 +222,7 @@ Backend tests require the dedicated MySQL test database and verify Phase 1, sess
 - Do not log passwords, tokens, cookies, hashes or secrets.
 - Authentication, backend authorization and login rate limiting are active. Helmet and restricted CORS remain explicitly deferred to HITO 11.
 - Raw refresh tokens exist only in HttpOnly cookies; password hashes and token digests never appear in API payloads.
+- Access tokens are held only in JavaScript memory; neither token type is written to `localStorage` or `sessionStorage`.
 
 ## Documentation
 
@@ -251,13 +259,13 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 
 ## Known Limitations
 
-Phase 2 frontend authentication/role guards and the history timeline remain intentionally absent until HITO 10. The existing Phase 1 React UI has no login/session context and therefore cannot call the protected business API end-to-end. Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
+Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. The UI confirms self-demotion and refreshes the session immediately; self-deactivation logs the user out. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 9 — Work-Order Status Audit History implemented locally.** Awaiting milestone review; no HITO 10 work is included.
+**HITO 10 — Phase 2 Frontend implemented locally.** Awaiting milestone review; no HITO 11 work is included.
 
 ## Roadmap
 

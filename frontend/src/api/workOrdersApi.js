@@ -33,11 +33,18 @@ export const workOrdersApi = {
     return response.data.data;
   },
 
-  async updateStatus(id, toStatus) {
+  async updateStatus(id, toStatus, note = null) {
     const response = await httpClient.patch(`/work-orders/${id}/status`, {
       toStatus,
-      note: null,
+      note: note?.trim() || null,
     });
     return response.data.data;
+  },
+
+  async getHistory(id, { page = 1, pageSize = 20 } = {}) {
+    const response = await httpClient.get(`/work-orders/${id}/history`, {
+      params: { page, pageSize },
+    });
+    return response.data;
   },
 };

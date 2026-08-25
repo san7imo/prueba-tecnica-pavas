@@ -1,12 +1,12 @@
-export const Pagination = ({ meta, onPageChange, disabled }) => {
+export const Pagination = ({ meta, onPageChange, disabled, label = 'órdenes', singularLabel = 'orden', ariaLabel = 'Paginación de órdenes' }) => {
   const hasPrevious = meta.page > 1;
   const hasNext = meta.page < meta.totalPages;
 
   return (
-    <nav className="pagination" aria-label="Paginación de órdenes">
+    <nav className="pagination" aria-label={ariaLabel}>
       <p>
         Página <strong>{meta.page}</strong> de <strong>{Math.max(meta.totalPages, 1)}</strong>
-        <span> · {meta.totalItems} {meta.totalItems === 1 ? 'orden' : 'órdenes'}</span>
+        <span> · {meta.totalItems} {meta.totalItems === 1 ? singularLabel : label}</span>
       </p>
       <div>
         <button

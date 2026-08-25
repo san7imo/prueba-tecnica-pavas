@@ -6,8 +6,10 @@ import { ErrorState } from '../components/ui/ErrorState.jsx';
 import { LoadingState } from '../components/ui/LoadingState.jsx';
 import { StatusBadge } from '../components/ui/StatusBadge.jsx';
 import { ItemForm } from '../features/workOrders/components/ItemForm.jsx';
+import { HistoryTimeline } from '../features/workOrders/components/HistoryTimeline.jsx';
 import { ItemsTable } from '../features/workOrders/components/ItemsTable.jsx';
 import { StatusActions } from '../features/workOrders/components/StatusActions.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 import { getApiError, getApiErrorMessage } from '../utils/apiError.js';
 import { formatCurrency, formatDateTime } from '../utils/formatters.js';
 
@@ -16,6 +18,7 @@ const EMPTY_ITEM = { type: 'MANO_OBRA', description: '', count: '1.00', unitValu
 export const WorkOrderDetailPage = () => {
   const { id } = useParams();
   const location = useLocation();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -26,6 +29,7 @@ export const WorkOrderDetailPage = () => {
   const [deletingItemId, setDeletingItemId] = useState(null);
   const [statusLoading, setStatusLoading] = useState('');
   const [statusError, setStatusError] = useState('');
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   const loadOrder = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -89,7 +93,7 @@ export const WorkOrderDetailPage = () => {
     }
   };
 
-  const transitionStatus = async (target) => {
+  const transitionStatus = async (target, note) => {
     const needsConfirmation = target === 'CANCELADA' || target === 'ENTREGADA';
     if (needsConfirmation) {
       const action = target === 'CANCELADA' ? 'cancelar' : 'marcar como entregada';
@@ -99,8 +103,9 @@ export const WorkOrderDetailPage = () => {
     setStatusError('');
     setNotice('');
     try {
-      await workOrdersApi.updateStatus(id, target);
+      await workOrdersApi.updateStatus(id, target, note);
       await loadOrder({ silent: true });
+      setHistoryVersion((current) => current + 1);
       setNotice(`Estado actualizado a ${target}.`);
     } catch (error) {
       setStatusError(getApiErrorMessage(error, 'No fue posible actualizar el estado.'));
@@ -158,9 +163,10 @@ export const WorkOrderDetailPage = () => {
             <div className="section-heading section-heading--compact">
               <div><h2 id="items-title">Ítems de la orden</h2><p>{order.items.length} {order.items.length === 1 ? 'registro' : 'registros'}</p></div>
             </div>
-            <ItemsTable items={order.items} onDelete={deleteItem} deletingItemId={deletingItemId} />
+            <ItemsTable items={order.items} onDelete={deleteItem} deletingItemId={deletingItemId} canDelete={user.role === 'ADMIN'} />
             <ItemForm form={itemForm} onChange={changeItem} onSubmit={addItem} loading={itemLoading} error={itemError} />
           </section>
+          <HistoryTimeline key={`${id}-${historyVersion}`} workOrderId={id} />
         </div>
 
         <aside className="detail-aside" aria-label="Información relacionada">
@@ -180,7 +186,7 @@ export const WorkOrderDetailPage = () => {
               <div><dt>Correo</dt><dd>{order.bike.client.email || 'No registrado'}</dd></div>
             </dl>
           </section>
-          <StatusActions status={order.status} onTransition={transitionStatus} loadingStatus={statusLoading} error={statusError} />
+          <StatusActions key={`${order.status}-${historyVersion}`} status={order.status} role={user.role} onTransition={transitionStatus} loadingStatus={statusLoading} error={statusError} />
         </aside>
       </div>
     </section>

@@ -1,12 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
+import { useAuth } from '../hooks/useAuth.js';
+
 const navigation = [
   { to: '/orders', label: 'Órdenes', end: true },
   { to: '/orders/new', label: 'Nueva orden', end: false },
 ];
 
-export const AppShell = () => (
-  <div className="app-shell">
+export const AppShell = () => {
+  const { user, logout } = useAuth();
+
+  return (
+    <div className="app-shell">
     <a className="skip-link" href="#main-content">Saltar al contenido principal</a>
     <aside className="sidebar">
       <NavLink className="brand" to="/orders" aria-label="PAVAS Taller, inicio">
@@ -29,9 +34,22 @@ export const AppShell = () => (
             {item.label}
           </NavLink>
         ))}
+        {user.role === 'ADMIN' ? (
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+          >
+            <span className="nav-link__dot" aria-hidden="true" />
+            Usuarios
+          </NavLink>
+        ) : null}
       </nav>
 
-      <p className="sidebar__phase">Operación · Fase 1</p>
+      <div className="sidebar-session">
+        <p className="sidebar__phase">Operación · Fase 2</p>
+        <span><strong>{user.name}</strong><small>{user.role === 'ADMIN' ? 'Administrador' : 'Mecánico'}</small></span>
+        <button className="button sidebar-session__logout" type="button" onClick={logout}>Cerrar sesión</button>
+      </div>
     </aside>
 
     <div className="app-content">
@@ -46,5 +64,6 @@ export const AppShell = () => (
         <Outlet />
       </main>
     </div>
-  </div>
-);
+    </div>
+  );
+};

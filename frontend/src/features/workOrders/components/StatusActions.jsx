@@ -1,7 +1,15 @@
+import { useState } from 'react';
+
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TRANSITIONS } from '../../../constants/workOrders.js';
 
-export const StatusActions = ({ status, onTransition, loadingStatus, error }) => {
-  const allowed = WORK_ORDER_TRANSITIONS[status] ?? [];
+const MECHANIC_TARGETS = new Set(['DIAGNOSTICO', 'EN_PROCESO', 'LISTA']);
+
+export const StatusActions = ({ status, role, onTransition, loadingStatus, error }) => {
+  const [note, setNote] = useState('');
+  const workflowAllowed = WORK_ORDER_TRANSITIONS[status] ?? [];
+  const allowed = role === 'ADMIN'
+    ? workflowAllowed
+    : workflowAllowed.filter((target) => MECHANIC_TARGETS.has(target));
 
   return (
     <section className="panel status-panel" aria-labelledby="status-actions-title">
@@ -11,24 +19,34 @@ export const StatusActions = ({ status, onTransition, loadingStatus, error }) =>
           <p>Solo se muestran transiciones válidas desde el estado actual.</p>
         </div>
       </div>
-      {allowed.length === 0 ? (
+      {workflowAllowed.length === 0 ? (
         <p className="terminal-message" role="status">
           Esta orden está en un estado final y no admite más cambios.
         </p>
+      ) : allowed.length === 0 ? (
+        <p className="terminal-message" role="status">
+          Tu rol no permite las transiciones disponibles desde este estado.
+        </p>
       ) : (
-        <div className="status-actions">
-          {allowed.map((target) => (
-            <button
-              key={target}
-              className={`button ${target === 'CANCELADA' ? 'button--danger-ghost' : 'button--primary'}`}
-              type="button"
-              onClick={() => onTransition(target)}
-              disabled={Boolean(loadingStatus)}
-            >
-              {loadingStatus === target ? 'Actualizando…' : target === 'CANCELADA' ? 'Cancelar orden' : `Mover a ${WORK_ORDER_STATUS_LABELS[target]}`}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="field status-note">
+            <label htmlFor="transition-note">Nota <span>(opcional)</span></label>
+            <textarea id="transition-note" value={note} maxLength="1000" onChange={(event) => setNote(event.target.value)} disabled={Boolean(loadingStatus)} placeholder="Contexto para el historial de la orden" />
+          </div>
+          <div className="status-actions">
+            {allowed.map((target) => (
+              <button
+                key={target}
+                className={`button ${target === 'CANCELADA' ? 'button--danger-ghost' : 'button--primary'}`}
+                type="button"
+                onClick={() => onTransition(target, note)}
+                disabled={Boolean(loadingStatus)}
+              >
+                {loadingStatus === target ? 'Actualizando…' : target === 'CANCELADA' ? 'Cancelar orden' : `Mover a ${WORK_ORDER_STATUS_LABELS[target]}`}
+              </button>
+            ))}
+          </div>
+        </>
       )}
       {error ? <p className="inline-alert inline-alert--error" role="alert">{error}</p> : null}
     </section>

@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1, HITO 7 authentication, HITO 8 backend RBAC/user administration and HITO 9 audit-history requirements are Done. Phase 2 frontend requirements remain pending.
+All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user administration, audit-history and frontend requirements through HITO 10 are Done. HITO 11 security hardening remains pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -82,11 +82,11 @@ All mandatory Phase 1, HITO 7 authentication, HITO 8 backend RBAC/user administr
 | P2-AUDIT-006 | History index includes required source prefix | 2 | `ix_work_order_status_history_order_created_id` | N/A | MySQL `STATISTICS` metadata test | Done |
 | P2-AUDIT-007 | History pagination, max 100 and stable tie order | 2 | Validated bounded `findAndCountAll` query | `GET /api/work-orders/:id/history` | 150-event 100/50/default/validation test | Done |
 | P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded backend query; UI remains HITO 10 | History API | Local 150-row query-plan/performance check | Done |
-| P2-FE-001 | Login and protected/role routes | 2 | Planned HITO 10 | `/login`, protected views | Guard/login tests | Pending |
-| P2-FE-002 | Session restore, renewal and logout | 2 | Planned AuthContext/Axios flow | Application shell | Refresh/recovery UI tests | Pending |
-| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | Planned HITO 10 | `/admin/users` | User-management UI tests | Pending |
-| P2-FE-004 | Role-aware work-order actions | 2 | Planned HITO 10 | `/orders/:id` | MECANICO UI tests | Pending |
-| P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Planned HITO 10 | `/orders/:id` | Timeline rendering test | Pending |
+| P2-FE-001 | Login and protected/role routes | 2 | `LoginPage`, `ProtectedRoute`, `AnonymousOnlyRoute`, `RoleRoute` | `/login`, protected views | `App.test.jsx` login/guard/role matrix | Done |
+| P2-FE-002 | Session restore, renewal and logout | 2 | Memory-only `AuthContext`, session coordinator and Axios interceptors | Application shell | `AuthContext.test.jsx`, `httpClientAuth.test.js` including five concurrent 401s | Done |
+| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | `UsersPage` + narrow users API module | `/admin/users` | `UsersPage.test.jsx` list/create/role/active tests | Done |
+| P2-FE-004 | Role-aware work-order actions | 2 | Role-filtered status/item controls; backend remains authoritative | `/orders/:id` | `WorkOrderDetailPage.test.jsx` ADMIN/MECANICO controls | Done |
+| P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Paginated `HistoryTimeline` with independent UI states | `/orders/:id` | `HistoryTimeline.test.jsx` render/order/pagination/error/empty tests | Done |
 | P2-SEC-001 | Login rate limiting | 2 | Dedicated configurable login limiter | `POST /api/auth/login` | Stable 429 endpoint test | Done |
 | P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | Planned HITO 11 | API boundary | Security configuration tests | Pending |
 | P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | HttpOnly/path/SameSite/Secure cookie + startup validator | Auth startup/cookies | Cookie and configuration tests | Done |

@@ -1,6 +1,6 @@
 import { formatCurrency, multiplyDecimals } from '../../../utils/formatters.js';
 
-export const ItemsTable = ({ items, onDelete, deletingItemId }) => {
+export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete }) => {
   if (items.length === 0) {
     return (
       <div className="items-empty">
@@ -20,7 +20,7 @@ export const ItemsTable = ({ items, onDelete, deletingItemId }) => {
             <th scope="col">Cantidad</th>
             <th scope="col" className="align-right">Valor unitario</th>
             <th scope="col" className="align-right">Subtotal</th>
-            <th scope="col"><span className="visually-hidden">Acciones</span></th>
+            {canDelete ? <th scope="col"><span className="visually-hidden">Acciones</span></th> : null}
           </tr>
         </thead>
         <tbody>
@@ -33,17 +33,19 @@ export const ItemsTable = ({ items, onDelete, deletingItemId }) => {
               <td data-label="Cantidad">{item.count}</td>
               <td data-label="Valor unitario" className="align-right money">{formatCurrency(item.unitValue)}</td>
               <td data-label="Subtotal" className="align-right money">{formatCurrency(multiplyDecimals(item.count, item.unitValue))}</td>
-              <td className="table-action">
-                <button
-                  className="text-button text-button--danger"
-                  type="button"
-                  onClick={() => onDelete(item)}
-                  disabled={deletingItemId === item.id}
-                  aria-label={`Eliminar ${item.description}`}
-                >
-                  {deletingItemId === item.id ? 'Eliminando…' : 'Eliminar'}
-                </button>
-              </td>
+              {canDelete ? (
+                <td className="table-action">
+                  <button
+                    className="text-button text-button--danger"
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    disabled={deletingItemId === item.id}
+                    aria-label={`Eliminar ${item.description}`}
+                  >
+                    {deletingItemId === item.id ? 'Eliminando…' : 'Eliminar'}
+                  </button>
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

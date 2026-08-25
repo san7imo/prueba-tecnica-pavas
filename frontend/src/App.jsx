@@ -1,3 +1,8 @@
+import { AuthProvider } from './context/AuthContext.jsx';
 import { AppRoutes } from './routes/AppRoutes.jsx';
 
-export const App = () => <AppRoutes />;
+export const App = () => (
+  <AuthProvider>
+    <AppRoutes />
+  </AuthProvider>
+);

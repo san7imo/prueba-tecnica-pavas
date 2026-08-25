@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { workOrdersApi } from '../src/api/workOrdersApi.js';
 import { WorkOrderDetailPage } from '../src/pages/WorkOrderDetailPage.jsx';
 import { orderFixture } from './fixtures.js';
+import { adminUser, authValue, mechanicUser, renderWithAuth } from './testUtils.jsx';
 
 vi.mock('../src/api/workOrdersApi.js', () => ({
   workOrdersApi: {
@@ -12,22 +13,27 @@ vi.mock('../src/api/workOrdersApi.js', () => ({
     addItem: vi.fn(),
     deleteItem: vi.fn(),
     updateStatus: vi.fn(),
+    getHistory: vi.fn(),
   },
 }));
 
-const renderPage = () => render(
+const emptyHistory = { data: [], meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } };
+
+const renderPage = (user = adminUser) => renderWithAuth(
   <MemoryRouter initialEntries={['/orders/7']}>
     <Routes>
       <Route path="/orders/:id" element={<WorkOrderDetailPage />} />
       <Route path="/orders" element={<h1>Listado</h1>} />
     </Routes>
   </MemoryRouter>,
+  { auth: authValue(user) },
 );
 
 describe('WorkOrderDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     workOrdersApi.getById.mockResolvedValue(orderFixture);
+    workOrdersApi.getHistory.mockResolvedValue(emptyHistory);
   });
 
   it('shows loading, related data, items, exact subtotals, total and valid actions only', async () => {
@@ -71,9 +77,22 @@ describe('WorkOrderDetailPage', () => {
     renderPage();
     await screen.findByRole('heading', { name: /orden #7/i });
 
+    fireEvent.change(screen.getByLabelText(/nota/i), { target: { value: '  Diagnóstico iniciado  ' } });
     fireEvent.click(screen.getByRole('button', { name: /mover a diagnóstico/i }));
-    await waitFor(() => expect(workOrdersApi.updateStatus).toHaveBeenCalledWith('7', 'DIAGNOSTICO'));
+    await waitFor(() => expect(workOrdersApi.updateStatus).toHaveBeenCalledWith('7', 'DIAGNOSTICO', '  Diagnóstico iniciado  '));
     expect(await screen.findByText(/estado actualizado a DIAGNOSTICO/i)).toBeInTheDocument();
+  });
+
+  it('hides deletion, cancellation and delivery controls from a mechanic', async () => {
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'LISTA' });
+    renderPage(mechanicUser);
+
+    await screen.findByRole('heading', { name: /orden #7/i });
+    expect(screen.queryByRole('button', { name: /eliminar kit de arrastre/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mover a entregada/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/tu rol no permite/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /agregar ítem/i })).toBeInTheDocument();
   });
 
   it('requires confirmation for cancellation and shows backend transition errors', async () => {

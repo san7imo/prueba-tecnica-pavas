@@ -24,6 +24,14 @@ The refresh cookie is `HttpOnly`, scoped to `/api/auth`, uses configured `SameSi
 
 No token, password, hash or secret is intentionally logged. Public auth errors do not include JWT, SQL or persistence details.
 
+## Frontend session boundary
+
+`AuthContext` owns the current safe user and access token. The access token exists only in module/context memory and is never written to browser storage. The raw refresh token remains inaccessible to JavaScript in the backend-issued HttpOnly cookie. On application bootstrap, the provider holds protected rendering in a loading state while `/api/auth/refresh` attempts to restore the session.
+
+The shared business Axios client sends credentials, injects the current Bearer token and may retry a failed request only once. A module-scoped refresh promise coordinates simultaneous 401 responses: all callers await one cookie rotation and then retry with the same new access token. Login, refresh and logout use a separate Axios client without the response interceptor, preventing recursive refresh loops. Failed renewal clears session state and redirects protected views to login with a generic expiry message.
+
+Logout calls the idempotent backend endpoint and clears memory even when the network call fails. In-flight refresh results cannot re-establish a session after an explicit clear/logout. Route guards and hidden role actions improve UX but are not security boundaries; every protected decision remains enforced by the backend.
+
 ## Deferred hardening
 
 HITO 8 adds a reusable `authorize(...roles)` boundary. Business routers execute authentication and role authorization before validators, so unauthenticated/forbidden callers do not receive body, ID or resource validation details. Health, login, refresh and logout remain public; `/me` remains authenticated.
@@ -34,4 +42,4 @@ HITO 9 derives every audit actor from the authenticated request, never from body
 
 Because authentication reloads the user and compares the JWT role on every request, deactivation and role changes invalidate existing access tokens immediately. Self-deactivation and self-role changes are allowed by the contract; last-ADMIN protection is explicitly outside this MVP milestone.
 
-HITO 11 retains the global Helmet/restricted-CORS review, broader security-header checks, dependency remediation and production deployment review. The local frontend currently uses Vite's same-origin `/api` proxy, so no broad CORS policy was introduced in this milestone.
+HITO 11 retains the global Helmet/restricted-CORS review, broader security-header checks, dependency remediation and production deployment review. The local frontend uses Vite's same-origin `/api` proxy, so no broad CORS policy was introduced in HITO 10.

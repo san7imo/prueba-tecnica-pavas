@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1–6 implement Phase 1; HITO 7 adds sessions; HITO 8 adds backend RBAC/user administration; HITO 9 adds the transactional audit ledger. Frontend authentication and history visualization remain assigned to HITO 10.
+This document defines the target architecture. HITO 1–6 implement Phase 1; HITO 7 adds sessions; HITO 8 adds backend RBAC/user administration; HITO 9 adds the transactional audit ledger; HITO 10 adds the authenticated, role-aware frontend and audit visualization.
 
 ## Architectural Style
 
@@ -104,25 +104,29 @@ API clients
 Express API
 ```
 
-Server data is held close to the consuming page or feature. Authentication will use a narrowly scoped context. Forms use local state unless later complexity justifies a small form library. Redux is not part of the initial architecture.
+Server data is held close to the consuming page or feature. Authentication uses a narrowly scoped `AuthContext`; forms use local state. Redux is not part of the architecture.
 
-React Router owns navigation and future role guards. Axios provides a single HTTP client whose refresh behavior will be added during Phase 2.
+React Router owns protected, anonymous-only and ADMIN role guards. Axios uses a business client for Bearer requests and a separate auth client for login/refresh/logout. A shared memory-only session coordinator deduplicates concurrent refresh attempts and limits each 401 request to one retry.
 
-HITO 6 implements this as:
+HITO 10 extends the HITO 6 structure as:
 
 ```text
 src/
-├── api/                    one Axios client + resource modules
+├── api/                    business/auth Axios clients + resource modules
 ├── components/ui/          shared loading, error, empty and status states
 ├── constants/              display labels and transition map
-├── features/workOrders/    focused workflow components and list hook
+├── context/ and hooks/     AuthContext and narrow access hook
+├── features/auth/          memory-only session/refresh coordinator
+├── features/workOrders/    workflow, permissions, history and list hook
 ├── layouts/                application shell
 ├── pages/                  route-level orchestration and local state
-├── routes/                 route table
+├── routes/                 route table and session/role guards
 └── utils/                  safe API errors and exact decimal presentation
 ```
 
 The browser never supplies WorkOrder `status` or `total` during creation. Mutations refetch detail so the persisted backend total and status remain authoritative. Item subtotals are informational and use decimal-string/`BigInt` arithmetic rather than `Number`. The centralized frontend transition map improves the workflow but does not replace backend state validation.
+
+The browser never persists either token in Web Storage. Access JWTs remain in memory; the refresh JWT is an HttpOnly cookie. UI role filtering is presentational defense in depth and never replaces backend authorization.
 
 For local development the Axios base defaults to `/api` and Vite proxies it to port 3000. `VITE_API_BASE_URL` can instead point to a deployed API; cross-origin production policy remains part of the approved security milestone.
 

@@ -3,7 +3,7 @@
 ## Foundation baseline
 
 - Backend: Vitest + Supertest verifies `GET /api/health` and the technical 404 envelope.
-- Frontend: Vitest + React Testing Library verifies the application shell and Phase 1 operational workflows in router contexts.
+- Frontend: Vitest + React Testing Library verifies operational workflows, authenticated routing, session behavior and role-aware UI in router contexts.
 - ESLint runs independently in each package.
 - Domain behavior is added only by its approved milestone suites.
 
@@ -27,7 +27,22 @@ Coverage includes:
 - valid state actions only, cancellation confirmation, terminal states and backend transition errors;
 - API-module envelope/query/status-body contracts.
 
-The suite deliberately does not mock a Phase 2 user, history or authentication boundary. Those modules do not exist in HITO 6.
+These Phase 1 cases remain regression coverage and now supply an explicit test authentication context when a route-level provider is not under test.
+
+## HITO 10 frontend suite
+
+The Phase 2 frontend suite exercises production session and routing behavior without a bypass:
+
+- refresh-based bootstrap loading, successful restoration, anonymous fallback and cleanup after failed logout;
+- login validation, protected-route redirect, authenticated `/login` redirect and ADMIN-only route behavior;
+- in-memory Bearer attachment and a strict one-retry limit;
+- five concurrent 401 failures resolved through exactly one refresh request and five successful retries;
+- ADMIN navigation and user list/create/role/active interactions, including deactivation confirmation and absence of delete controls;
+- MECANICO visibility rules for item deletion, delivery, cancellation and intermediate actions;
+- optional transition note transport plus authoritative order/history refetch;
+- history loading, newest-first rendering, actor/from/to/note/initial-event display, pagination, retry and empty states.
+
+Resource modules are mocked at the network boundary for component tests. The Axios concurrency suite exercises the real interceptors with a deterministic adapter, and application tests mount the real `AuthProvider` and route table.
 
 ## Dedicated integration database
 
@@ -163,7 +178,7 @@ The 2026-08-24 local HITO 9 verification observed **9.40 ms** for the complete a
 
 ## Critical future suites
 
-Later milestones must cover the remaining Phase 2 frontend and security-hardening matrix in `AGENTS.md`. Phase 1, authentication, backend RBAC/user administration and audit history now point to concrete integration evidence.
+Later milestones must cover the remaining security-hardening and final-submission matrix in `AGENTS.md`. Phase 1, authentication, RBAC/user administration, audit history and Phase 2 frontend now point to concrete automated evidence.
 
 ## HITO 7 authentication suite
 

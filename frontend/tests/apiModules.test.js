@@ -39,11 +39,20 @@ describe('feature API modules', () => {
 
   it('keeps the status body compatible with the approved Phase 2 shape', async () => {
     httpClient.patch.mockResolvedValue({ data: { data: { id: 7, status: 'DIAGNOSTICO' } } });
-    await workOrdersApi.updateStatus(7, 'DIAGNOSTICO');
+    await workOrdersApi.updateStatus(7, 'DIAGNOSTICO', '  Inicio de revisión  ');
 
     expect(httpClient.patch).toHaveBeenCalledWith('/work-orders/7/status', {
       toStatus: 'DIAGNOSTICO',
-      note: null,
+      note: 'Inicio de revisión',
+    });
+  });
+
+  it('requests paginated status history newest-first as provided by the API', async () => {
+    httpClient.get.mockResolvedValue({ data: { data: [], meta: { page: 2 } } });
+    await workOrdersApi.getHistory(7, { page: 2, pageSize: 20 });
+
+    expect(httpClient.get).toHaveBeenCalledWith('/work-orders/7/history', {
+      params: { page: 2, pageSize: 20 },
     });
   });
 });
