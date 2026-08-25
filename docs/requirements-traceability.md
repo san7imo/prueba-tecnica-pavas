@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 82 requisitos: 76 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 83 requisitos: 77 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -92,6 +92,7 @@ La tabla contiene 82 requisitos: 76 `Done` y 6 `Foundation`. No existen filas `P
 | P2-SEC-002 | Helmet, CORS restringido, body limit | Contrato | app/CORS/parser | API | security suite | Done |
 | P2-SEC-003 | Cookie y secretos seguros | 2/Contrato | cookie/startup validation | Auth | config/cookie tests | Done |
 | P2-SEC-004 | Sin fuga de stack/SQL/JWT/secreto | Contrato | sanitizador/serializadores | errores/logs | payload seguro/500 | Done |
+| P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento
 

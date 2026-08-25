@@ -5,7 +5,7 @@ Ejecutar antes del tag final. HITO 14 no crea tag.
 - [x] working tree limpio y `git diff --check` sin errores;
 - [x] README y enlaces relativos verificados;
 - [x] documentación orientada al evaluador en español;
-- [x] backend lint y 192 pruebas;
+- [x] backend lint y 199 pruebas;
 - [x] frontend lint, 46 pruebas y build de producción;
 - [x] siete migraciones ejecutadas y cero pendientes;
 - [x] seed ADMIN y primer login comprobados desde copia limpia;

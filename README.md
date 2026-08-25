@@ -203,6 +203,21 @@ El seed normaliza el email, aplica bcrypt y crea un usuario `ADMIN` activo. Es i
 
 Después de levantar ambos procesos, abra `http://localhost:5173` e inicie sesión con el email y la contraseña que configuró localmente.
 
+## Datos de demostración
+
+Después de aplicar las migraciones y crear el ADMIN inicial, puede cargar un conjunto opcional de datos para evaluación visual o desarrollo:
+
+```bash
+cd backend
+npm run db:seed:demo
+```
+
+El comando crea clientes, motocicletas, órdenes, ítems, historiales coherentes y tres usuarios `MECANICO`. Es idempotente: reconoce sus registros por el dominio reservado `@demo.pavas.test`, las placas `DMO###` y el prefijo `[DEMO]`, y no duplica ni elimina datos existentes.
+
+Los mecánicos demo usan los correos `mecanico.demo.01@demo.pavas.test` a `mecanico.demo.03@demo.pavas.test` y la contraseña compartida `DemoMechanic-2026!`.
+
+Este seed requiere un ADMIN activo, es exclusivamente para desarrollo/evaluación y se niega a ejecutarse con `NODE_ENV=production`.
+
 ## URLs locales
 
 | Servicio | URL predeterminada |
@@ -222,10 +237,11 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 |---|---|
 | `npm run dev` | inicia la API con recarga de Node.js |
 | `npm start` | inicia la API sin modo watch |
-| `npm test` | ejecuta 14 suites sobre MySQL de pruebas |
+| `npm test` | ejecuta 15 suites sobre MySQL de pruebas |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 | `npm run db:seed:admin` | crea de forma idempotente el ADMIN inicial |
+| `npm run db:seed:demo` | carga datos opcionales, idempotentes y exclusivos de desarrollo/demo |
 
 ### Frontend
 
@@ -288,7 +304,7 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado al cierre de HITO 14:
 
 ```text
-Backend:        14 suites, 192 pruebas
+Backend:        15 suites, 199 pruebas
 Frontend:       10 suites, 46 pruebas
 Matriz crítica: 103 casos/filas PASS
 Migraciones:    7 ejecutadas, 0 pendientes

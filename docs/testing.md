@@ -7,7 +7,7 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  14 suites, 192 pruebas
+Backend:  15 suites, 199 pruebas
 Frontend: 10 suites, 46 pruebas
 Matriz:   103 filas PASS
 ```
@@ -51,6 +51,8 @@ afterAll: cerrar Sequelize
 ```
 
 Los tests ordinarios pueden usar rollback. Las carreras requieren filas confirmadas y conexiones separadas, por lo que usan limpieza determinista. Los archivos MySQL se ejecutan secuencialmente porque comparten el esquema de integración.
+
+El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration.test.js` lo invoca de forma explícita y comprueba la protección de producción, la necesidad de un ADMIN activo, cantidades deterministas, bcrypt, FKs, estados, totales, historial, idempotencia y preservación de datos ajenos.
 
 ## Suites backend
 
@@ -235,7 +237,7 @@ También se observaron envelopes 401/403/400/404/409/429. Postman se validó com
 
 ### Registro local HITO 13 — 2026-08-24
 
-- backend: 14/14 suites, 192/192 pruebas;
+- backend al cierre de HITO 13: 14/14 suites, 192/192 pruebas;
 - frontend: 10/10 suites, 46/46 pruebas;
 - build: 113 módulos, JS 326.83 kB (102.39 kB gzip);
 - lint de ambos paquetes: pass;
@@ -257,6 +259,14 @@ También se observaron envelopes 401/403/400/404/409/429. Postman se validó com
 - login ADMIN: 200; `GET /api/work-orders` autenticado: 200 con página vacía válida;
 - documento frontend: 200 y título correcto;
 - base, procesos, copia y archivos temporales eliminados al terminar.
+
+### Mejora opcional — seed demo
+
+- backend: 15/15 suites, 199/199 pruebas;
+- dataset esperado: 3 mecánicos, 20 clientes, 30 motocicletas, 96 órdenes, 192 ítems y 296 eventos;
+- distribución: 16 órdenes por cada estado canónico;
+- ejecución bloqueada en producción e idempotencia verificada;
+- la matriz crítica de Fases 1 y 2 permanece en 103 casos PASS; esta suite cubre una facilidad opcional de evaluación.
 
 El contenedor activo exponía MySQL en el puerto host 33306; el flujo documentado usa 3306 por defecto y permite ajustar `DB_PORT`. Como la base temporal no era una de las dos bases creadas originalmente por Compose, se le concedió al usuario local acceso únicamente durante esta comprobación; un Compose desde cero crea y concede `DB_NAME`/`DB_NAME_TEST` mediante su configuración e init script.
 
