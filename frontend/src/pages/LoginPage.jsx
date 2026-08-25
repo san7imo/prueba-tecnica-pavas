@@ -49,22 +49,24 @@ export const LoginPage = () => {
 
         <form className="login-form" onSubmit={submit} noValidate>
           <div className="field">
-            <label htmlFor="login-email">Correo</label>
+            <label htmlFor="login-email">Correo<span className="required-mark" aria-hidden="true"> *</span></label>
             <input
               id="login-email"
               type="email"
               autoComplete="username"
+              required
               value={form.email}
               onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
               disabled={loading}
             />
           </div>
           <div className="field">
-            <label htmlFor="login-password">Contraseña</label>
+            <label htmlFor="login-password">Contraseña<span className="required-mark" aria-hidden="true"> *</span></label>
             <input
               id="login-password"
               type="password"
               autoComplete="current-password"
+              required
               value={form.password}
               onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
               disabled={loading}

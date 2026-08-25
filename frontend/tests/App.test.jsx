@@ -51,6 +51,8 @@ describe('App routing and session gates', () => {
     render(<MemoryRouter initialEntries={['/orders']}><App /></MemoryRouter>);
 
     expect(await screen.findByRole('heading', { name: /iniciar sesión/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeRequired();
+    expect(screen.getByLabelText(/contraseña/i)).toBeRequired();
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
     expect(screen.getByText(/ingresa tu correo y contraseña/i)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: 'mauro@pavas.test' } });
@@ -96,7 +98,7 @@ describe('App routing and session gates', () => {
     render(<MemoryRouter initialEntries={['/admin/users']}><App /></MemoryRouter>);
 
     expect(await screen.findByRole('heading', { name: /^usuarios$/i })).toBeInTheDocument();
-    expect(usersApi.list).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(usersApi.list).toHaveBeenCalledTimes(1));
   });
 
   it('renders a friendly not-found page inside authenticated routes', async () => {

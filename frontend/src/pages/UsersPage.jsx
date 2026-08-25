@@ -21,6 +21,7 @@ export const UsersPage = () => {
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
+  const [roleDrafts, setRoleDrafts] = useState({});
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -79,6 +80,11 @@ export const UsersPage = () => {
     try {
       const updated = await usersApi.changeRole(managedUser.id, role);
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setRoleDrafts((current) => {
+        const next = { ...current };
+        delete next[updated.id];
+        return next;
+      });
       setNotice(`Rol de ${updated.name} actualizado.`);
       if (updated.id === currentUser.id) await refreshAccessSession();
     } catch (error) {
@@ -129,10 +135,10 @@ export const UsersPage = () => {
             <div><h2 id="create-user-title">Crear usuario</h2><p>La contraseña inicial debe tener mínimo 8 caracteres.</p></div>
           </div>
           <form className="user-form" onSubmit={createUser} noValidate>
-            <div className="field"><label htmlFor="user-name">Nombre</label><input id="user-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} disabled={submitting} /></div>
-            <div className="field"><label htmlFor="user-email">Correo</label><input id="user-email" type="email" autoComplete="off" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} disabled={submitting} /></div>
-            <div className="field"><label htmlFor="user-password">Contraseña inicial</label><input id="user-password" type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} disabled={submitting} /></div>
-            <div className="field"><label htmlFor="user-role">Rol</label><select id="user-role" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} disabled={submitting}><option value="MECANICO">Mecánico</option><option value="ADMIN">Administrador</option></select></div>
+            <div className="field"><label htmlFor="user-name">Nombre<span className="required-mark" aria-hidden="true"> *</span></label><input id="user-name" autoComplete="name" required value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} disabled={submitting} /></div>
+            <div className="field"><label htmlFor="user-email">Correo<span className="required-mark" aria-hidden="true"> *</span></label><input id="user-email" type="email" autoComplete="email" required value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} disabled={submitting} /></div>
+            <div className="field"><label htmlFor="user-password">Contraseña inicial<span className="required-mark" aria-hidden="true"> *</span></label><input id="user-password" type="password" autoComplete="new-password" required minLength="8" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} disabled={submitting} /></div>
+            <div className="field"><label htmlFor="user-role">Rol<span className="required-mark" aria-hidden="true"> *</span></label><select id="user-role" required value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} disabled={submitting}><option value="MECANICO">Mecánico</option><option value="ADMIN">Administrador</option></select></div>
             <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? 'Creando…' : 'Crear usuario'}</button>
           </form>
         </section>
@@ -145,7 +151,8 @@ export const UsersPage = () => {
           {!loading && loadError ? <ErrorState message={loadError.message} onRetry={loadUsers} /> : null}
           {!loading && !loadError && users.length === 0 ? <EmptyState title="Sin usuarios" message="Crea la primera cuenta del equipo." /> : null}
           {!loading && !loadError && users.length > 0 ? (
-            <div className="table-scroll">
+            <div className="table-scroll table-scroll--users" role="region" aria-label="Tabla de usuarios del taller" tabIndex="0">
+              <p className="table-scroll__hint">Desliza horizontalmente para ver todas las columnas.</p>
               <table className="data-table">
                 <caption className="visually-hidden">Usuarios del taller</caption>
                 <thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Creado</th><th scope="col"><span className="visually-hidden">Acciones</span></th></tr></thead>
@@ -153,7 +160,28 @@ export const UsersPage = () => {
                   {users.map((managedUser) => (
                     <tr key={managedUser.id}>
                       <td data-label="Usuario"><span className="cell-primary">{managedUser.name}{managedUser.id === currentUser.id ? ' (tú)' : ''}</span><span className="cell-secondary">{managedUser.email}</span></td>
-                      <td data-label="Rol"><select aria-label={`Rol de ${managedUser.name}`} value={managedUser.role} onChange={(event) => updateRole(managedUser, event.target.value)} disabled={updatingId !== null}><option value="ADMIN">Administrador</option><option value="MECANICO">Mecánico</option></select></td>
+                      <td data-label="Rol">
+                        <div className="user-role-editor">
+                          <select
+                            aria-label={`Rol de ${managedUser.name}`}
+                            value={roleDrafts[managedUser.id] ?? managedUser.role}
+                            onChange={(event) => setRoleDrafts((current) => ({ ...current, [managedUser.id]: event.target.value }))}
+                            disabled={updatingId !== null}
+                          >
+                            <option value="ADMIN">Administrador</option>
+                            <option value="MECANICO">Mecánico</option>
+                          </select>
+                          <button
+                            className="button button--secondary"
+                            type="button"
+                            onClick={() => updateRole(managedUser, roleDrafts[managedUser.id] ?? managedUser.role)}
+                            disabled={updatingId !== null || (roleDrafts[managedUser.id] ?? managedUser.role) === managedUser.role}
+                            aria-label={`Guardar rol de ${managedUser.name}`}
+                          >
+                            {updatingId === managedUser.id ? 'Guardando…' : 'Guardar'}
+                          </button>
+                        </div>
+                      </td>
                       <td data-label="Estado"><span className={`user-state ${managedUser.active ? 'user-state--active' : 'user-state--inactive'}`}>{managedUser.active ? 'Activo' : 'Inactivo'}</span></td>
                       <td data-label="Creado">{formatDateTime(managedUser.createdAt)}</td>
                       <td className="table-action"><button className={`button ${managedUser.active ? 'button--danger-ghost' : 'button--secondary'}`} type="button" onClick={() => toggleActive(managedUser)} disabled={updatingId !== null} aria-label={`${managedUser.active ? 'Desactivar' : 'Activar'} a ${managedUser.name}`}>{updatingId === managedUser.id ? 'Actualizando…' : managedUser.active ? 'Desactivar' : 'Activar'}</button></td>

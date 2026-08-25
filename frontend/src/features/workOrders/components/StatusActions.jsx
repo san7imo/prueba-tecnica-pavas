@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TRANSITIONS } from '../../../constants/workOrders.js';
+import { WORK_ORDER_TRANSITION_ACTION_LABELS, WORK_ORDER_TRANSITIONS } from '../../../constants/workOrders.js';
 
 const MECHANIC_TARGETS = new Set(['DIAGNOSTICO', 'EN_PROCESO', 'LISTA']);
 
@@ -31,7 +31,8 @@ export const StatusActions = ({ status, role, onTransition, loadingStatus, error
         <>
           <div className="field status-note">
             <label htmlFor="transition-note">Nota <span>(opcional)</span></label>
-            <textarea id="transition-note" value={note} maxLength="1000" onChange={(event) => setNote(event.target.value)} disabled={Boolean(loadingStatus)} placeholder="Contexto para el historial de la orden" />
+            <textarea id="transition-note" value={note} maxLength="1000" onChange={(event) => setNote(event.target.value)} disabled={Boolean(loadingStatus)} placeholder="Contexto para el historial de la orden" aria-describedby="transition-note-limit" />
+            <small id="transition-note-limit" className="field__meta">{note.length}/1000 caracteres</small>
           </div>
           <div className="status-actions">
             {allowed.map((target) => (
@@ -42,7 +43,7 @@ export const StatusActions = ({ status, role, onTransition, loadingStatus, error
                 onClick={() => onTransition(target, note)}
                 disabled={Boolean(loadingStatus)}
               >
-                {loadingStatus === target ? 'Actualizando…' : target === 'CANCELADA' ? 'Cancelar orden' : `Mover a ${WORK_ORDER_STATUS_LABELS[target]}`}
+                {loadingStatus === target ? 'Actualizando…' : WORK_ORDER_TRANSITION_ACTION_LABELS[target]}
               </button>
             ))}
           </div>

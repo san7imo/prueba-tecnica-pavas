@@ -278,6 +278,35 @@ Direct API sanity additionally samples the public status classes 401, 403, 400, 
 
 The browser profile and servers were temporary and removed/stopped after verification. Smoke fixtures never left `pavas_workshop_test`; afterward its schema was reverted/reapplied, all seven migrations were executed with zero pending, and all seven entity tables reported zero rows.
 
+## HITO 13 UI and accessibility acceptance
+
+HITO 13 keeps the existing component/API architecture and verifies polish through focused accessible-role assertions plus a real Chrome review. No visual-test dependency or retained screenshot fixture was added.
+
+Automated evidence covers:
+
+- required login controls and associated labels;
+- labeled, keyboard-focusable order/item/user table regions;
+- explicit role selection followed by a separate save action;
+- operational status-action labels while preserving enum payloads;
+- existing loading, error, empty, disabled, retry, confirmation and role-aware states.
+
+### HITO 13 local acceptance record — 2026-08-24
+
+- frontend lint: pass;
+- frontend full suite: 10/10 files, 46/46 tests;
+- frontend production build: 113 modules, 326.83 kB JavaScript (102.39 kB gzip) and no new dependency;
+- backend lint: pass;
+- backend regression: 14/14 files, 192/192 tests;
+- desktop/tablet/mobile visual review: `/login`, `/orders`, `/orders/new`, ADMIN/MECANICO `/orders/:id` and ADMIN `/admin/users`;
+- responsive widths: every audited 375 px view reported document width 375 px after the item table switched to a CSS card presentation below 640 px;
+- keyboard: Tab/Shift+Tab login order, skip link as first application focus, Enter form submission, Space role-save activation and focusable table region verified;
+- semantics: one `h1` per view, zero unlabeled form controls, zero untyped buttons and no raw ISO timestamps in audited views;
+- contrast: primary/status combinations exceed 5.46:1; muted text is 4.97:1 and placeholders 4.65:1 on white;
+- security/console: Web Storage remained empty and Chrome reported zero application errors, React warnings or duplicate-request symptoms during the final flow;
+- role UX: ADMIN item/delete/deliver/cancel/user actions remained available while MECANICO retained add/intermediate-transition actions and no forbidden controls.
+
+The browser flow also created an order, added items as both roles, executed allowed transitions, refreshed history, filtered with the keyboard, saved/restored a user role explicitly and logged both roles out. All data remained confined to the dedicated test database.
+
 ## Manual final acceptance
 
 For a reviewer running the project manually:

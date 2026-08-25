@@ -11,7 +11,8 @@ export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete }) => {
   }
 
   return (
-    <div className="table-scroll">
+    <div className="table-scroll table-scroll--items" role="region" aria-label="Tabla de ítems de la orden" tabIndex="0">
+      <p className="table-scroll__hint">Desliza horizontalmente para ver todos los valores.</p>
       <table className="data-table data-table--items">
         <caption className="visually-hidden">Ítems de la orden</caption>
         <thead>
@@ -27,14 +28,16 @@ export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete }) => {
           {items.map((item) => (
             <tr key={item.id}>
               <td data-label="Ítem">
-                <span className="item-type">{item.type === 'MANO_OBRA' ? 'Mano de obra' : 'Repuesto'}</span>
-                <span className="cell-primary">{item.description}</span>
+                <span className="item-summary">
+                  <span className="item-type">{item.type === 'MANO_OBRA' ? 'Mano de obra' : 'Repuesto'}</span>
+                  <span className="cell-primary">{item.description}</span>
+                </span>
               </td>
               <td data-label="Cantidad">{item.count}</td>
               <td data-label="Valor unitario" className="align-right money">{formatCurrency(item.unitValue)}</td>
               <td data-label="Subtotal" className="align-right money">{formatCurrency(multiplyDecimals(item.count, item.unitValue))}</td>
               {canDelete ? (
-                <td className="table-action">
+                <td className="table-action" data-label="Acción">
                   <button
                     className="text-button text-button--danger"
                     type="button"

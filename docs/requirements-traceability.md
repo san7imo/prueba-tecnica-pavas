@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 and Phase 2 requirements through HITO 12 are mapped to passing evidence. The detailed risk-to-test release gate is [test-acceptance-matrix.md](test-acceptance-matrix.md); HITO 13 remains outside this milestone.
+All mandatory Phase 1 and Phase 2 requirements through HITO 13 are mapped to passing evidence. The detailed risk-to-test release gate is [test-acceptance-matrix.md](test-acceptance-matrix.md); HITO 14 remains outside this milestone.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -51,10 +51,11 @@ All mandatory Phase 1 and Phase 2 requirements through HITO 12 are mapped to pas
 | P1-FE-004 | Create order selecting bike by plate | 1 | `BikeLookup`, local workflow state and explicit create payload | `/orders/new` | Existing-bike creation/navigation test | Done |
 | P1-FE-005 | Quick client and bike registration | 1 | Sequential `QuickRegistration`, Client/Bike API modules and automatic selection | `/orders/new` | Full client→bike chain test | Done |
 | P1-FE-006 | Detail shows client, bike, items and total | 1 | `WorkOrderDetailPage`, resource cards and exact decimal presentation | `/orders/:id` | Detail/related data/items/subtotal/total rendering test | Done |
-| P1-FE-007 | Detail exposes valid transition actions only | 1 | Central frontend transition map + `StatusActions`; backend remains authoritative | `/orders/:id` | Allowed/hidden/terminal/error tests | Done |
-| P1-FE-008 | Detail manages items | 1 | Item form/table, delete confirmation and authoritative refetch after mutation | `/orders/:id` | Add/delete/payload/refetch tests | Done |
-| P1-UX-001 | Clear errors and loading indicators | 1 | Shared loading/error panels plus scoped mutation feedback | Required views | List/detail/create loading and API error tests | Done |
+| P1-FE-007 | Detail exposes valid transition actions only | 1 | Central frontend transition map + operational `StatusActions`; backend remains authoritative | `/orders/:id` | Allowed/hidden/terminal/error and action-label tests | Done |
+| P1-FE-008 | Detail manages items | 1 | Item form/table, accessible scroll region, delete confirmation and authoritative refetch | `/orders/:id` | Add/delete/payload/refetch and region tests | Done |
+| P1-UX-001 | Clear errors and loading indicators | 1 | Shared live loading/error panels, scoped feedback, localized messages and readable contrast | Required views | List/detail/create loading and API error tests | Done |
 | P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Empty panels, submit locks, terminal state and responsive CSS system | Required views | Empty/retry/double-submit/terminal tests | Done |
+| P1-UX-003 | Responsive and accessibility polish | Project contract | Required markers, visible focus, semantic/focusable table regions, contained mobile item scroll and 375/768/desktop CSS | Required views | Accessible-role assertions plus ADMIN/MECANICO browser review | Done |
 | P1-DOC-001 | Source, migrations and setup README | 1 | Backend/frontend source, Sequelize migrations and current root README | Repository delivery | Clean migration, boot, build and E2E verification | Done |
 | P1-DOC-002 | Postman collection | Project contract | Complete Phase 1 Client/Bike/Work Orders/Items/Status collection | Phase 1 API | Collection structure review + E2E API smoke | Done |
 | P2-DATA-001 | User model with unique email, role and active | 2 | User model + `202608240005-create-users.js` | Auth APIs | Schema/auth integration tests | Done |
@@ -84,8 +85,8 @@ All mandatory Phase 1 and Phase 2 requirements through HITO 12 are mapped to pas
 | P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded backend query; UI remains HITO 10 | History API | Local 150-row query-plan/performance check | Done |
 | P2-FE-001 | Login and protected/role routes | 2 | `LoginPage`, `ProtectedRoute`, `AnonymousOnlyRoute`, `RoleRoute` | `/login`, protected views | `App.test.jsx` login/guard/role matrix | Done |
 | P2-FE-002 | Session restore, renewal and logout | 2 | Memory-only `AuthContext`, session coordinator and Axios interceptors | Application shell | `AuthContext.test.jsx`, `httpClientAuth.test.js` including five concurrent 401s | Done |
-| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | `UsersPage` + narrow users API module | `/admin/users` | `UsersPage.test.jsx` list/create/role/active tests | Done |
-| P2-FE-004 | Role-aware work-order actions | 2 | Role-filtered status/item controls; backend remains authoritative | `/orders/:id` | `WorkOrderDetailPage.test.jsx` ADMIN/MECANICO controls | Done |
+| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | `UsersPage`, explicit role draft/save and narrow users API module | `/admin/users` | `UsersPage.test.jsx` list/create/explicit-role-save/active tests | Done |
+| P2-FE-004 | Role-aware work-order actions | 2 | Role-filtered operational status/item controls; backend remains authoritative | `/orders/:id` | `WorkOrderDetailPage.test.jsx` ADMIN/MECANICO controls | Done |
 | P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Paginated `HistoryTimeline` with independent UI states | `/orders/:id` | `HistoryTimeline.test.jsx` render/order/pagination/error/empty tests | Done |
 | P2-SEC-001 | Login rate limiting | 2 | Dedicated configurable login limiter | `POST /api/auth/login` | Stable 429 endpoint test | Done |
 | P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | `src/app.js`, `corsPolicy.js`, exact `FRONTEND_ORIGIN`, 100 KiB JSON parser | API boundary | `security.test.js`, credentialed auth integration flow | Done |

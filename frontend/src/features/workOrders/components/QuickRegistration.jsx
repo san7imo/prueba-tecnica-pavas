@@ -30,11 +30,11 @@ export const QuickRegistration = ({
         {!createdClient ? (
           <form className="form-grid" onSubmit={onClientSubmit} aria-label="Registro rápido de cliente">
             <div className="field field--span-2">
-              <label htmlFor="client-name">Nombre completo</label>
+              <label htmlFor="client-name">Nombre completo<span className="required-mark" aria-hidden="true"> *</span></label>
               <input id="client-name" name="name" value={clientForm.name} onChange={onClientChange} required maxLength={120} disabled={clientLoading} aria-describedby={error ? 'quick-registration-error' : undefined} />
             </div>
             <div className="field">
-              <label htmlFor="client-phone">Teléfono</label>
+              <label htmlFor="client-phone">Teléfono<span className="required-mark" aria-hidden="true"> *</span></label>
               <input id="client-phone" name="phone" value={clientForm.phone} onChange={onClientChange} required maxLength={40} inputMode="tel" disabled={clientLoading} aria-describedby={error ? 'quick-registration-error' : undefined} />
             </div>
             <div className="field">
@@ -55,15 +55,15 @@ export const QuickRegistration = ({
             </div>
             <form className="form-grid" onSubmit={onBikeSubmit} aria-label="Registro rápido de moto">
               <div className="field">
-                <label htmlFor="bike-plate">Placa</label>
+                <label htmlFor="bike-plate">Placa<span className="required-mark" aria-hidden="true"> *</span></label>
                 <input id="bike-plate" name="plate" value={bikeForm.plate} onChange={onBikeChange} required maxLength={20} disabled={bikeLoading} aria-describedby={error ? 'quick-registration-error' : undefined} />
               </div>
               <div className="field">
-                <label htmlFor="bike-brand">Marca</label>
+                <label htmlFor="bike-brand">Marca<span className="required-mark" aria-hidden="true"> *</span></label>
                 <input id="bike-brand" name="brand" value={bikeForm.brand} onChange={onBikeChange} required maxLength={100} disabled={bikeLoading} aria-describedby={error ? 'quick-registration-error' : undefined} />
               </div>
               <div className="field">
-                <label htmlFor="bike-model">Modelo</label>
+                <label htmlFor="bike-model">Modelo<span className="required-mark" aria-hidden="true"> *</span></label>
                 <input id="bike-model" name="model" value={bikeForm.model} onChange={onBikeChange} required maxLength={100} disabled={bikeLoading} aria-describedby={error ? 'quick-registration-error' : undefined} />
               </div>
               <div className="field">

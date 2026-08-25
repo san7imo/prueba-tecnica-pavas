@@ -46,7 +46,7 @@ export const AppShell = () => {
       </nav>
 
       <div className="sidebar-session">
-        <p className="sidebar__phase">Operación · Fase 2</p>
+        <p className="sidebar__phase">Sesión actual</p>
         <span><strong>{user.name}</strong><small>{user.role === 'ADMIN' ? 'Administrador' : 'Mecánico'}</small></span>
         <button className="button sidebar-session__logout" type="button" onClick={logout}>Cerrar sesión</button>
       </div>
@@ -58,7 +58,7 @@ export const AppShell = () => {
           <p className="topbar__eyebrow">Centro de servicio</p>
           <p className="topbar__title">Control de órdenes</p>
         </div>
-        <span className="topbar__environment">Operación local</span>
+        <span className="topbar__environment">PAVAS Moto Workshop</span>
       </header>
       <main id="main-content" className="main-content" tabIndex="-1">
         <Outlet />

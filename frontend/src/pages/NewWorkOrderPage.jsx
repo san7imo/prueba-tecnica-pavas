@@ -170,7 +170,7 @@ export const NewWorkOrderPage = () => {
             </div>
             <form onSubmit={createOrder}>
               <div className="field">
-                <label htmlFor="fault-description">Descripción de la falla</label>
+                <label htmlFor="fault-description">Descripción de la falla<span className="required-mark" aria-hidden="true"> *</span></label>
                 <textarea
                   id="fault-description"
                   value={faultDescription}

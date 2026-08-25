@@ -25,8 +25,8 @@ describe('UsersPage', () => {
 
     expect(await screen.findByText('Mauro Mecánico')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/^nombre$/i), { target: { value: 'Nora Técnica' } });
-    fireEvent.change(screen.getByLabelText(/^correo$/i), { target: { value: 'nora@pavas.test' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^nombre$/i }), { target: { value: 'Nora Técnica' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^correo$/i }), { target: { value: 'nora@pavas.test' } });
     fireEvent.change(screen.getByLabelText(/contraseña inicial/i), { target: { value: 'secret123' } });
     fireEvent.click(screen.getByRole('button', { name: /crear usuario/i }));
 
@@ -41,12 +41,21 @@ describe('UsersPage', () => {
     renderWithAuth(<UsersPage />, { auth: authValue(adminUser) });
     await screen.findByText('Mauro Mecánico');
 
-    fireEvent.change(screen.getByLabelText(/rol de mauro/i), { target: { value: 'ADMIN' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /rol de mauro/i }), { target: { value: 'ADMIN' } });
+    expect(usersApi.changeRole).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /guardar rol de mauro/i }));
     await waitFor(() => expect(usersApi.changeRole).toHaveBeenCalledWith(2, 'ADMIN'));
     fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
 
     expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/desactivar a mauro/i));
     await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, false));
+  });
+
+  it('exposes the user table as a keyboard-focusable labeled region', async () => {
+    renderWithAuth(<UsersPage />);
+
+    await screen.findByText('Mauro Mecánico');
+    expect(screen.getByRole('region', { name: /tabla de usuarios/i })).toHaveAttribute('tabindex', '0');
   });
 
   it('shows loading, reports a list error and retries to an empty state', async () => {
@@ -71,8 +80,8 @@ describe('UsersPage', () => {
     renderWithAuth(<UsersPage />);
     await screen.findByText('Mauro Mecánico');
 
-    fireEvent.change(screen.getByLabelText(/^nombre$/i), { target: { value: 'Nora Técnica' } });
-    fireEvent.change(screen.getByLabelText(/^correo$/i), { target: { value: 'nora@pavas.test' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^nombre$/i }), { target: { value: 'Nora Técnica' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^correo$/i }), { target: { value: 'nora@pavas.test' } });
     fireEvent.change(screen.getByLabelText(/contraseña inicial/i), { target: { value: 'secret123' } });
     const submit = screen.getByRole('button', { name: /crear usuario/i });
     fireEvent.click(submit);

@@ -9,6 +9,7 @@ import { ItemForm } from '../features/workOrders/components/ItemForm.jsx';
 import { HistoryTimeline } from '../features/workOrders/components/HistoryTimeline.jsx';
 import { ItemsTable } from '../features/workOrders/components/ItemsTable.jsx';
 import { StatusActions } from '../features/workOrders/components/StatusActions.jsx';
+import { WORK_ORDER_STATUS_LABELS } from '../constants/workOrders.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { getApiError, getApiErrorMessage } from '../utils/apiError.js';
 import { formatCurrency, formatDateTime } from '../utils/formatters.js';
@@ -106,7 +107,7 @@ export const WorkOrderDetailPage = () => {
       await workOrdersApi.updateStatus(id, target, note);
       await loadOrder({ silent: true });
       setHistoryVersion((current) => current + 1);
-      setNotice(`Estado actualizado a ${target}.`);
+      setNotice(`Estado actualizado a ${WORK_ORDER_STATUS_LABELS[target]}.`);
     } catch (error) {
       setStatusError(getApiErrorMessage(error, 'No fue posible actualizar el estado.'));
     } finally {

@@ -45,9 +45,10 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.getByText('Ruido anormal en la transmisión')).toBeInTheDocument();
     expect(screen.getAllByText(/130\.000,00/).length).toBeGreaterThan(0);
     expect(screen.getByText(/100\.000,00/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /mover a diagnóstico/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /iniciar diagnóstico/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancelar orden/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mover a lista/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /marcar como lista/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /tabla de ítems/i })).toHaveAttribute('tabindex', '0');
   });
 
   it('adds and deletes items, refetching the authoritative total after each mutation', async () => {
@@ -57,8 +58,8 @@ describe('WorkOrderDetailPage', () => {
     renderPage();
     await screen.findByRole('heading', { name: /orden #7/i });
 
-    fireEvent.change(screen.getByLabelText(/^descripción$/i), { target: { value: 'Revisión eléctrica' } });
-    fireEvent.change(screen.getByLabelText(/^cantidad$/i), { target: { value: '1.50' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^descripción$/i }), { target: { value: 'Revisión eléctrica' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^cantidad$/i }), { target: { value: '1.50' } });
     fireEvent.change(screen.getByLabelText(/valor unitario/i), { target: { value: '20000.00' } });
     fireEvent.click(screen.getByRole('button', { name: /agregar ítem/i }));
     await waitFor(() => expect(workOrdersApi.addItem).toHaveBeenCalledWith('7', {
@@ -78,9 +79,9 @@ describe('WorkOrderDetailPage', () => {
     await screen.findByRole('heading', { name: /orden #7/i });
 
     fireEvent.change(screen.getByLabelText(/nota/i), { target: { value: '  Diagnóstico iniciado  ' } });
-    fireEvent.click(screen.getByRole('button', { name: /mover a diagnóstico/i }));
+    fireEvent.click(screen.getByRole('button', { name: /iniciar diagnóstico/i }));
     await waitFor(() => expect(workOrdersApi.updateStatus).toHaveBeenCalledWith('7', 'DIAGNOSTICO', '  Diagnóstico iniciado  '));
-    expect(await screen.findByText(/estado actualizado a DIAGNOSTICO/i)).toBeInTheDocument();
+    expect(await screen.findByText(/estado actualizado a diagnóstico/i)).toBeInTheDocument();
   });
 
   it('hides deletion, cancellation and delivery controls from a mechanic', async () => {
@@ -90,7 +91,7 @@ describe('WorkOrderDetailPage', () => {
     await screen.findByRole('heading', { name: /orden #7/i });
     expect(screen.queryByRole('button', { name: /eliminar kit de arrastre/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mover a entregada/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /entregar orden/i })).not.toBeInTheDocument();
     expect(screen.getByText(/tu rol no permite/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /agregar ítem/i })).toBeInTheDocument();
   });
@@ -100,9 +101,9 @@ describe('WorkOrderDetailPage', () => {
     renderPage(mechanicUser);
 
     await screen.findByRole('heading', { name: /orden #7/i });
-    expect(screen.getByRole('button', { name: /mover a en proceso/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /iniciar reparación/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mover a entregada/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /entregar orden/i })).not.toBeInTheDocument();
   });
 
   it('requires confirmation for cancellation and shows backend transition errors', async () => {
@@ -121,7 +122,7 @@ describe('WorkOrderDetailPage', () => {
     renderPage();
 
     expect(await screen.findByText(/estado final y no admite más cambios/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mover a/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /iniciar|marcar|entregar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
   });
 

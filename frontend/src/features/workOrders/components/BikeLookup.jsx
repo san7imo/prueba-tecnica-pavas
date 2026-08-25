@@ -22,7 +22,7 @@ export const BikeLookup = ({
 
       <form className="lookup-form" onSubmit={onSearch}>
         <div className="field">
-          <label htmlFor="bike-plate-search">Placa de la moto</label>
+          <label htmlFor="bike-plate-search">Placa de la moto<span className="required-mark" aria-hidden="true"> *</span></label>
           <input
             id="bike-plate-search"
             value={plate}

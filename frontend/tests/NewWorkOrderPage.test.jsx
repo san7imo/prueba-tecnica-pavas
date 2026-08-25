@@ -59,13 +59,13 @@ describe('NewWorkOrderPage', () => {
     expect(await screen.findByText(/no encontramos una moto/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/nombre completo/i), { target: { value: 'Ana Torres' } });
-    fireEvent.change(screen.getByLabelText(/^teléfono$/i), { target: { value: '3001234567' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^teléfono$/i }), { target: { value: '3001234567' } });
     fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: 'ana@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar cliente/i }));
 
     expect(await screen.findByText(/cliente creado/i)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/^marca$/i), { target: { value: 'Yamaha' } });
-    fireEvent.change(screen.getByLabelText(/^modelo$/i), { target: { value: 'FZ 2.0' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^marca$/i }), { target: { value: 'Yamaha' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^modelo$/i }), { target: { value: 'FZ 2.0' } });
     fireEvent.change(screen.getByLabelText(/cilindraje/i), { target: { value: '149' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar y seleccionar moto/i }));
 

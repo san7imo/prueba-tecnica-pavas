@@ -44,6 +44,7 @@ describe('WorkOrdersPage', () => {
     expect(screen.getByRole('cell', { name: 'Recibida' })).toBeInTheDocument();
     expect(screen.getByText(/130\.000,00/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ver orden 7/i })).toHaveAttribute('href', '/orders/7');
+    expect(screen.getByRole('region', { name: /tabla de órdenes/i })).toHaveAttribute('tabindex', '0');
   });
 
   it('applies server filters, resets the page and paginates', async () => {

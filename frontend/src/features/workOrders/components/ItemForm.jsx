@@ -10,23 +10,23 @@ export const ItemForm = ({ form, onChange, onSubmit, loading, error }) => (
     </div>
     <div className="form-grid form-grid--item">
       <div className="field">
-        <label htmlFor="item-type">Tipo</label>
-        <select id="item-type" name="type" value={form.type} onChange={onChange} disabled={loading} aria-describedby={error ? 'item-form-error' : undefined}>
+        <label htmlFor="item-type">Tipo<span className="required-mark" aria-hidden="true"> *</span></label>
+        <select id="item-type" name="type" value={form.type} onChange={onChange} required disabled={loading} aria-describedby={error ? 'item-form-error' : undefined}>
           {WORK_ORDER_ITEM_TYPES.map((type) => (
             <option key={type.value} value={type.value}>{type.label}</option>
           ))}
         </select>
       </div>
       <div className="field field--description">
-        <label htmlFor="item-description">Descripción</label>
+        <label htmlFor="item-description">Descripción<span className="required-mark" aria-hidden="true"> *</span></label>
         <input id="item-description" name="description" value={form.description} onChange={onChange} required maxLength={255} disabled={loading} aria-describedby={error ? 'item-form-error' : undefined} />
       </div>
       <div className="field">
-        <label htmlFor="item-count">Cantidad</label>
+        <label htmlFor="item-count">Cantidad<span className="required-mark" aria-hidden="true"> *</span></label>
         <input id="item-count" name="count" value={form.count} onChange={onChange} required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="1.00" disabled={loading} aria-describedby={error ? 'item-form-error' : undefined} />
       </div>
       <div className="field">
-        <label htmlFor="item-unit-value">Valor unitario</label>
+        <label htmlFor="item-unit-value">Valor unitario<span className="required-mark" aria-hidden="true"> *</span></label>
         <input id="item-unit-value" name="unitValue" value={form.unitValue} onChange={onChange} required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="50000.00" disabled={loading} aria-describedby={error ? 'item-form-error' : undefined} />
       </div>
     </div>

@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend, security hardening and the HITO 12 critical acceptance matrix.
+The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend, security hardening, the HITO 12 critical acceptance matrix and the HITO 13 UI/accessibility polish.
 
 ## Features
 
-Implemented through HITO 12:
+Implemented through HITO 13:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -70,6 +70,9 @@ Implemented through HITO 12:
 - documented dependency audit, CSRF/XSS/SQL-injection posture and residual production risks.
 - requirement-to-risk-to-test acceptance matrix spanning backend, frontend, concurrency and security;
 - explicit frontend regressions for failed refresh cleanup, memory-only tokens, MECANICO allowed actions and user administration states.
+- polished responsive workshop shell with consistent required-field, contrast and focus treatment;
+- keyboard-focusable table regions, contained mobile item scrolling and explicit ADMIN role-change confirmation;
+- operational status-action labels, localized feedback and accessible transition-note length guidance.
 
 ## Assessment Scope
 
@@ -274,7 +277,7 @@ Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role o
 
 ## Current Milestone
 
-**HITO 12 — Critical Test Matrix implemented locally.** Awaiting milestone review; no HITO 13 work is included.
+**HITO 13 — UI/UX Polish implemented locally.** Awaiting milestone review; no HITO 14 work is included.
 
 ## Roadmap
 

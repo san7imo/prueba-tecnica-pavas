@@ -16,6 +16,14 @@ export const WORK_ORDER_STATUS_LABELS = {
   CANCELADA: 'Cancelada',
 };
 
+export const WORK_ORDER_TRANSITION_ACTION_LABELS = {
+  DIAGNOSTICO: 'Iniciar diagnóstico',
+  EN_PROCESO: 'Iniciar reparación',
+  LISTA: 'Marcar como lista',
+  ENTREGADA: 'Entregar orden',
+  CANCELADA: 'Cancelar orden',
+};
+
 export const WORK_ORDER_TRANSITIONS = {
   RECIBIDA: ['DIAGNOSTICO', 'CANCELADA'],
   DIAGNOSTICO: ['EN_PROCESO', 'CANCELADA'],

@@ -4,7 +4,8 @@ import { formatCurrency, formatDateTime } from '../../../utils/formatters.js';
 import { StatusBadge } from '../../../components/ui/StatusBadge.jsx';
 
 export const OrderTable = ({ orders }) => (
-  <div className="table-scroll">
+  <div className="table-scroll table-scroll--orders" role="region" aria-label="Tabla de órdenes de trabajo" tabIndex="0">
+    <p className="table-scroll__hint">Desliza horizontalmente para ver todas las columnas.</p>
     <table className="data-table">
       <caption className="visually-hidden">Listado de órdenes de trabajo</caption>
       <thead>

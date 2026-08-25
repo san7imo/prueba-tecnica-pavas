@@ -96,7 +96,7 @@ This matrix is the HITO 12 release gate. It maps the mandatory Phase 1/Phase 2 b
 | P2-FE-002D | A request retries at most once | Frontend unit | `httpClientAuth.test.js` | `does not retry a request that already consumed its one refresh attempt` | PASS |
 | P2-FE-002E | Stale refresh cannot restore a session after logout; logout clears after network failure | Frontend unit/integration | `httpClientAuth.test.js`, `AuthContext.test.jsx` | logout/refresh race and failed-logout cleanup cases | PASS |
 | P2-FE-003A | ADMIN user page lists and creates users without delete functionality | Frontend integration | `UsersPage.test.jsx` | `lists users and creates a user without exposing delete operations` | PASS |
-| P2-FE-003B | Role update, deactivation confirmation and activation are wired correctly | Frontend integration | `UsersPage.test.jsx` | role/deactivate and inactive-user activation cases | PASS |
+| P2-FE-003B | Role update requires explicit save; deactivation confirmation and activation are wired correctly | Frontend integration | `UsersPage.test.jsx` | role draft/save, deactivate and inactive-user activation cases | PASS |
 | P2-FE-003C | User loading, list error/retry/empty and safe create-error/submit lock are visible | Frontend integration | `UsersPage.test.jsx` | loading/error/retry and failed-creation cases | PASS |
 | P2-FE-004A | MECANICO sees add/intermediate state but no delete/deliver/cancel/users controls | Frontend integration | `WorkOrderDetailPage.test.jsx`, `App.test.jsx` | mechanic hidden-control, intermediate-transition and route cases | PASS |
 | P2-FE-004B | ADMIN sees valid delete/cancel/transition controls and confirmations | Frontend integration | `WorkOrderDetailPage.test.jsx` | detail actions, mutations and cancellation-confirmation cases | PASS |
@@ -111,6 +111,7 @@ This matrix is the HITO 12 release gate. It maps the mandatory Phase 1/Phase 2 b
 | P1-FE-007 | Only valid state action is submitted with Phase 2 note; terminal UI has no actions | Frontend integration | `WorkOrderDetailPage.test.jsx`, `apiModules.test.js` | allowed transition, terminal and payload-shape cases | PASS |
 | P1-FE-008 | Add/delete item uses confirmation and refetches authoritative total | Frontend integration | `WorkOrderDetailPage.test.jsx` | `adds and deletes items, refetching...` | PASS |
 | P1-FE-009 | Decimal UI multiplication/rounding avoids floating-point monetary arithmetic | Frontend unit | `formatters.test.js` | exact multiplication and COP-format cases | PASS |
+| P1-UX-003 | Required controls, labeled keyboard-focusable tables and role-aware operational actions remain accessible | Frontend integration | `App.test.jsx`, `WorkOrdersPage.test.jsx`, `WorkOrderDetailPage.test.jsx`, `UsersPage.test.jsx` | required-field and focusable-region assertions plus explicit role save | PASS |
 
 ## Non-functional and documentation evidence
 
