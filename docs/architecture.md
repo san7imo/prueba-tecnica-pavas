@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1–6 implement Phase 1; HITO 7 adds sessions; HITO 8 adds backend RBAC/user administration; HITO 9 adds the transactional audit ledger; HITO 10 adds the authenticated, role-aware frontend and audit visualization.
+This document defines the implemented architecture through HITO 11: complete Phase 1, Phase 2 sessions/RBAC/audit/frontend, and the approved HTTP/security hardening boundary.
 
 ## Architectural Style
 
@@ -14,6 +14,12 @@ Microservices would add deployment, network, data-consistency and observability 
 
 ```text
 HTTP Request
+     ↓
+Helmet security headers
+     ↓
+Exact-origin credentialed CORS
+     ↓
+Bounded JSON parser
      ↓
 Route
      ↓
@@ -128,7 +134,7 @@ The browser never supplies WorkOrder `status` or `total` during creation. Mutati
 
 The browser never persists either token in Web Storage. Access JWTs remain in memory; the refresh JWT is an HttpOnly cookie. UI role filtering is presentational defense in depth and never replaces backend authorization.
 
-For local development the Axios base defaults to `/api` and Vite proxies it to port 3000. `VITE_API_BASE_URL` can instead point to a deployed API; cross-origin production policy remains part of the approved security milestone.
+For local development the Axios base defaults to `/api` and Vite proxies it to port 3000. `VITE_API_BASE_URL` can instead point to a deployed API; the API accepts credentials from exactly `FRONTEND_ORIGIN` and rejects other browser origins.
 
 ## API conventions
 
@@ -151,11 +157,11 @@ Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results 
 
 The security boundary lives on the backend. HITO 7 implements bcrypt, short-lived signed access JWTs, database-checked active users, hashed rotating refresh tokens in HttpOnly cookies, family-scoped replay response and a login-specific rate limiter. Refresh rotation locks the presented token row in a transaction; replay revocation commits before the public 401 response. See ADR-002 and [security.md](security.md).
 
-UI visibility is never authorization. HITO 8 protects every business route and enforces ADMIN/MECANICO boundaries in middleware plus the status service. Restricted CORS, Helmet and the global production hardening review remain HITO 11.
+UI visibility is never authorization. HITO 8 protects every business route and enforces ADMIN/MECANICO boundaries in middleware plus the status service. HITO 11 places Helmet, exact-origin credentialed CORS and the 100 KiB JSON limit before routes, validates production origin/cookie/secret invariants before startup, and sanitizes parser and unexpected errors. The API deliberately disables CSP because it serves JSON only; the frontend hosting layer owns its document CSP.
 
 ## Error handling
 
-The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. HITO 2 adds explicit validation, not-found and conflict errors while preserving the same centralized public envelope. Unexpected failures return a generic 500 response.
+The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. Domain modules add explicit validation, not-found, conflict and business errors while preserving the same centralized public envelope. Malformed/oversized JSON map to safe 400/413 responses and unexpected failures return a generic 500 without internal details.
 
 ## Operational assumptions
 

@@ -176,9 +176,13 @@ The terminal race captures SQL evidence of two independent transactions and two 
 
 The 2026-08-24 local HITO 9 verification observed **9.40 ms** for the complete authenticated HTTP request returning a 100-row page from 150 tied events on the Docker MySQL 8.4 test environment. `EXPLAIN` selected `ix_work_order_status_history_order_created_id` for the history table; the actor join still reported a bounded temporary/filesort step. With a hard maximum of 100 returned rows and the measured result well below the source target, no raw-SQL hint or extra infrastructure is justified. This observation is assessment-scale evidence, not a production SLA.
 
-## Critical future suites
+## HITO 11 security suite
 
-Later milestones must cover the remaining security-hardening and final-submission matrix in `AGENTS.md`. Phase 1, authentication, RBAC/user administration, audit history and Phase 2 frontend now point to concrete automated evidence.
+`tests/security.test.js` verifies representative Helmet headers, the documented API-only CSP decision, absence of Express disclosure/non-production HSTS, exact allowed-origin credentials, denied origins, no-Origin clients, preflight, the 100 KiB JSON boundary, malformed JSON and sanitized unexpected exceptions. `tests/applicationConfig.test.js` covers environment/origin startup invariants; `tests/authConfig.test.js` retains secret, lifetime and production-cookie failures.
+
+`tests/auth.integration.test.js` additionally proves access/refresh tokens cannot cross purpose boundaries, non-HS256 access JWTs fail, credentialed CORS survives login → refresh → protected business request → logout, and cookie clearing preserves the set-cookie scope/security attributes. The existing rate-limit and RBAC suites remain regression evidence. Frontend tests/build prove hardening did not change memory-only token storage or authenticated UX.
+
+HITO 12 still owns the final submission-wide matrix; HITO 11 does not replace it.
 
 ## HITO 7 authentication suite
 

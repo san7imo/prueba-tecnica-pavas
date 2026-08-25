@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The API exposes complete Phase 1 business routes, HITO 7 sessions, HITO 8 backend RBAC/user administration and HITO 9 work-order history. Every Client, Bike and WorkOrder endpoint requires a valid access JWT.
+The API exposes complete Phase 1 and Phase 2 routes with the HITO 11 HTTP security boundary. Every Client, Bike and WorkOrder endpoint requires a valid access JWT.
 
 ```text
 GET  /api/health
@@ -43,6 +43,9 @@ DELETE /api/work-orders/items/:itemId
 - Public serializers expose only documented fields and omit Sequelize metadata/timestamps.
 - Validation failures may include safe field-level `details`.
 - Stack traces, SQL errors and environment internals are never returned.
+- JSON request bodies are limited to 100 KiB; malformed JSON returns `400 INVALID_JSON` and an oversized body returns `413 PAYLOAD_TOO_LARGE`.
+- Credentialed browser access is allowed only from the exact configured `FRONTEND_ORIGIN`; another origin returns `403 CORS_ORIGIN_DENIED`. Requests without `Origin` remain valid for non-browser clients.
+- Helmet headers apply globally. CSP is intentionally absent because this service returns JSON rather than HTML; the frontend host owns its document CSP.
 
 Standard error:
 

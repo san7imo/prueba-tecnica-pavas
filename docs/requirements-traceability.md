@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user administration, audit-history and frontend requirements through HITO 10 are Done. HITO 11 security hardening remains pending.
+All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user administration, audit-history, frontend and HITO 11 security-hardening requirements are Done. HITO 12 final verification remains outside this milestone.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -88,9 +88,9 @@ All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user adminis
 | P2-FE-004 | Role-aware work-order actions | 2 | Role-filtered status/item controls; backend remains authoritative | `/orders/:id` | `WorkOrderDetailPage.test.jsx` ADMIN/MECANICO controls | Done |
 | P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Paginated `HistoryTimeline` with independent UI states | `/orders/:id` | `HistoryTimeline.test.jsx` render/order/pagination/error/empty tests | Done |
 | P2-SEC-001 | Login rate limiting | 2 | Dedicated configurable login limiter | `POST /api/auth/login` | Stable 429 endpoint test | Done |
-| P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | Planned HITO 11 | API boundary | Security configuration tests | Pending |
+| P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | `src/app.js`, `corsPolicy.js`, exact `FRONTEND_ORIGIN`, 100 KiB JSON parser | API boundary | `security.test.js`, credentialed auth integration flow | Done |
 | P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | HttpOnly/path/SameSite/Secure cookie + startup validator | Auth startup/cookies | Cookie and configuration tests | Done |
-| P2-SEC-004 | No stack, SQL, JWT or secret leakage | Project contract | Planned error hardening | Error responses/logs | Sanitization tests | Pending |
+| P2-SEC-004 | No stack, SQL, JWT or secret leakage | Project contract | Central parser/AppError/unexpected-error sanitization + safe serializers/log review | Error responses/logs | `security.test.js`, auth/RBAC safe-payload suites | Done |
 
 ## Maintenance rule
 

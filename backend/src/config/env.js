@@ -38,11 +38,12 @@ const parseSameSite = (value) => {
   return normalized;
 };
 
-const nodeEnv = process.env.NODE_ENV ?? 'development';
+const nodeEnv = (process.env.NODE_ENV ?? 'development').trim();
 
 export const env = Object.freeze({
   nodeEnv,
   port: parsePort(process.env.PORT, 3000),
+  frontendOrigin: (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173').trim(),
   database: Object.freeze({
     host: process.env.DB_HOST ?? '127.0.0.1',
     port: parsePort(process.env.DB_PORT, 3306),

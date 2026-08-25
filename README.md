@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history and the authenticated role-aware frontend delivered through HITO 10.
+The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend and HITO 11 security hardening.
 
 ## Features
 
-Implemented through HITO 10:
+Implemented through HITO 11:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -63,6 +63,11 @@ Implemented through HITO 10:
 - role-aware order detail actions that hide delete/deliver/cancel controls from MECANICO;
 - optional transition notes and a paginated newest-first status-history timeline;
 - focused frontend tests for session restoration, guards, five concurrent 401 responses, users, permissions and history states.
+- global Helmet headers, exact-origin credentialed CORS and a 100 KiB JSON request limit;
+- startup validation for environment, origin, JWT lifetimes/secrets and production cookie invariants;
+- safe malformed/oversized JSON errors plus generic sanitization of unexpected failures;
+- explicit JWT purpose/algorithm boundary, cookie-clearing and CORS integration regressions;
+- documented dependency audit, CSRF/XSS/SQL-injection posture and residual production risks.
 
 ## Assessment Scope
 
@@ -141,7 +146,7 @@ The API health endpoint is `http://localhost:3000/api/health`; Vite defaults to 
 
 ## Environment Variables
 
-Root `.env` configures local MySQL. `backend/.env` configures the API, separate access/refresh secrets, bcrypt, cookie, login limiter and ADMIN seed. `frontend/.env` configures the API base URL. Only `.env.example` files belong in Git; production secrets must be random, distinct and at least 32 characters.
+Root `.env` configures local MySQL. `backend/.env` configures the API, exact frontend origin, separate access/refresh secrets, bcrypt, cookie, login limiter and ADMIN seed. `frontend/.env` configures the API base URL. Only `.env.example` files belong in Git; production secrets must be random, distinct and at least 32 characters. Production requires an HTTPS `FRONTEND_ORIGIN` and `COOKIE_SECURE=true`.
 
 See the comments in each example file. Test integration suites must use `DB_NAME_TEST`, never the development or production database.
 
@@ -214,15 +219,16 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, security headers/CORS/parser boundaries, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
 - Never commit `.env` files or real credentials.
 - Do not log passwords, tokens, cookies, hashes or secrets.
-- Authentication, backend authorization and login rate limiting are active. Helmet and restricted CORS remain explicitly deferred to HITO 11.
+- Authentication, backend authorization, login rate limiting, Helmet, exact-origin credentialed CORS and bounded JSON parsing are active.
 - Raw refresh tokens exist only in HttpOnly cookies; password hashes and token digests never appear in API payloads.
 - Access tokens are held only in JavaScript memory; neither token type is written to `localStorage` or `sessionStorage`.
+- CSP is intentionally owned by the frontend host because the Express service is JSON-only; see the threat model and production recommendations in `docs/security.md`.
 
 ## Documentation
 
@@ -259,13 +265,13 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 
 ## Known Limitations
 
-Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. The UI confirms self-demotion and refreshes the session immediately; self-deactivation logs the user out. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
+Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. The UI confirms self-demotion and refreshes the session immediately; self-deactivation logs the user out. Local development works through the Vite proxy; a separately hosted frontend must exactly match `FRONTEND_ORIGIN`.
 
-`npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
+`npm audit` reports two moderate records for one Sequelize 6.37.8 → `uuid` 8.3.2 advisory chain. The application does not invoke the affected buffer-taking UUID APIs; Sequelize 6.37.8 is the newest v6 release, and npm proposes an unsafe downgrade to Sequelize 3. No forced fix was applied. This accepted residual risk must be rechecked before release.
 
 ## Current Milestone
 
-**HITO 10 — Phase 2 Frontend implemented locally.** Awaiting milestone review; no HITO 11 work is included.
+**HITO 11 — Security Hardening implemented locally.** Awaiting milestone review; no HITO 12 work is included.
 
 ## Roadmap
 

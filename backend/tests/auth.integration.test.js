@@ -199,6 +199,64 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
     expect(inactive.body.error.code).toBe('INVALID_ACCESS_TOKEN');
   });
 
+  it('enforces access/refresh token purpose and the configured JWT algorithm', async () => {
+    const user = await createUser();
+    const session = await login();
+    const accessToken = session.body.data.accessToken;
+    const refreshCookie = cookieValue(session);
+    const refreshToken = rawCookieToken(refreshCookie);
+    const wrongAlgorithm = jwt.sign({ role: user.role }, env.auth.accessSecret, {
+      algorithm: 'HS384',
+      subject: String(user.id),
+      expiresIn: '15m',
+    });
+
+    const accessAsRefresh = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `pavas_refresh_token=${accessToken}`);
+    expect(accessAsRefresh.status).toBe(401);
+    expect(accessAsRefresh.body.error.code).toBe('INVALID_REFRESH_TOKEN');
+
+    for (const token of [refreshToken, wrongAlgorithm]) {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('INVALID_ACCESS_TOKEN');
+    }
+  });
+
+  it('preserves credentialed CORS through login, refresh, business API and logout', async () => {
+    await createUser();
+    const origin = env.frontendOrigin;
+    const session = await login().set('Origin', origin);
+    expect(session.status).toBe(200);
+    expect(session.headers['access-control-allow-origin']).toBe(origin);
+    expect(session.headers['access-control-allow-credentials']).toBe('true');
+
+    const refreshed = await request(app)
+      .post('/api/auth/refresh')
+      .set('Origin', origin)
+      .set('Cookie', cookieValue(session));
+    expect(refreshed.status).toBe(200);
+    expect(refreshed.headers['access-control-allow-origin']).toBe(origin);
+
+    const business = await request(app)
+      .get('/api/clients')
+      .set('Origin', origin)
+      .set('Authorization', `Bearer ${refreshed.body.data.accessToken}`);
+    expect(business.status).toBe(200);
+    expect(business.headers['access-control-allow-origin']).toBe(origin);
+
+    const logout = await request(app)
+      .post('/api/auth/logout')
+      .set('Origin', origin)
+      .set('Cookie', cookieValue(refreshed));
+    expect(logout.status).toBe(200);
+    expect(logout.headers['access-control-allow-origin']).toBe(origin);
+    expect(logout.headers['access-control-allow-credentials']).toBe('true');
+  });
+
   it('rotates a valid refresh token transactionally in the same family', async () => {
     await createUser();
     const session = await login();
@@ -298,7 +356,12 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
     const first = await request(app).post('/api/auth/logout').set('Cookie', currentCookie);
     expect(first.status).toBe(200);
     expect(first.body.data.loggedOut).toBe(true);
-    expect(first.headers['set-cookie'][0]).toContain('pavas_refresh_token=;');
+    const clearedCookie = first.headers['set-cookie'][0];
+    expect(clearedCookie).toContain('pavas_refresh_token=;');
+    expect(clearedCookie).toContain('HttpOnly');
+    expect(clearedCookie).toContain('Path=/api/auth');
+    expect(clearedCookie).toContain('SameSite=Lax');
+    expect(clearedCookie).not.toContain('Secure');
     await request(app).post('/api/auth/refresh').set('Cookie', currentCookie).expect(401);
 
     const second = await request(app).post('/api/auth/logout').set('Cookie', currentCookie);
