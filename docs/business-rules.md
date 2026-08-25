@@ -2,7 +2,7 @@
 
 ## Status
 
-These rules are the approved domain contract. Phase 1 behavior, authentication and HITO 8 backend authorization are implemented. Audit history remains assigned to HITO 9.
+These rules are the approved domain contract. Phase 1 behavior, authentication, HITO 8 backend authorization and HITO 9 audit history are implemented.
 
 ## Work-order state machine
 
@@ -46,24 +46,26 @@ Canonical transition map:
 - Unknown target states are request validation errors; known but disallowed transitions return HTTP 400 with `INVALID_STATUS_TRANSITION`.
 - A same-state request is rejected and never creates history.
 - The service locks the WorkOrder row inside a transaction and validates from the status read under that lock. Competing transitions therefore behave as a legal serial ordering rather than overwriting from stale state.
-- The optional `note` field is accepted, trimmed and capped at 1000 characters for Phase 2 body compatibility, but HITO 5 does not persist it.
+- The optional `note` field is accepted, trimmed, capped at 1000 characters and persisted only in the audit row for a valid transition.
 
 ## Work-order creation
 
 - A valid existing Bike is required; the database FK remains the final integrity barrier.
 - `entryDate` accepts an unambiguous ISO 8601 date-time with timezone and defaults to current server time when omitted.
-- Every HITO 3 order starts in `RECIBIDA` with persisted total `0.00`.
+- Every API-created order starts in `RECIBIDA` with persisted total `0.00`.
 - Client-supplied `status`, `total`, IDs and timestamps are ignored through explicit whitelists.
-- Initial `NULL -> RECIBIDA` history remains deferred until authenticated audit history is implemented in HITO 9.
+- The order and its initial `NULL -> RECIBIDA` event commit or roll back together; the event always identifies the authenticated creator and uses a null note.
 
 ## Audit history
 
-- Final Phase 2 work-order creation atomically records `NULL -> RECIBIDA` with the authenticated creator.
+- Work-order creation atomically records `NULL -> RECIBIDA` with the authenticated creator.
 - Every valid later transition creates exactly one immutable history row in the same transaction.
 - Cancellation is audited.
 - Rejected and idempotent transitions create no row.
 - History is ordered by `created_at DESC, id DESC`.
 - History defaults to page 1 and page size 20; page size is capped at 100.
+- A missing parent order returns 404 instead of an empty history response.
+- Both roles may read history; records expose only actor ID/name and have no update/delete API.
 - An indexed query and a test with more than 100 events support the source `<1s` display target under assessment-scale local data.
 
 ## Work-order items

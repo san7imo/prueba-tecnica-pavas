@@ -20,6 +20,7 @@ const DOMAIN_TABLES = [
   'bikes',
   'work_orders',
   'work_order_items',
+  'work_order_status_history',
   'users',
   'refresh_tokens',
 ];
@@ -38,6 +39,7 @@ const cleanDomainData = async () => {
     return;
   }
 
+  await models.WorkOrderStatusHistory.destroy({ where: {}, force: true });
   await models.WorkOrderItem.destroy({ where: {}, force: true });
   await models.WorkOrder.destroy({ where: {}, force: true });
   await models.Bike.destroy({ where: {}, force: true });
@@ -75,7 +77,7 @@ const createWorkOrder = async () => {
   return { client, bike, workOrder };
 };
 
-describe.sequential('Phase 1 persistence schema', () => {
+describe.sequential('Persistence schema', () => {
   beforeAll(async () => {
     assertSafeTestDatabase({
       nodeEnv: env.nodeEnv,
@@ -97,7 +99,7 @@ describe.sequential('Phase 1 persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(6);
+    expect(applied).toHaveLength(7);
     models = initializeModels(sequelize);
   });
 
@@ -116,7 +118,7 @@ describe.sequential('Phase 1 persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(6);
+    expect(await migrator.executed()).toHaveLength(7);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -126,6 +128,18 @@ describe.sequential('Phase 1 persistence schema', () => {
     expect(models.WorkOrder.associations.bike.target).toBe(models.Bike);
     expect(models.WorkOrder.associations.items.target).toBe(models.WorkOrderItem);
     expect(models.WorkOrderItem.associations.workOrder.target).toBe(models.WorkOrder);
+    expect(models.WorkOrder.associations.statusHistory.target).toBe(
+      models.WorkOrderStatusHistory,
+    );
+    expect(models.WorkOrderStatusHistory.associations.workOrder.target).toBe(
+      models.WorkOrder,
+    );
+    expect(models.User.associations.statusChanges.target).toBe(
+      models.WorkOrderStatusHistory,
+    );
+    expect(models.WorkOrderStatusHistory.associations.changedBy.target).toBe(
+      models.User,
+    );
     expect(models.User.associations.refreshTokens.target).toBe(models.RefreshToken);
     expect(models.RefreshToken.associations.user.target).toBe(models.User);
     expect(models.RefreshToken.associations.replacement.target).toBe(models.RefreshToken);
@@ -245,7 +259,7 @@ describe.sequential('Phase 1 persistence schema', () => {
     ).rejects.toBeInstanceOf(ForeignKeyConstraintError);
   });
 
-  it('uses RESTRICT deletes and CASCADE key updates on every Phase 1 FK', async () => {
+  it('uses RESTRICT deletes and CASCADE key updates on domain and audit FKs', async () => {
     const [rules] = await sequelize.query(
       `SELECT CONSTRAINT_NAME, DELETE_RULE, UPDATE_RULE
        FROM information_schema.REFERENTIAL_CONSTRAINTS
@@ -253,20 +267,92 @@ describe.sequential('Phase 1 persistence schema', () => {
          AND CONSTRAINT_NAME IN (
            'fk_bikes_client',
            'fk_work_orders_bike',
-           'fk_work_order_items_order'
+           'fk_work_order_items_order',
+           'fk_work_order_status_history_order',
+           'fk_work_order_status_history_user'
          )
        ORDER BY CONSTRAINT_NAME`,
       { replacements: { schema: env.database.name } },
     );
 
-    expect(rules).toHaveLength(3);
+    expect(rules).toHaveLength(5);
     expect(rules).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
         expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
         expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
+        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
+        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
       ]),
     );
+  });
+
+  it('defines the immutable audit columns and deterministic composite index physically', async () => {
+    const columns = await sequelize.getQueryInterface().describeTable(
+      'work_order_status_history',
+    );
+    expect(Object.keys(columns).sort()).toEqual([
+      'changed_by_user_id',
+      'created_at',
+      'from_status',
+      'id',
+      'note',
+      'to_status',
+      'work_order_id',
+    ]);
+    expect(columns.from_status.allowNull).toBe(true);
+    expect(columns.to_status.allowNull).toBe(false);
+    expect(columns.changed_by_user_id.allowNull).toBe(false);
+    expect(columns).not.toHaveProperty('updated_at');
+
+    const [indexRows] = await sequelize.query(
+      `SELECT INDEX_NAME, COLUMN_NAME, SEQ_IN_INDEX, COLLATION
+       FROM information_schema.STATISTICS
+       WHERE TABLE_SCHEMA = :schema
+         AND TABLE_NAME = 'work_order_status_history'
+         AND INDEX_NAME = 'ix_work_order_status_history_order_created_id'
+       ORDER BY SEQ_IN_INDEX`,
+      { replacements: { schema: env.database.name } },
+    );
+    expect(indexRows).toEqual([
+      expect.objectContaining({ COLUMN_NAME: 'work_order_id', COLLATION: 'A' }),
+      expect.objectContaining({ COLUMN_NAME: 'created_at', COLLATION: 'D' }),
+      expect.objectContaining({ COLUMN_NAME: 'id', COLLATION: 'D' }),
+    ]);
+  });
+
+  it('enforces both audit foreign keys and RESTRICT deletion physically', async () => {
+    const actor = await models.User.create({
+      name: 'Audit FK actor',
+      email: 'audit.fk@example.test',
+      passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-123456789',
+      role: 'ADMIN',
+    });
+    const { workOrder } = await createWorkOrder();
+    const history = await models.WorkOrderStatusHistory.create({
+      workOrderId: workOrder.id,
+      fromStatus: null,
+      toStatus: WORK_ORDER_STATUS.RECEIVED,
+      changedByUserId: actor.id,
+    });
+
+    await expect(models.WorkOrder.destroy({ where: { id: workOrder.id } }))
+      .rejects.toBeInstanceOf(ForeignKeyConstraintError);
+    await expect(models.User.destroy({ where: { id: actor.id } }))
+      .rejects.toBeInstanceOf(ForeignKeyConstraintError);
+    await expect(models.WorkOrderStatusHistory.create({
+      workOrderId: 999999,
+      fromStatus: null,
+      toStatus: WORK_ORDER_STATUS.RECEIVED,
+      changedByUserId: actor.id,
+    })).rejects.toBeInstanceOf(ForeignKeyConstraintError);
+    await expect(models.WorkOrderStatusHistory.create({
+      workOrderId: workOrder.id,
+      fromStatus: null,
+      toStatus: WORK_ORDER_STATUS.RECEIVED,
+      changedByUserId: 999999,
+    })).rejects.toBeInstanceOf(ForeignKeyConstraintError);
+    expect(history.id).toEqual(expect.any(Number));
   });
 
   it.each(['0.00', '-1.00'])('rejects count %s through the MySQL CHECK', async (count) => {
@@ -366,13 +452,20 @@ describe.sequential('Phase 1 persistence schema', () => {
       tokenHash: 'c'.repeat(64),
       expiresAt: new Date(Date.now() + 60000),
     });
+    const { workOrder } = await createWorkOrder();
+    await models.WorkOrderStatusHistory.create({
+      workOrderId: workOrder.id,
+      fromStatus: null,
+      toStatus: WORK_ORDER_STATUS.RECEIVED,
+      changedByUserId: user.id,
+    });
 
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(6);
+    expect(reverted).toHaveLength(7);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(6);
+    expect(reapplied).toHaveLength(7);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
   }, 30000);
 });

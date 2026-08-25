@@ -34,10 +34,15 @@ const bikeInclude = (plate) => ({
 });
 
 export const workOrderRepository = {
-  create(data) {
+  create(data, transaction) {
     return models.WorkOrder.create(data, {
       fields: ['bikeId', 'entryDate', 'faultDescription', 'status', 'total'],
+      transaction,
     });
+  },
+
+  existsById(id) {
+    return models.WorkOrder.findByPk(id, { attributes: ['id'] });
   },
 
   findByIdForUpdate(id, transaction) {

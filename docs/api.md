@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The API exposes complete Phase 1 business routes plus HITO 7 sessions and HITO 8 backend RBAC/user administration. Every Client, Bike and WorkOrder endpoint requires a valid access JWT.
+The API exposes complete Phase 1 business routes, HITO 7 sessions, HITO 8 backend RBAC/user administration and HITO 9 work-order history. Every Client, Bike and WorkOrder endpoint requires a valid access JWT.
 
 ```text
 GET  /api/health
@@ -28,12 +28,11 @@ GET  /api/bikes/:id
 POST /api/work-orders
 GET  /api/work-orders?status=&plate=&page=&pageSize=
 GET  /api/work-orders/:id
+GET  /api/work-orders/:id/history?page=&pageSize=
 PATCH /api/work-orders/:id/status
 POST /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
 ```
-
-Work-order history remains deferred to HITO 9.
 
 ## General conventions
 
@@ -264,7 +263,7 @@ Authentication/roles: Bearer token required; ADMIN and MECANICO.
 
 `bikeId` and a non-empty `faultDescription` are required. `entryDate` is optional: when present it must be a valid ISO 8601 date-time with an explicit `Z`/UTC offset and up to millisecond precision; when omitted, the backend uses current server time. The related Bike must exist.
 
-The backend always persists `status=RECIBIDA` and `total=0.00`. Input fields such as `id`, `status`, `total`, `createdAt` and `updatedAt` are ignored by explicit validator/service/repository whitelists.
+The backend always persists `status=RECIBIDA` and `total=0.00`. In the same transaction it inserts one history event with `fromStatus=null`, `toStatus=RECIBIDA`, `note=null` and the authenticated creator. Input fields such as `id`, `status`, `total`, history fields and timestamps are ignored by explicit validator/service/repository whitelists.
 
 Success: `201 Created` with the order, nested Bike/Client and `items: []`.
 
@@ -354,7 +353,7 @@ Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` must be a 
 }
 ```
 
-`toStatus` is required and must be one of the six canonical states. `note` is optional, accepts a string or `null`, is trimmed and is limited to 1000 characters. HITO 5 accepts but does not persist or return the note; Phase 2 audit history will consume the same body shape.
+`toStatus` is required and must be one of the six canonical states. `note` is optional, accepts a string or `null`, is trimmed and is limited to 1000 characters. A valid transition persists the normalized note in its history row; the compact status response does not repeat it.
 
 Allowed transitions:
 
@@ -369,7 +368,7 @@ Allowed transitions:
 
 ADMIN may execute every workflow-valid target. MECANICO may target only `DIAGNOSTICO`, `EN_PROCESO` and `LISTA`; a workflow-valid `ENTREGADA` or `CANCELADA` request returns 403. The service checks the locked workflow edge before the actor permission, so an edge invalid for everyone remains `400 INVALID_STATUS_TRANSITION` rather than 403.
 
-The service starts a transaction and locks the WorkOrder before reading and validating its current status. Same-state requests and every known but disallowed edge return the stable business error below.
+The service starts a transaction and locks the WorkOrder before reading and validating its current status. The status update and exactly one history insert either commit together or roll back together. Same-state requests and every known but disallowed edge return the stable business error below and create no history.
 
 Success: `200 OK`.
 
@@ -394,6 +393,48 @@ Invalid transition: `400 Bad Request`.
 ```
 
 Errors: `400 VALIDATION_ERROR` for an unknown target/malformed input, `400 INVALID_STATUS_TRANSITION` for a known disallowed edge, `403 FORBIDDEN` for a workflow-valid target denied to MECANICO, `404 WORK_ORDER_NOT_FOUND` for a missing order, and safe `500 INTERNAL_ERROR` for an unexpected transactional failure.
+
+### List work-order status history
+
+```http
+GET /api/work-orders/:id/history?page=1&pageSize=20
+Authorization: Bearer <accessToken>
+```
+
+Authentication/roles: Bearer token required; ADMIN and MECANICO. `id` and `page` must be positive integers. `pageSize` defaults to 20 and cannot exceed 100. The service first verifies that the parent order exists, so a missing order returns `404 WORK_ORDER_NOT_FOUND`, never an ambiguous empty list.
+
+Rows are immutable and ordered deterministically by `createdAt DESC, id DESC`. The response selects only the audit contract and the actor's safe `id`/`name`; email, role, active state, password hash and token data are not exposed.
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "fromStatus": "RECIBIDA",
+      "toStatus": "DIAGNOSTICO",
+      "note": "Initial diagnosis completed",
+      "createdAt": "2026-08-24T16:00:00.000Z",
+      "changedBy": { "id": 1, "name": "Workshop Admin" }
+    },
+    {
+      "id": 1,
+      "fromStatus": null,
+      "toStatus": "RECIBIDA",
+      "note": null,
+      "createdAt": "2026-08-24T15:00:00.000Z",
+      "changedBy": { "id": 1, "name": "Workshop Admin" }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 2,
+    "totalPages": 1
+  }
+}
+```
+
+Errors: `400 VALIDATION_ERROR`, `401 AUTHENTICATION_REQUIRED`/`INVALID_ACCESS_TOKEN`, `404 WORK_ORDER_NOT_FOUND`.
 
 ### Add work-order item
 

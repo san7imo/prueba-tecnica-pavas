@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product plus HITO 7 sessions and HITO 8 backend RBAC/user administration. Audit history and Phase 2 frontend work remain assigned to later milestones.
+The repository includes the complete Phase 1 product plus HITO 7 sessions, HITO 8 backend RBAC/user administration and HITO 9 work-order status audit history. Phase 2 frontend work remains assigned to HITO 10.
 
 ## Features
 
-Implemented through HITO 8:
+Implemented through HITO 9:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -48,8 +48,14 @@ Implemented through HITO 8:
 - ADMIN registration, safe user listing and role/active administration;
 - immediate access-token rejection after role or active changes;
 - MECANICO item/status permissions enforced in backend with workflow/RBAC separation.
+- immutable WorkOrderStatusHistory persistence with physical WorkOrder/User foreign keys;
+- atomic initial `NULL -> RECIBIDA` audit events tied to the authenticated creator;
+- atomic transition/audit writes with notes, cancellation evidence and rollback coverage;
+- authenticated ADMIN/MECANICO history API with safe actor serialization;
+- deterministic indexed history pagination (`createdAt DESC, id DESC`) tested with 150 tied events;
+- competing same-target transitions proven to create exactly one audit row.
 
-Phase 2 audit history and frontend authentication/user management remain pending.
+Phase 2 frontend authentication, user management and history visualization remain pending.
 
 ## Assessment Scope
 
@@ -134,7 +140,7 @@ See the comments in each example file. Test integration suites must use `DB_NAME
 
 ## Database Setup
 
-MySQL uses separate `pavas_workshop` and `pavas_workshop_test` databases. HITO 1 implements deterministic Phase 1 migrations:
+MySQL uses separate `pavas_workshop` and `pavas_workshop_test` databases. Seven deterministic migrations currently create the Phase 1 domain, identity/session tables and status history:
 
 ```bash
 cd backend
@@ -180,7 +186,7 @@ Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`,
 
 ## API Summary
 
-Implemented endpoints include health, protected Phase 1 resources/status/items, all contractual Auth endpoints and ADMIN-only user list/role/active APIs. Payloads, cookies, authorization and errors are documented in [docs/api.md](docs/api.md).
+Implemented endpoints include health, protected Phase 1 resources/status/items, paginated work-order history, all contractual Auth endpoints and ADMIN-only user list/role/active APIs. Payloads, cookies, authorization and errors are documented in [docs/api.md](docs/api.md).
 
 ## Authentication
 
@@ -192,7 +198,7 @@ Enforced in the backend. Both roles can create/read current business resources a
 
 ## Business Rules
 
-The canonical total, state machine and role matrix are active in the backend. Audit behavior remains documented for HITO 9 in [docs/business-rules.md](docs/business-rules.md).
+The canonical total, state machine, atomic audit ledger and role matrix are active in the backend. See [docs/business-rules.md](docs/business-rules.md).
 
 ## Testing
 
@@ -201,7 +207,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, immediate token invalidation and concurrency. Frontend tests remain the Phase 1 gate until HITO 10. See [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, immediate token invalidation and concurrency. Frontend tests remain the Phase 1 gate until HITO 10. See [docs/testing.md](docs/testing.md).
 
 ## Security Notes
 
@@ -240,17 +246,18 @@ Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.j
 - WorkOrder `entryDate` requires an ISO 8601 date-time with timezone when provided and otherwise uses current server time.
 - The HITO 6 creation screen intentionally omits `entryDate`, so the backend server time is the single default.
 - WorkOrder pages default to 1/20, reject page sizes above 100 and use `entryDate DESC, id DESC`.
-- The first audit record will be `NULL -> RECIBIDA` once audit history is introduced in Phase 2.
+- History pages default to 1/20, reject page sizes above 100 and use `createdAt DESC, id DESC`.
+- Every API-created order records `NULL -> RECIBIDA` with the authenticated creator and a null system note.
 
 ## Known Limitations
 
-Audit history and Phase 2 frontend authentication/role guards remain intentionally absent. Until HITO 10, the existing Phase 1 React UI has no login/session context and therefore cannot call the newly protected business API end-to-end. Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. Status notes are not persisted until HITO 9. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
+Phase 2 frontend authentication/role guards and the history timeline remain intentionally absent until HITO 10. The existing Phase 1 React UI has no login/session context and therefore cannot call the protected business API end-to-end. Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. A separately hosted frontend requires the restricted CORS policy planned for HITO 11; local development works through the Vite proxy.
 
 `npm audit` currently reports a moderate advisory in Sequelize 6.37.8's transitive `uuid` 8.3.2 dependency. npm offers only an unsafe downgrade to Sequelize 3 as an automatic fix, so no forced fix was applied. It must be reviewed again during HITO 11 and final dependency audit.
 
 ## Current Milestone
 
-**HITO 8 — Role-Based Access Control implemented locally.** Awaiting milestone review; no HITO 9 work is included.
+**HITO 9 — Work-Order Status Audit History implemented locally.** Awaiting milestone review; no HITO 10 work is included.
 
 ## Roadmap
 

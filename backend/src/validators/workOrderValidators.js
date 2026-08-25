@@ -187,6 +187,40 @@ export const validateWorkOrderId = (request, _response, next) => {
   });
 };
 
+export const validateWorkOrderHistoryList = (request, _response, next) => {
+  const details = [];
+  const id = positiveId({
+    value: request.params.id,
+    field: 'id',
+    label: 'Work order id',
+    details,
+  });
+  const page = paginationInteger({
+    value: request.query.page,
+    field: 'page',
+    defaultValue: DEFAULT_PAGE,
+    details,
+  });
+  const pageSize = paginationInteger({
+    value: request.query.pageSize,
+    field: 'pageSize',
+    defaultValue: DEFAULT_PAGE_SIZE,
+    max: MAX_PAGE_SIZE,
+    details,
+  });
+
+  if (details.length > 0) {
+    completeValidation({ request, section: 'query', value: {}, details, next });
+    return;
+  }
+
+  request.validated = {
+    params: { id },
+    query: { page, pageSize },
+  };
+  next();
+};
+
 export const validateWorkOrderStatusUpdate = (request, _response, next) => {
   const body = asObject(request.body);
   const details = [];

@@ -1,8 +1,14 @@
 import { workOrderService } from '../services/workOrderService.js';
-import { serializeWorkOrder } from '../utils/resourceSerializers.js';
+import {
+  serializeWorkOrder,
+  serializeWorkOrderStatusHistory,
+} from '../utils/resourceSerializers.js';
 
 export const createWorkOrder = async (request, response) => {
-  const workOrder = await workOrderService.createWorkOrder(request.validated.body);
+  const workOrder = await workOrderService.createWorkOrder(
+    request.validated.body,
+    request.user.id,
+  );
   response.status(201).json({ data: serializeWorkOrder(workOrder) });
 };
 
@@ -17,6 +23,17 @@ export const listWorkOrders = async (request, response) => {
 export const getWorkOrder = async (request, response) => {
   const workOrder = await workOrderService.getWorkOrder(request.validated.params.id);
   response.json({ data: serializeWorkOrder(workOrder) });
+};
+
+export const listWorkOrderStatusHistory = async (request, response) => {
+  const result = await workOrderService.listStatusHistory(
+    request.validated.params.id,
+    request.validated.query,
+  );
+  response.json({
+    data: result.history.map(serializeWorkOrderStatusHistory),
+    meta: result.meta,
+  });
 };
 
 export const updateWorkOrderStatus = async (request, response) => {

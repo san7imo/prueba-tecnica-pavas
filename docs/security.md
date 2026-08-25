@@ -30,6 +30,8 @@ HITO 8 adds a reusable `authorize(...roles)` boundary. Business routers execute 
 
 Users and registration are ADMIN-only. MECANICO cannot administer users, delete items, deliver or cancel orders. Status authorization is evaluated in the locked WorkOrder transaction after workflow validity, preserving 400 for an invalid graph edge and 403 for a valid target forbidden to the actor.
 
+HITO 9 derives every audit actor from the authenticated request, never from body input. Both roles may read work-order history, but its explicit serializer exposes only actor `id` and `name`; email, role, active state, password hashes and token fields are excluded. The database restricts deletion of an order or user referenced by immutable history.
+
 Because authentication reloads the user and compares the JWT role on every request, deactivation and role changes invalidate existing access tokens immediately. Self-deactivation and self-role changes are allowed by the contract; last-ADMIN protection is explicitly outside this MVP milestone.
 
 HITO 11 retains the global Helmet/restricted-CORS review, broader security-header checks, dependency remediation and production deployment review. The local frontend currently uses Vite's same-origin `/api` proxy, so no broad CORS policy was introduced in this milestone.

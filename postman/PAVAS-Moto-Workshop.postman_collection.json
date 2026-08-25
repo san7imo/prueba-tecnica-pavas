@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "HITO 8 Auth, Users and protected Client, Bike and Work Order API requests.",
+    "description": "HITO 9 Auth, Users, protected business APIs and work-order audit history requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -518,7 +518,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders",
-            "description": "Creates a RECIBIDA work order with total 0.00 and stores its id."
+            "description": "Creates a RECIBIDA work order with total 0.00, atomically records its initial audit event and stores its id."
           },
           "event": [
             {
@@ -654,7 +654,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"toStatus\": \"{{toStatus}}\",\n  \"note\": \"Phase 1 accepts this note without persisting history\"\n}",
+              "raw": "{\n  \"toStatus\": \"{{toStatus}}\",\n  \"note\": \"Status changed and recorded by HITO 9 audit\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -662,7 +662,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}/status",
-            "description": "Updates status transactionally. Examples: DIAGNOSTICO, EN_PROCESO, LISTA, ENTREGADA and CANCELADA. Set toStatus to a target valid from the order's current state."
+            "description": "Updates status and inserts its actor/note audit row in one transaction. Set toStatus to a target valid from the order's current state."
           },
           "event": [
             {
@@ -673,6 +673,32 @@
                   "const data = pm.response.json().data;",
                   "pm.expect(String(data.id)).to.eql(String(pm.collectionVariables.get('workOrderId')));",
                   "pm.expect(data.status).to.eql(pm.collectionVariables.get('toStatus'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Status History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}/history?page=1&pageSize=20",
+            "description": "Returns safe immutable history newest first with pagination metadata. ADMIN and MECANICO may call it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.be.an('array').that.is.not.empty;",
+                  "pm.expect(body.meta.page).to.eql(1);",
+                  "pm.expect(body.meta.pageSize).to.eql(20);",
+                  "pm.expect(body.data[0]).to.have.property('changedBy');",
+                  "pm.expect(body.data[0].changedBy).not.to.have.property('email');"
                 ],
                 "type": "text/javascript"
               }

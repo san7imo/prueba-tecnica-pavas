@@ -5,6 +5,7 @@ import {
   createWorkOrder,
   getWorkOrder,
   listWorkOrders,
+  listWorkOrderStatusHistory,
   updateWorkOrderStatus,
 } from '../controllers/workOrderController.js';
 import {
@@ -18,6 +19,7 @@ import {
 } from '../validators/workOrderItemValidators.js';
 import {
   validateCreateWorkOrder,
+  validateWorkOrderHistoryList,
   validateWorkOrderId,
   validateWorkOrderList,
   validateWorkOrderStatusUpdate,
@@ -38,5 +40,10 @@ workOrderRouter.patch(
   '/:id/status',
   validateWorkOrderStatusUpdate,
   updateWorkOrderStatus,
+);
+workOrderRouter.get(
+  '/:id/history',
+  validateWorkOrderHistoryList,
+  listWorkOrderStatusHistory,
 );
 workOrderRouter.get('/:id', validateWorkOrderId, getWorkOrder);

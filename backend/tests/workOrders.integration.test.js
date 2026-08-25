@@ -30,6 +30,7 @@ let adminAccessToken;
 const request = createAuthenticatedRequest(() => adminAccessToken);
 
 const cleanDomainData = async () => {
+  await models.WorkOrderStatusHistory.destroy({ where: {}, force: true });
   await models.WorkOrderItem.destroy({ where: {}, force: true });
   await models.WorkOrder.destroy({ where: {}, force: true });
   await models.Bike.destroy({ where: {}, force: true });

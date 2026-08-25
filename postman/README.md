@@ -27,8 +27,9 @@ Then run protected Phase 1 requests in folder order:
 10. Work Orders / Filter Work Orders
 11. Work Orders / Get Work Order
 12. Work Orders / Update Work Order Status
-13. Work Orders / Delete Work Order Item
+13. Work Orders / Get Status History
+14. Work Orders / Delete Work Order Item
 
-The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify exact totals. `toStatus` defaults to `DIAGNOSTICO`; change it to each next legal target (`EN_PROCESO`, `LISTA`, `ENTREGADA`) or use `CANCELADA` from a non-terminal order.
+The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify exact totals. `toStatus` defaults to `DIAGNOSTICO`; change it to each next legal target (`EN_PROCESO`, `LISTA`, `ENTREGADA`) or use `CANCELADA` from a non-terminal order. The history request verifies pagination and the safe actor shape after creation/status events.
 
-Run Auth / Logout last. HITO 8 Auth, Users and protected Phase 1 endpoints are present. History remains deliberately absent until HITO 9.
+Run Auth / Logout last. HITO 9 Auth, Users, protected Phase 1 endpoints and status history are present.

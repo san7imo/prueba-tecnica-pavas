@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1, HITO 7 authentication and HITO 8 backend RBAC/user-administration requirements are Done. Audit and Phase 2 frontend requirements remain pending.
+All mandatory Phase 1, HITO 7 authentication, HITO 8 backend RBAC/user administration and HITO 9 audit-history requirements are Done. Phase 2 frontend requirements remain pending.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -74,14 +74,14 @@ All mandatory Phase 1, HITO 7 authentication and HITO 8 backend RBAC/user-admini
 | P2-USER-002 | ADMIN changes user role | 2 | Validated UserService update | `PATCH /api/users/:id/role` | Update/validation/404/403/immediate-effect tests | Done |
 | P2-USER-003 | ADMIN activates/deactivates users | 2 | Strict boolean UserService update | `PATCH /api/users/:id/active` | Deactivate/reactivate/validation/404/403 tests | Done |
 | P2-USER-004 | Password/hash never returned | 2 | Safe User model + explicit auth serializers/attributes | Auth APIs | Deep JSON payload/model assertions | Done |
-| P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Planned migration/model HITO 9 | History endpoint | Schema/content tests | Pending |
-| P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | Planned creation transaction HITO 9 | Create/history | Initial audit test | Pending |
-| P2-AUDIT-003 | Every valid change, including cancel, creates one row | 2 | Planned transition transaction | Status/history | Exact row-count tests | Pending |
-| P2-AUDIT-004 | Rejected/idempotent changes create no history | 2 | Planned transition transaction | Status/history | Absence tests | Pending |
-| P2-AUDIT-005 | History immutable and newest first | 2 | No mutation routes; ordered repository | History endpoint | Ordering tests | Pending |
-| P2-AUDIT-006 | History index includes required source prefix | 2 | Planned migration HITO 9 | N/A | Index metadata test | Pending |
-| P2-AUDIT-007 | History pagination, max 100 and stable tie order | 2 | Planned repository HITO 9 | `GET /api/work-orders/:id/history` | More-than-100 test | Pending |
-| P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded query + UI | Detail timeline | Local query-plan/performance check | Pending |
+| P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Migration/model + WorkOrder/User associations and FKs | History endpoint | Schema metadata/FK + content tests | Done |
+| P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | WorkOrder creation + audit insert in one transaction | Create/history | Initial event + forced-insert rollback tests | Done |
+| P2-AUDIT-003 | Every valid change, including cancel, creates one row | 2 | Locked status update + history insert in one transaction | Status/history | Actor/from/to/note/cancel exact row tests | Done |
+| P2-AUDIT-004 | Rejected/idempotent changes create no history | 2 | Workflow/RBAC validation before writes | Status/history | Invalid/same/terminal/forbidden absence tests | Done |
+| P2-AUDIT-005 | History immutable and newest first | 2 | Append-only repository/API + ordered read | History endpoint | Safe response/newest-first/timestamp-tie tests | Done |
+| P2-AUDIT-006 | History index includes required source prefix | 2 | `ix_work_order_status_history_order_created_id` | N/A | MySQL `STATISTICS` metadata test | Done |
+| P2-AUDIT-007 | History pagination, max 100 and stable tie order | 2 | Validated bounded `findAndCountAll` query | `GET /api/work-orders/:id/history` | 150-event 100/50/default/validation test | Done |
+| P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded backend query; UI remains HITO 10 | History API | Local 150-row query-plan/performance check | Done |
 | P2-FE-001 | Login and protected/role routes | 2 | Planned HITO 10 | `/login`, protected views | Guard/login tests | Pending |
 | P2-FE-002 | Session restore, renewal and logout | 2 | Planned AuthContext/Axios flow | Application shell | Refresh/recovery UI tests | Pending |
 | P2-FE-003 | ADMIN user list/create/role/active UI | 2 | Planned HITO 10 | `/admin/users` | User-management UI tests | Pending |

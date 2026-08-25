@@ -8,6 +8,7 @@ import { BusinessRuleError } from '../errors/BusinessRuleError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { bikeRepository } from '../repositories/bikeRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
+import { workOrderStatusHistoryRepository } from '../repositories/workOrderStatusHistoryRepository.js';
 import { canTransition } from '../utils/workOrderStateMachine.js';
 
 const bikeNotFound = () =>
@@ -29,20 +30,31 @@ const invalidStatusTransition = (fromStatus, toStatus) =>
   });
 
 export const workOrderService = {
-  async createWorkOrder(data) {
-    if (!(await bikeRepository.existsById(data.bikeId))) {
-      throw bikeNotFound();
-    }
-
+  async createWorkOrder(data, actorUserId) {
     try {
-      const workOrder = await workOrderRepository.create({
-        bikeId: data.bikeId,
-        entryDate: data.entryDate ?? new Date(),
-        faultDescription: data.faultDescription.trim(),
-        status: WORK_ORDER_STATUS.RECEIVED,
-        total: '0.00',
+      const workOrderId = await sequelize.transaction(async (transaction) => {
+        if (!(await bikeRepository.existsById(data.bikeId, transaction))) {
+          throw bikeNotFound();
+        }
+
+        const workOrder = await workOrderRepository.create({
+          bikeId: data.bikeId,
+          entryDate: data.entryDate ?? new Date(),
+          faultDescription: data.faultDescription.trim(),
+          status: WORK_ORDER_STATUS.RECEIVED,
+          total: '0.00',
+        }, transaction);
+        await workOrderStatusHistoryRepository.create({
+          workOrderId: workOrder.id,
+          fromStatus: null,
+          toStatus: WORK_ORDER_STATUS.RECEIVED,
+          note: null,
+          changedByUserId: actorUserId,
+        }, transaction);
+
+        return workOrder.id;
       });
-      return workOrderRepository.findById(workOrder.id);
+      return workOrderRepository.findById(workOrderId);
     } catch (error) {
       if (error instanceof ForeignKeyConstraintError) {
         throw bikeNotFound();
@@ -72,7 +84,28 @@ export const workOrderService = {
     return workOrder;
   },
 
-  transitionStatus(id, { toStatus }, actor) {
+  async listStatusHistory(id, pagination) {
+    if (!(await workOrderRepository.existsById(id))) {
+      throw workOrderNotFound();
+    }
+
+    const { count, rows } =
+      await workOrderStatusHistoryRepository.findPaginatedByWorkOrder(
+        id,
+        pagination,
+      );
+    return {
+      history: rows,
+      meta: {
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        totalItems: count,
+        totalPages: Math.ceil(count / pagination.pageSize),
+      },
+    };
+  },
+
+  transitionStatus(id, { toStatus, note }, actor) {
     return sequelize.transaction(async (transaction) => {
       const workOrder = await workOrderRepository.findByIdForUpdate(
         id,
@@ -98,6 +131,13 @@ export const workOrderService = {
       }
 
       await workOrderRepository.updateStatus(id, toStatus, transaction);
+      await workOrderStatusHistoryRepository.create({
+        workOrderId: workOrder.id,
+        fromStatus: workOrder.status,
+        toStatus,
+        note,
+        changedByUserId: actor.id,
+      }, transaction);
       return { id: workOrder.id, status: toStatus };
     });
   },

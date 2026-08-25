@@ -2,7 +2,7 @@
 
 ## Status
 
-The physical schema contains the four Phase 1 domain tables plus the HITO 7 `users` and `refresh_tokens` identity tables. WorkOrderStatusHistory remains conceptual until HITO 9.
+The physical schema contains the four Phase 1 domain tables, the HITO 7 `users` and `refresh_tokens` identity tables, and the HITO 9 immutable `work_order_status_history` audit table.
 
 ## Conventions
 
@@ -95,7 +95,7 @@ erDiagram
     }
 ```
 
-The diagram includes the full target domain. Six migrations are currently the schema source of truth; only WorkOrderStatusHistory remains pending.
+The diagram represents the implemented backend domain. Seven migrations are currently the schema source of truth.
 
 ## Client
 
@@ -164,7 +164,7 @@ CAST(COALESCE(SUM(`count` * `unit_value`), 0) AS DECIMAL(15,2))
 
 The `COALESCE` defines an empty order as `0.00`; the cast matches `work_orders.total`. MySQL performs multiplication and summation on exact decimal values, and Sequelize/mysql2 returns the result as a string. The backend does not convert it to binary floating point. This bounded aggregate is documented in ADR-004 and requires no new dependency.
 
-## Phase 1 referential policy
+## Referential policy
 
 All Phase 1 foreign keys use:
 
@@ -186,6 +186,7 @@ The schema is created in dependency order:
 202608240004-create-work-order-items.js
 202608240005-create-users.js
 202608240006-create-refresh-tokens.js
+202608240007-create-work-order-status-history.js
 ```
 
 Umzug executes ESM migrations and records them in `SequelizeMeta`. Each migration provides `up` and `down`. Sequelize `sync` is not used.
@@ -202,7 +203,7 @@ Umzug executes ESM migrations and records them in `SequelizeMeta`. Each migratio
 | `active` | BOOLEAN | required |
 | timestamps | DATETIME(3) | required |
 
-Email is trimmed and lowercased by seed/input code and the model setter. Only `ADMIN` and `MECANICO` are valid. No user-management API exists in HITO 7.
+Email is trimmed and lowercased by seed/input code and the model setter. Only `ADMIN` and `MECANICO` are valid. HITO 8 adds ADMIN-only user management without changing this schema.
 
 ## WorkOrderStatusHistory
 
@@ -212,7 +213,7 @@ Email is trimmed and lowercased by seed/input code and the model setter. Only `A
 | `work_order_id` | BIGINT | FK to `work_orders.id`, required |
 | `from_status` | ENUM | nullable only for initial event |
 | `to_status` | ENUM | required |
-| `note` | TEXT | nullable |
+| `note` | VARCHAR(1000) | nullable |
 | `changed_by_user_id` | BIGINT | FK to `users.id`, required |
 | `created_at` | DATETIME | required, immutable |
 
@@ -224,7 +225,7 @@ Required index:
 
 The source-required `(work_order_id, created_at DESC)` prefix is preserved; `id DESC` provides deterministic ordering for timestamp ties. There are no update or delete history endpoints.
 
-Work-order creation in the final Phase 2 system atomically creates `NULL -> RECIBIDA` with the authenticated creator. This interprets the source field “from_status nullable para el primer estado” explicitly and traceably.
+`fk_work_order_status_history_order` and `fk_work_order_status_history_user` use `ON DELETE RESTRICT` and `ON UPDATE CASCADE`. Migration `202608240007` creates the physical descending index `ix_work_order_status_history_order_created_id`. Work-order creation now atomically creates `NULL -> RECIBIDA` with the authenticated creator. This interprets the source field “from_status nullable para el primer estado” explicitly and traceably.
 
 ## RefreshToken
 

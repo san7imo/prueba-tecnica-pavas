@@ -75,3 +75,18 @@ export const serializeWorkOrder = (resource) => {
 
   return serialized;
 };
+
+export const serializeWorkOrderStatusHistory = (resource) => {
+  const history = plain(resource);
+  return {
+    id: history.id,
+    fromStatus: history.fromStatus,
+    toStatus: history.toStatus,
+    note: history.note,
+    createdAt: new Date(history.createdAt).toISOString(),
+    changedBy: {
+      id: history.changedBy.id,
+      name: history.changedBy.name,
+    },
+  };
+};

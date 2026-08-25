@@ -52,6 +52,7 @@ const EXPECTED_TRANSITIONS = Object.freeze({
 });
 
 const cleanDomainData = async () => {
+  await models.WorkOrderStatusHistory.destroy({ where: {}, force: true });
   await models.WorkOrderItem.destroy({ where: {}, force: true });
   await models.WorkOrder.destroy({ where: {}, force: true });
   await models.Bike.destroy({ where: {}, force: true });

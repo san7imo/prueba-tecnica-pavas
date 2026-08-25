@@ -64,19 +64,20 @@ Transaction rollback may isolate ordinary tests. Concurrency tests need committe
 - asserts `NODE_ENV=test` and `DB_NAME_TEST` selection;
 - refuses development/production destructive setup through `testDatabaseGuard`;
 - starts from a reverted migration stack;
-- applies all four migrations;
+- applies all seven migrations;
 - verifies Sequelize associations with a nested persistence query;
 - verifies normalized UNIQUE plate behavior;
-- verifies Bike→Client, WorkOrder→Bike and WorkOrderItem→WorkOrder foreign keys;
+- verifies domain, audit and identity associations plus physical foreign keys;
 - bypasses model validation deliberately to prove MySQL enforces both CHECK constraints;
 - reloads DECIMAL values as strings to prove no JavaScript float conversion;
-- verifies contractual ENUM values;
+- verifies contractual ENUM values and the exact audit column set;
+- verifies the physical descending audit index and both audit `RESTRICT` foreign keys;
 - reverts every migration, confirms the tables are absent and reapplies the stack;
 - removes domain data/reverts migrations and closes the connection in teardown.
 
 All MySQL integration files run sequentially because they intentionally share one migration database. Ordinary test cases within each HTTP suite remain isolated by deterministic cleanup.
 
-The backend Vitest hook timeout is 30 seconds because every integration file deliberately exercises a six-migration MySQL down/up lifecycle; file parallelism remains disabled so suites cannot mutate the shared schema concurrently.
+The backend Vitest hook timeout is 30 seconds because every integration file deliberately exercises a seven-migration MySQL down/up lifecycle; file parallelism remains disabled so suites cannot mutate the shared schema concurrently.
 
 ## HITO 2 Client/Bike HTTP suite
 
@@ -134,7 +135,7 @@ Concurrency fixtures are committed before the requests and the requests run thro
 - cancellation from `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` and `LISTA`;
 - an explicit 6 × 6 matrix comparing every current/target pair against the contractual graph, including every same-state request;
 - terminal-state, unknown-target, malformed body/ID, missing-order and stable error behavior;
-- optional/null note compatibility without history persistence;
+- normalized/null note handling with transactional history persistence;
 - rollback and safe error serialization on a forced repository failure;
 - preservation of item total during status changes;
 - a concurrent serially valid `RECIBIDA → DIAGNOSTICO/CANCELADA` scenario;
@@ -142,13 +143,31 @@ Concurrency fixtures are committed before the requests and the requests run thro
 
 The terminal race captures SQL evidence of two independent transactions and two WorkOrder `FOR UPDATE` reads. Its losing response names the terminal state committed by the winner, proving revalidation occurred after the lock rather than against stale `LISTA` state.
 
+## HITO 9 audit-history suite
+
+`tests/workOrderHistory.integration.test.js` exercises the audit contract through Express and MySQL. It covers:
+
+- exactly one initial `NULL -> RECIBIDA` event using the authenticated creator and null note;
+- creation rollback when the initial audit insert fails;
+- actor, timestamp, from/to, trimmed note and cancellation content;
+- zero rows after invalid, same-state, terminal or MECANICO-forbidden attempts;
+- transition rollback when the history insert fails after the status update;
+- ADMIN/MECANICO read access, unauthenticated 401, missing-parent 404 and safe actor serialization;
+- strict ID/page/pageSize validation and the page-size maximum of 100;
+- 150 timestamp-tied rows split exactly 100/50 and ordered by descending ID;
+- two concurrent same-target requests producing one 200, one 400 and exactly one history row.
+
+`tests/schema.integration.test.js` additionally verifies the physical `(work_order_id ASC, created_at DESC, id DESC)` metadata, exact immutable column set, both foreign keys and populated migration down/up. The bounded read performs one parent check, one count and one paginated actor join; no query is issued per history row.
+
+The 2026-08-24 local HITO 9 verification observed **9.40 ms** for the complete authenticated HTTP request returning a 100-row page from 150 tied events on the Docker MySQL 8.4 test environment. `EXPLAIN` selected `ix_work_order_status_history_order_created_id` for the history table; the actor join still reported a bounded temporary/filesort step. With a hard maximum of 100 returned rows and the measured result well below the source target, no raw-SQL hint or extra infrastructure is justified. This observation is assessment-scale evidence, not a production SLA.
+
 ## Critical future suites
 
-Later milestones must cover the remaining Phase 2 matrix in `AGENTS.md`: audit contents/order/pagination and the Phase 2 frontend. Phase 1, authentication and backend RBAC/user administration now point to concrete integration evidence.
+Later milestones must cover the remaining Phase 2 frontend and security-hardening matrix in `AGENTS.md`. Phase 1, authentication, backend RBAC/user administration and audit history now point to concrete integration evidence.
 
 ## HITO 7 authentication suite
 
-`tests/auth.integration.test.js` applies all six migrations to guarded MySQL and covers bcrypt storage/cost/comparison, normalized ADMIN and MECANICO login, generic failures, safe payloads, access claims, `/me`, missing/malformed/expired/wrong-signature/stale-user/inactive-user access, HttpOnly cookie properties, digest-only persistence, refresh expiry/invalidity, rotation links, family-scoped replay revocation, independent families, idempotent logout, login HTTP 429 and idempotent ADMIN seed behavior.
+`tests/auth.integration.test.js` applies the full migration stack to guarded MySQL and covers bcrypt storage/cost/comparison, normalized ADMIN and MECANICO login, generic failures, safe payloads, access claims, `/me`, missing/malformed/expired/wrong-signature/stale-user/inactive-user access, HttpOnly cookie properties, digest-only persistence, refresh expiry/invalidity, rotation links, family-scoped replay revocation, independent families, idempotent logout, login HTTP 429 and idempotent ADMIN seed behavior.
 
 The concurrent-refresh test sends two requests with the same token through separate transactions. The token-row `FOR UPDATE` lock permits exactly one rotation; the waiter detects the committed replacement, revokes that family and leaves zero active descendants. This intentionally conservative outcome treats simultaneous second use as possible theft.
 

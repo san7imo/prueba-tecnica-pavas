@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the target architecture. HITO 1–6 implement the complete Phase 1 persistence, API and React interface; HITO 7 adds sessions; HITO 8 adds business-route authentication, RBAC and user administration. Audit and frontend authentication remain assigned to later Phase 2 milestones.
+This document defines the target architecture. HITO 1–6 implement Phase 1; HITO 7 adds sessions; HITO 8 adds backend RBAC/user administration; HITO 9 adds the transactional audit ledger. Frontend authentication and history visualization remain assigned to HITO 10.
 
 ## Architectural Style
 
@@ -72,17 +72,19 @@ Application errors carry a safe code, status and message. A single error middlew
 
 ## Transactions and concurrency
 
-Multi-write business operations must be atomic. HITO 4 item-total mutations run through a service-owned Sequelize transaction and lock their target work-order row with `SELECT ... FOR UPDATE`. Create then inserts the item; delete resolves the immutable owning order, locks that order, revalidates the item with a locking read and removes it. Both paths aggregate persisted item rows and update the order before commit. This common order lock serializes competing create/create and create/delete operations. Audit insertion will occur in the same transaction as the status update in its later milestone.
+Multi-write business operations must be atomic. HITO 4 item-total mutations run through a service-owned Sequelize transaction and lock their target work-order row with `SELECT ... FOR UPDATE`. Create then inserts the item; delete resolves the immutable owning order, locks that order, revalidates the item with a locking read and removes it. Both paths aggregate persisted item rows and update the order before commit. This common order lock serializes competing create/create and create/delete operations.
 
 MySQL performs the HITO 4 `SUM(count * unit_value)` using exact `DECIMAL` operands and casts the aggregate to `DECIMAL(15,2)`. The application carries the result as a string and never performs monetary arithmetic with JavaScript `Number`. See ADR-004.
 
-HITO 5 status changes reuse the same WorkOrder row-lock query. The service starts a transaction, reads the current status with `FOR UPDATE`, invokes the HTTP/Sequelize-independent state-machine utility and persists only an allowed target. A waiting transition reads and validates the state committed by the preceding transaction. The workflow intentionally contains no history insert yet, but HITO 9 can add it before the existing commit boundary. See ADR-003.
+HITO 9 extends the HITO 5 status transaction without changing its lock order: read WorkOrder `FOR UPDATE`, validate the graph, validate the actor, update status and insert one history row before commit. A waiting transition reads the winner's committed state, so two same-target requests yield one success, one HTTP 400 and exactly one audit row. Order creation likewise wraps the order and initial `NULL -> RECIBIDA` event in one transaction. See ADR-003.
+
+History reads use a dedicated repository query with bounded limit/offset, a single eager actor join selecting only ID/name, and `created_at DESC, id DESC`. The physical `(work_order_id, created_at DESC, id DESC)` index supports filtering and ordering without N+1 reads.
 
 ## Database and migrations
 
 MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. HITO 1 implements deterministic ESM migrations through Umzug/`SequelizeMeta`; the application does not use `sequelize.sync` as a schema strategy.
 
-HITO 7 extends the stack to six migrations with User and RefreshToken. HITO 8 adds `UserService`/UserRepository administration without schema changes. Auth request flow remains layered: Route → security middleware → Validator → Controller → Service → Repository → Sequelize. Controllers only set/clear cookies or serialize service results; cryptography and domain authorization remain outside controllers.
+HITO 7 extends the stack with User and RefreshToken; HITO 8 adds `UserService`/UserRepository without schema changes; HITO 9 adds the seventh migration and a narrow history repository. Auth/audit request flow remains layered: Route → security middleware → Validator → Controller → Service → Repository → Sequelize. Controllers serialize service results; transactions and domain authorization remain in services.
 
 Development and integration tests use separate databases. See [testing.md](testing.md).
 

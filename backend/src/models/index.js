@@ -2,6 +2,7 @@ import { initializeBike } from './Bike.js';
 import { initializeClient } from './Client.js';
 import { initializeWorkOrder } from './WorkOrder.js';
 import { initializeWorkOrderItem } from './WorkOrderItem.js';
+import { initializeWorkOrderStatusHistory } from './WorkOrderStatusHistory.js';
 import { initializeRefreshToken } from './RefreshToken.js';
 import { initializeUser } from './User.js';
 
@@ -10,6 +11,7 @@ export const initializeModels = (sequelize) => {
   const Bike = initializeBike(sequelize);
   const WorkOrder = initializeWorkOrder(sequelize);
   const WorkOrderItem = initializeWorkOrderItem(sequelize);
+  const WorkOrderStatusHistory = initializeWorkOrderStatusHistory(sequelize);
   const User = initializeUser(sequelize);
   const RefreshToken = initializeRefreshToken(sequelize);
 
@@ -60,9 +62,50 @@ export const initializeModels = (sequelize) => {
     onUpdate: 'CASCADE',
   });
 
+  WorkOrder.hasMany(WorkOrderStatusHistory, {
+    as: 'statusHistory',
+    foreignKey: {
+      name: 'workOrderId',
+      field: 'work_order_id',
+      allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  WorkOrderStatusHistory.belongsTo(WorkOrder, {
+    as: 'workOrder',
+    foreignKey: {
+      name: 'workOrderId',
+      field: 'work_order_id',
+      allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
   User.hasMany(RefreshToken, {
     as: 'refreshTokens',
     foreignKey: { name: 'userId', field: 'user_id', allowNull: false },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  User.hasMany(WorkOrderStatusHistory, {
+    as: 'statusChanges',
+    foreignKey: {
+      name: 'changedByUserId',
+      field: 'changed_by_user_id',
+      allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  WorkOrderStatusHistory.belongsTo(User, {
+    as: 'changedBy',
+    foreignKey: {
+      name: 'changedByUserId',
+      field: 'changed_by_user_id',
+      allowNull: false,
+    },
     onDelete: 'RESTRICT',
     onUpdate: 'CASCADE',
   });
@@ -79,5 +122,13 @@ export const initializeModels = (sequelize) => {
     onUpdate: 'CASCADE',
   });
 
-  return { Client, Bike, WorkOrder, WorkOrderItem, User, RefreshToken };
+  return {
+    Client,
+    Bike,
+    WorkOrder,
+    WorkOrderItem,
+    WorkOrderStatusHistory,
+    User,
+    RefreshToken,
+  };
 };

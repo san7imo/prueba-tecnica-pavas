@@ -23,8 +23,8 @@ export const bikeRepository = {
     });
   },
 
-  existsById(id) {
-    return models.Bike.findByPk(id, { attributes: ['id'] });
+  existsById(id, transaction) {
+    return models.Bike.findByPk(id, { attributes: ['id'], transaction });
   },
 
   findByPlate(plate) {
