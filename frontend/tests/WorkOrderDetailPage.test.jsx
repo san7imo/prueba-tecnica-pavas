@@ -95,6 +95,16 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.getByRole('button', { name: /agregar ítem/i })).toBeInTheDocument();
   });
 
+  it('keeps the next intermediate transition available to a mechanic', async () => {
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'DIAGNOSTICO' });
+    renderPage(mechanicUser);
+
+    await screen.findByRole('heading', { name: /orden #7/i });
+    expect(screen.getByRole('button', { name: /mover a en proceso/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mover a entregada/i })).not.toBeInTheDocument();
+  });
+
   it('requires confirmation for cancellation and shows backend transition errors', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     workOrdersApi.updateStatus.mockRejectedValue({ response: { status: 400, data: { error: { code: 'INVALID_STATUS_TRANSITION', message: 'La transición ya no es válida.' } } } });

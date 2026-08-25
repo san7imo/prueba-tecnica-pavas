@@ -4,11 +4,11 @@
 
 PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
 
-The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend and HITO 11 security hardening.
+The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend, security hardening and the HITO 12 critical acceptance matrix.
 
 ## Features
 
-Implemented through HITO 11:
+Implemented through HITO 12:
 
 - executable Express API foundation with `GET /api/health`;
 - executable React/Vite foundation;
@@ -68,6 +68,8 @@ Implemented through HITO 11:
 - safe malformed/oversized JSON errors plus generic sanitization of unexpected failures;
 - explicit JWT purpose/algorithm boundary, cookie-clearing and CORS integration regressions;
 - documented dependency audit, CSRF/XSS/SQL-injection posture and residual production risks.
+- requirement-to-risk-to-test acceptance matrix spanning backend, frontend, concurrency and security;
+- explicit frontend regressions for failed refresh cleanup, memory-only tokens, MECANICO allowed actions and user administration states.
 
 ## Assessment Scope
 
@@ -219,7 +221,7 @@ cd backend && DB_PORT=3306 npm test
 cd frontend && npm test
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, security headers/CORS/parser boundaries, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md).
+Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, security headers/CORS/parser boundaries, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md) and the [critical acceptance matrix](docs/test-acceptance-matrix.md).
 
 ## Security Notes
 
@@ -237,6 +239,7 @@ Backend tests require the dedicated MySQL test database and verify Phase 1, sess
 - [API conventions](docs/api.md)
 - [Business rules](docs/business-rules.md)
 - [Testing strategy](docs/testing.md)
+- [Critical test acceptance matrix](docs/test-acceptance-matrix.md)
 - [Requirements traceability](docs/requirements-traceability.md)
 - [Security](docs/security.md)
 - [ADR-001](docs/decisions/ADR-001-modular-monolith.md)
@@ -271,7 +274,7 @@ Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role o
 
 ## Current Milestone
 
-**HITO 11 — Security Hardening implemented locally.** Awaiting milestone review; no HITO 12 work is included.
+**HITO 12 — Critical Test Matrix implemented locally.** Awaiting milestone review; no HITO 13 work is included.
 
 ## Roadmap
 

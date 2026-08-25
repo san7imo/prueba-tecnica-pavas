@@ -6,7 +6,7 @@
 - **Pending:** implementation and automated evidence belong to a later milestone.
 - **Done:** reserved for implemented behavior with passing evidence.
 
-All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user administration, audit-history, frontend and HITO 11 security-hardening requirements are Done. HITO 12 final verification remains outside this milestone.
+All mandatory Phase 1 and Phase 2 requirements through HITO 12 are mapped to passing evidence. The detailed risk-to-test release gate is [test-acceptance-matrix.md](test-acceptance-matrix.md); HITO 13 remains outside this milestone.
 
 | ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
 |---|---|---|---|---|---|---|
@@ -94,4 +94,4 @@ All mandatory Phase 1 requirements and Phase 2 authentication, RBAC/user adminis
 
 ## Maintenance rule
 
-Every milestone must replace planned implementation/test references with concrete files and mark a row Done only after its automated evidence passes. Source requirements and project-contract enhancements remain distinguishable in the Phase column.
+Every milestone must replace planned implementation/test references with concrete files and mark a row Done only after its automated evidence passes. Source requirements and project-contract enhancements remain distinguishable in the Phase column. Critical functional rows are additionally cross-checked against the named cases in `test-acceptance-matrix.md`.

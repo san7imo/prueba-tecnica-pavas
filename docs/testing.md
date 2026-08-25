@@ -9,6 +9,24 @@
 
 Vitest is used for both packages to keep foundation tooling small and consistent. Supertest still exercises Express without binding a network port. This is a tooling choice, not an architectural change; later suites remain integration-focused.
 
+## HITO 12 acceptance strategy
+
+Acceptance is requirement-driven, not percentage-driven. The executable inventory is 14 backend suites/192 tests and 10 frontend suites/45 tests. The complete mapping from requirement and risk to named evidence is maintained in [test-acceptance-matrix.md](test-acceptance-matrix.md).
+
+The audit sequence is:
+
+```text
+Phase 1 + Phase 2 + AGENTS.md
+  → requirements traceability
+  → named automated evidence
+  → focused missing tests
+  → full regression
+  → repeated concurrency/order tests
+  → real browser/API acceptance smoke
+```
+
+Coverage percentage is deliberately not an acceptance criterion. Persistence/HTTP/component tests overlap only where they prove different boundaries, such as request validation versus a physical MySQL constraint.
+
 ## HITO 6 frontend suite
 
 Frontend tests mock the narrow resource API modules, not React components. This keeps tests deterministic while exercising page state, routing, forms and user-visible outcomes.
@@ -61,7 +79,7 @@ Mandatory safeguards:
 - close Sequelize connections after the suite;
 - ensure test order does not affect outcomes.
 
-Planned lifecycle:
+Implemented lifecycle:
 
 ```text
 beforeAll: connect to dedicated test DB and apply migrations
@@ -224,3 +242,59 @@ npm run db:migrate:reset:test
 ```
 
 The full reset command is intentionally test-only.
+
+## Concurrency and repeatability
+
+Critical races use committed fixtures and separate pooled connections rather than a synthetic single transaction:
+
+- refresh/refresh locks the presented token row and treats the waiter as replay;
+- item add/add and add/delete share the WorkOrder lock and compare persisted `SUM` with `WorkOrder.total`;
+- status races re-read the current state under `FOR UPDATE` and assert one legal outcome;
+- competing same-target status requests assert exactly one new audit row;
+- the 150-event history test fixes equal timestamps and proves the descending ID tie-break over two pages.
+
+HITO 12 repeats these suites in fresh Vitest processes and records run/pass/failure totals in the milestone report. A small repeat count is intentional: this is concurrency regression evidence, not a load benchmark.
+
+## Security regression tests
+
+The security boundary is covered by the header/CORS/parser suite, startup configuration tests, auth/RBAC integration suites and safe 404/500 assertions. Cookie attributes are checked at login/logout; token purpose and algorithm boundaries are explicit; rate limiting is tested through the real login endpoint. Dependency findings are reviewed separately because an audit advisory is not equivalent to an exploitable application path.
+
+## Browser and API acceptance smoke
+
+Automated component tests remain the primary repeatable UI evidence. A real Chrome smoke complements them against running Vite, Express and MySQL processes. The HITO 12 scenario exercises an ADMIN creating Client → Bike → WorkOrder → two item types → total → three status changes → history → MECANICO, followed by the MECANICO read/item/permission/allowed-transition/logout flow.
+
+Direct API sanity additionally samples the public status classes 401, 403, 400, 404, 409 and 429. These smoke checks do not replace their deterministic automated integration tests.
+
+### HITO 12 local acceptance record — 2026-08-24
+
+- backend full suite: 14/14 files, 192/192 tests;
+- frontend full suite: 10/10 files, 45/45 tests;
+- critical repeatability: 3 fresh runs, 7 selected cases per run, 21 passes and 0 failures;
+- ADMIN browser flow: Client/Bike/two orders, REPUESTO + MANO_OBRA, persisted 130000 total, DIAGNOSTICO → EN_PROCESO → LISTA, actor-visible history and MECANICO creation;
+- MECANICO browser flow: list/detail, item creation, allowed DIAGNOSTICO transition, next intermediate action visible, delete/cancel/deliver/users unavailable;
+- API sanity: expected 401/403/400/404/409/429 envelopes observed;
+- migration status before smoke: seven executed, zero pending;
+- Postman collection: valid JSON, five top-level folders and 22 requests.
+
+The browser profile and servers were temporary and removed/stopped after verification. Smoke fixtures never left `pavas_workshop_test`; afterward its schema was reverted/reapplied, all seven migrations were executed with zero pending, and all seven entity tables reported zero rows.
+
+## Manual final acceptance
+
+For a reviewer running the project manually:
+
+1. start clean MySQL and apply all migrations;
+2. seed an ADMIN and start backend/frontend;
+3. perform the ADMIN and MECANICO scenario above;
+4. verify stored total and newest-first audit history;
+5. run both full suites, lint and frontend build;
+6. validate the Postman collection and review dependency audits.
+
+HITO 15 remains responsible for the final clean-install/release execution; HITO 12 only establishes the critical evidence gate.
+
+## Known testing limitations
+
+- Frontend component tests mock narrow API modules; real browser smoke covers the wiring but is not retained as a permanent browser-automation dependency.
+- The login limiter is process-local, so its integration case assumes a fresh test process.
+- Concurrency tests prove transactional ordering on the assessment MySQL setup, not throughput under production load.
+- The existing 9.40 ms history observation is local assessment evidence, not a production SLA.
+- No coverage plugin is installed because percentage alone would not demonstrate requirement acceptance.

@@ -48,4 +48,55 @@ describe('UsersPage', () => {
     expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/desactivar a mauro/i));
     await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, false));
   });
+
+  it('shows loading, reports a list error and retries to an empty state', async () => {
+    usersApi.list
+      .mockRejectedValueOnce({ response: { data: { error: { message: 'Usuarios temporalmente no disponibles.' } } } })
+      .mockResolvedValueOnce([]);
+    renderWithAuth(<UsersPage />);
+
+    expect(screen.getByText(/cargando usuarios/i)).toBeInTheDocument();
+    expect(await screen.findByText('Usuarios temporalmente no disponibles.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+
+    expect(await screen.findByRole('heading', { name: /sin usuarios/i })).toBeInTheDocument();
+    expect(usersApi.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('disables duplicate creation and shows the safe API error', async () => {
+    let rejectCreation;
+    usersApi.create.mockReturnValue(new Promise((_resolve, reject) => {
+      rejectCreation = reject;
+    }));
+    renderWithAuth(<UsersPage />);
+    await screen.findByText('Mauro Mecánico');
+
+    fireEvent.change(screen.getByLabelText(/^nombre$/i), { target: { value: 'Nora Técnica' } });
+    fireEvent.change(screen.getByLabelText(/^correo$/i), { target: { value: 'nora@pavas.test' } });
+    fireEvent.change(screen.getByLabelText(/contraseña inicial/i), { target: { value: 'secret123' } });
+    const submit = screen.getByRole('button', { name: /crear usuario/i });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    expect(usersApi.create).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /creando/i })).toBeDisabled();
+    rejectCreation({ response: { data: { error: { message: 'El correo ya está registrado.' } } } });
+    expect(await screen.findByText('El correo ya está registrado.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /crear usuario/i })).toBeEnabled();
+  });
+
+  it('reactivates an inactive user without destructive confirmation', async () => {
+    const inactiveMechanic = { ...managedMechanic, active: false };
+    usersApi.list.mockResolvedValue([managedAdmin, inactiveMechanic]);
+    usersApi.changeActive.mockResolvedValue({ ...inactiveMechanic, active: true });
+    const confirm = vi.spyOn(window, 'confirm');
+    renderWithAuth(<UsersPage />);
+    await screen.findByText('Mauro Mecánico');
+
+    fireEvent.click(screen.getByRole('button', { name: /activar a mauro/i }));
+
+    await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, true));
+    expect(await screen.findByText(/mauro mecánico fue activado/i)).toBeInTheDocument();
+    expect(confirm).not.toHaveBeenCalled();
+  });
 });

@@ -517,12 +517,3 @@ Errors: `400 VALIDATION_ERROR`, `404 WORK_ORDER_ITEM_NOT_FOUND`, safe `500 INTER
 | Duplicate normalized plate or user email | 409 |
 | Unknown route | 404 |
 | Unexpected failure | 500 |
-
-## Planned assessment endpoint
-
-The remaining contract is intentionally deferred to its approved milestones:
-
-```text
-GET    /api/work-orders/:id/history?page=&pageSize=
-
-```
