@@ -69,7 +69,7 @@ Los servicios concentran reglas de negocio y transacciones; los repositorios con
 .
 ├── backend/
 │   ├── migrations/       migraciones Sequelize/Umzug
-│   ├── seeders/          seed del ADMIN inicial
+│   ├── seeders/          seeds del ADMIN y datos demo
 │   ├── src/              API modular por capas
 │   └── tests/            pruebas unitarias y de integración
 ├── frontend/
@@ -78,15 +78,15 @@ Los servicios concentran reglas de negocio y transacciones; los repositorios con
 ├── docs/                 documentación, trazabilidad y ADR
 ├── docker/mysql/init/    creación de la base exclusiva de tests
 ├── postman/              colección y guía de uso
-├── docker-compose.yml
-└── AGENTS.md             contrato de ejecución del proyecto
+└── docker-compose.yml
 ```
 
 ## Requisitos previos
 
 - Node.js compatible con los rangos anteriores;
 - npm incluido con Node.js;
-- Docker con Compose v2 (`docker compose`) o Compose v1 (`docker-compose`);
+- Docker con el plugin Compose v2 (`docker compose`), opción recomendada;
+- `docker-compose` standalone/legacy, sólo como compatibilidad secundaria;
 - `openssl` recomendado para generar secretos.
 
 MySQL 8.4 se ejecuta mediante Docker Compose. No se requiere Redis, colas ni infraestructura adicional.
@@ -120,11 +120,11 @@ Los siguientes pasos parten de un clon limpio y usan los lockfiles versionados.
 4. Levante MySQL y espere a que esté saludable:
 
    ```bash
-   docker-compose up -d mysql
-   docker-compose ps
+   docker compose up -d mysql
+   docker compose ps
    ```
 
-   Si su instalación usa Compose v2, sustituya `docker-compose` por `docker compose`.
+   En instalaciones standalone/legacy puede usar `docker-compose` como alternativa compatible.
 
 5. Instale el backend, aplique las migraciones y cree el ADMIN inicial:
 
@@ -301,7 +301,7 @@ npm run build
 
 El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `test`, si el nombre no contiene `test` o si coincide con la base de desarrollo. No ejecute las suites contra datos reales.
 
-Baseline verificado al cierre de HITO 14:
+Baseline verificado para la entrega:
 
 ```text
 Backend:        15 suites, 199 pruebas
