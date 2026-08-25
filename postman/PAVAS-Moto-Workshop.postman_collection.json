@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "HITO 9 Auth, Users, protected business APIs and work-order audit history requests.",
+    "description": "Colección completa de autenticación, usuarios, APIs de negocio protegidas e historial de órdenes de trabajo.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -74,7 +74,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "Login",
+          "name": "Iniciar sesión",
           "request": {
             "method": "POST",
             "header": [
@@ -93,7 +93,7 @@
               }
             },
             "url": "{{baseUrl}}/auth/login",
-            "description": "Authenticates the seeded ADMIN. Postman stores the HttpOnly refresh cookie in its cookie jar."
+            "description": "Autentica el ADMIN creado por seed. Postman conserva la cookie HttpOnly de refresh en su cookie jar."
           },
           "event": [
             {
@@ -111,7 +111,7 @@
           ]
         },
         {
-          "name": "Me",
+          "name": "Consultar usuario actual",
           "request": {
             "method": "GET",
             "header": [
@@ -121,7 +121,7 @@
               }
             ],
             "url": "{{baseUrl}}/auth/me",
-            "description": "Returns the active user represented by the current access token."
+            "description": "Devuelve el usuario activo representado por el access token actual."
           },
           "event": [
             {
@@ -137,12 +137,12 @@
           ]
         },
         {
-          "name": "Refresh",
+          "name": "Renovar sesión",
           "request": {
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/auth/refresh",
-            "description": "Uses and rotates the HttpOnly refresh cookie maintained by Postman's cookie jar."
+            "description": "Usa y rota la cookie HttpOnly de refresh conservada por Postman."
           },
           "event": [
             {
@@ -159,7 +159,7 @@
           ]
         },
         {
-          "name": "Register User",
+          "name": "Registrar usuario",
           "request": {
             "method": "POST",
             "header": [
@@ -178,7 +178,7 @@
               }
             },
             "url": "{{baseUrl}}/auth/register",
-            "description": "ADMIN-only registration. Stores the created id for Users requests; replace the example password locally."
+            "description": "Registro exclusivo de ADMIN. Guarda el ID para las requests de Usuarios; reemplace la contraseña de ejemplo localmente."
           },
           "event": [
             {
@@ -196,12 +196,12 @@
           ]
         },
         {
-          "name": "Logout",
+          "name": "Cerrar sesión",
           "request": {
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/auth/logout",
-            "description": "Revokes the current refresh session and clears its cookie."
+            "description": "Revoca la sesión de refresh actual y limpia su cookie."
           },
           "event": [
             {
@@ -220,15 +220,15 @@
       ]
     },
     {
-      "name": "Users",
+      "name": "Usuarios",
       "item": [
         {
-          "name": "List Users",
+          "name": "Listar usuarios",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/users",
-            "description": "ADMIN-only safe user listing."
+            "description": "Listado seguro de usuarios exclusivo de ADMIN."
           },
           "event": [
             {
@@ -246,7 +246,7 @@
           ]
         },
         {
-          "name": "Change User Role",
+          "name": "Cambiar rol de usuario",
           "request": {
             "method": "PATCH",
             "header": [
@@ -265,7 +265,7 @@
               }
             },
             "url": "{{baseUrl}}/users/{{managedUserId}}/role",
-            "description": "ADMIN-only role update. Use ADMIN or MECANICO."
+            "description": "Actualización de rol exclusiva de ADMIN. Use ADMIN o MECANICO."
           },
           "event": [
             {
@@ -281,7 +281,7 @@
           ]
         },
         {
-          "name": "Change User Active",
+          "name": "Cambiar estado activo",
           "request": {
             "method": "PATCH",
             "header": [
@@ -300,7 +300,7 @@
               }
             },
             "url": "{{baseUrl}}/users/{{managedUserId}}/active",
-            "description": "ADMIN-only activation/deactivation using a real JSON boolean."
+            "description": "Activación o desactivación exclusiva de ADMIN mediante un boolean JSON real."
           },
           "event": [
             {
@@ -318,10 +318,10 @@
       ]
     },
     {
-      "name": "Clients",
+      "name": "Clientes",
       "item": [
         {
-          "name": "Create client",
+          "name": "Crear cliente",
           "request": {
             "method": "POST",
             "header": [
@@ -340,7 +340,7 @@
               }
             },
             "url": "{{baseUrl}}/clients",
-            "description": "Creates a client and stores its id as clientId."
+            "description": "Crea un cliente y guarda su ID en clientId."
           },
           "event": [
             {
@@ -358,12 +358,12 @@
           ]
         },
         {
-          "name": "Search clients",
+          "name": "Buscar clientes",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/clients?search=Juan",
-            "description": "Searches partially across name, phone and email."
+            "description": "Busca parcialmente por nombre, teléfono y email."
           },
           "event": [
             {
@@ -379,7 +379,7 @@
           ]
         },
         {
-          "name": "Get client",
+          "name": "Consultar cliente",
           "request": {
             "method": "GET",
             "header": [],
@@ -401,10 +401,10 @@
       ]
     },
     {
-      "name": "Bikes",
+      "name": "Motocicletas",
       "item": [
         {
-          "name": "Create bike",
+          "name": "Crear motocicleta",
           "event": [
             {
               "listen": "prerequest",
@@ -447,16 +447,16 @@
               }
             },
             "url": "{{baseUrl}}/bikes",
-            "description": "Creates a bike for clientId and stores its id and normalized plate."
+            "description": "Crea una motocicleta para clientId y guarda su ID y placa normalizada."
           }
         },
         {
-          "name": "Search bikes",
+          "name": "Buscar motocicletas",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/bikes?plate={{bikePlate}}",
-            "description": "Searches by a normalized partial plate."
+            "description": "Busca por una placa parcial normalizada."
           },
           "event": [
             {
@@ -472,7 +472,7 @@
           ]
         },
         {
-          "name": "Get bike",
+          "name": "Consultar motocicleta",
           "request": {
             "method": "GET",
             "header": [],
@@ -496,10 +496,10 @@
       ]
     },
     {
-      "name": "Work Orders",
+      "name": "Órdenes de trabajo",
       "item": [
         {
-          "name": "Create Work Order",
+          "name": "Crear orden de trabajo",
           "request": {
             "method": "POST",
             "header": [
@@ -518,7 +518,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders",
-            "description": "Creates a RECIBIDA work order with total 0.00, atomically records its initial audit event and stores its id."
+            "description": "Crea una orden RECIBIDA con total 0.00, registra atómicamente el evento inicial y guarda su ID."
           },
           "event": [
             {
@@ -537,7 +537,7 @@
           ]
         },
         {
-          "name": "Add Work Order Item",
+          "name": "Agregar ítem",
           "request": {
             "method": "POST",
             "header": [
@@ -556,7 +556,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}/items",
-            "description": "Creates an item transactionally, captures itemId and verifies the server-calculated total."
+            "description": "Crea un ítem en transacción, captura itemId y verifica el total calculado por el servidor."
           },
           "event": [
             {
@@ -574,12 +574,12 @@
           ]
         },
         {
-          "name": "List Work Orders",
+          "name": "Listar órdenes",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/work-orders",
-            "description": "Returns the default first page with metadata."
+            "description": "Devuelve la primera página predeterminada con metadata."
           },
           "event": [
             {
@@ -597,12 +597,12 @@
           ]
         },
         {
-          "name": "Filter Work Orders",
+          "name": "Filtrar órdenes",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/work-orders?status=RECIBIDA&plate={{bikePlate}}&page=1&pageSize=20",
-            "description": "Combines contractual status and normalized partial-plate filters."
+            "description": "Combina los filtros contractuales de estado y placa parcial normalizada."
           },
           "event": [
             {
@@ -620,12 +620,12 @@
           ]
         },
         {
-          "name": "Get Work Order",
+          "name": "Consultar orden",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}",
-            "description": "Returns the work order with Bike, Client and items."
+            "description": "Devuelve la orden con Bike, Client e ítems."
           },
           "event": [
             {
@@ -643,7 +643,7 @@
           ]
         },
         {
-          "name": "Update Work Order Status",
+          "name": "Cambiar estado",
           "request": {
             "method": "PATCH",
             "header": [
@@ -662,7 +662,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}/status",
-            "description": "Updates status and inserts its actor/note audit row in one transaction. Set toStatus to a target valid from the order's current state."
+            "description": "Actualiza el estado e inserta actor y nota en una transacción. Configure toStatus con un destino válido desde el estado actual."
           },
           "event": [
             {
@@ -680,12 +680,12 @@
           ]
         },
         {
-          "name": "Get Status History",
+          "name": "Consultar historial",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}/history?page=1&pageSize=20",
-            "description": "Returns safe immutable history newest first with pagination metadata. ADMIN and MECANICO may call it."
+            "description": "Devuelve historial inmutable y seguro, del más nuevo al más antiguo, con paginación. ADMIN y MECANICO pueden consultarlo."
           },
           "event": [
             {
@@ -706,12 +706,12 @@
           ]
         },
         {
-          "name": "Delete Work Order Item",
+          "name": "Eliminar ítem",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/work-orders/items/{{itemId}}",
-            "description": "Deletes the captured item and verifies that the final total returns to zero."
+            "description": "Elimina el ítem capturado y verifica que el total final vuelva a cero."
           },
           "event": [
             {

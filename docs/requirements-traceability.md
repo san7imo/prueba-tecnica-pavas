@@ -1,98 +1,98 @@
-# Requirements Traceability
+# Trazabilidad de requisitos
 
-## Status legend
+## Leyenda
 
-- **Foundation:** architecture/tooling or contract is established in HITO 0; business behavior is not implemented.
-- **Pending:** implementation and automated evidence belong to a later milestone.
-- **Done:** reserved for implemented behavior with passing evidence.
+- `Foundation`: arquitectura, tooling o contrato establecido como fundamento; no representa una feature de negocio pendiente.
+- `Pending`: implementación/evidencia aún no realizada.
+- `Done`: comportamiento implementado con evidencia aprobada.
 
-All mandatory Phase 1 and Phase 2 requirements through HITO 13 are mapped to passing evidence. The detailed risk-to-test release gate is [test-acceptance-matrix.md](test-acceptance-matrix.md); HITO 14 remains outside this milestone.
+La tabla contiene 82 requisitos: 76 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
-| ID | Requirement | Phase | Implementation | Endpoint/UI | Automated Test | Status |
+| ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
-| P0-INF-001 | Node/Express backend boots | Foundation | `backend/server.js`, `src/app.js` | `GET /api/health` | `tests/health.test.js` | Foundation |
-| P0-INF-002 | React frontend boots/builds | Foundation | Vite React application shell | `/orders` | `tests/App.test.jsx` + production build | Done |
-| P0-INF-003 | Central technical error handling | Foundation | `AppError`, 404 and error middleware | Error envelope | `tests/notFound.test.js` | Foundation |
-| P0-INF-004 | MySQL reproducible locally | Foundation | `docker-compose.yml` | N/A | Compose health verification | Foundation |
-| P0-INF-005 | Dedicated test DB strategy | Foundation | `testDatabaseGuard.js`, `DB_NAME_TEST`, Umzug | N/A | Guard + schema integration suite | Done |
-| P0-DOC-001 | Modular monolith documented | Foundation | `docs/architecture.md`, ADR-001 | N/A | Documentation review | Foundation |
-| P0-DOC-002 | Full ER model documented | Foundation | `docs/database.md` | N/A | Documentation review | Foundation |
-| P0-DOC-003 | API/error conventions documented | Foundation | `docs/api.md` | `/api` | Documentation review | Foundation |
-| P1-DATA-001 | Client entity and Client 1:N Bike | 1 | Client model/migration + association | N/A | `schema.integration.test.js` | Done |
-| P1-DATA-002 | Bike entity with valid Client FK | 1 | Bike model/migration + `fk_bikes_client` | N/A | FK + association tests | Done |
-| P1-DATA-003 | Plate normalization and two-level uniqueness | 1 | Bike validator/service/setter + `uq_bikes_plate` | `POST /api/bikes` | HTTP normalized duplicate matrix + schema constraint test | Done |
-| P1-DATA-004 | WorkOrder entity with valid Bike FK | 1 | WorkOrder model/migration + `fk_work_orders_bike` | Persistence layer | FK + association tests | Done |
-| P1-DATA-005 | WorkOrderItem entity and relationship | 1 | Item model/migration + `fk_work_order_items_order` | Persistence layer | FK + association tests | Done |
-| P1-DATA-006 | Item count greater than zero | 1 | Exact request/model validator + MySQL CHECK | Items API + persistence | HTTP zero/negative/scale/range + DB rejection tests | Done |
-| P1-DATA-007 | Item unit value greater/equal zero | 1 | Exact request/model validator + MySQL CHECK | Items API + persistence | HTTP negative/scale/range/zero + DB rejection tests | Done |
-| P1-DATA-008 | Money uses DECIMAL | 1 | `DECIMAL(15,2)` migration/models | Persistence layer | Reloaded exact DECIMAL test | Done |
-| P1-BE-001 | Create client | 1 | Client route/validator/controller/service/repository | `POST /api/clients` | `clientsBikes.integration.test.js` create/validation tests | Done |
-| P1-BE-002 | Search clients | 1 | Parameterized Client repository partial search | `GET /api/clients?search=` | Unfiltered + name/phone/email/empty tests | Done |
-| P1-BE-003 | Get client detail | 1 | Client service not-found boundary + repository | `GET /api/clients/:id` | Existing/404/invalid-ID tests | Done |
-| P1-BE-004 | Create bike | 1 | Bike layered module, client validation and conflict mapping | `POST /api/bikes` | Create/optional/validation/FK/duplicate tests | Done |
-| P1-BE-005 | Search bikes by plate | 1 | Normalized partial Bike repository search | `GET /api/bikes?plate=` | Unfiltered/lowercase/spaces/empty tests | Done |
-| P1-BE-006 | Get bike detail | 1 | Bike detail repository include + service not-found | `GET /api/bikes/:id` | Existing/client/404/invalid-ID tests | Done |
-| P1-BE-007 | Create order only for valid bike, initial `RECIBIDA` | 1 | WorkOrder validator/service/repository with backend defaults | `POST /api/work-orders` | `workOrders.integration.test.js` create/default/FK tests | Done |
-| P1-BE-008 | List/filter orders by status and plate | 1 | WorkOrder eager query with validated combined filters | `GET /api/work-orders` | Status/plate/combined/N+1 tests | Done |
-| P1-BE-009 | Paginate work orders with metadata | 1 | `findAndCountAll`, max 100, stable entry-date/ID order | `GET /api/work-orders` | Defaults/invalid/page/meta/order tests | Done |
-| P1-BE-010 | Get order with client, bike and items | 1 | WorkOrder detail include graph + explicit serializer | `GET /api/work-orders/:id` | Detail graph/404/invalid-ID tests | Done |
-| P1-BE-011 | Add MANO_OBRA/REPUESTO item | 1 | Item validator/controller/service/repository with explicit fields | `POST /api/work-orders/:id/items` | Creation/type/validation/404 tests in `workOrders.integration.test.js` | Done |
-| P1-BE-012 | Delete work-order item | 1 | Transactional item service with locked revalidation | `DELETE /api/work-orders/items/:itemId` | Delete/last-item/404/invalid-ID tests | Done |
-| P1-BE-013 | Backend calculates total after add/delete | 1 | MySQL DECIMAL aggregate + persisted server-controlled total, ADR-004 | Order detail/items | 130000, 0.30, rollback and delete-total tests | Done |
-| P1-BE-014 | Concurrent item mutations preserve total | Project contract | Service transactions + WorkOrder `FOR UPDATE` lock | Items API | Independent add/add transactions and add/delete race tests | Done |
-| P1-STATE-001 | Canonical forward state flow | 1 | Central transition map + transactional WorkOrder service | `PATCH /api/work-orders/:id/status` | Full path and 6×6 matrix in `workOrderStatus.integration.test.js` | Done |
-| P1-STATE-002 | Cancel from RECIBIDA/DIAGNOSTICO/EN_PROCESO/LISTA | 1 | Explicit cancellation edges in domain utility | Status endpoint | Four-state cancellation matrix | Done |
-| P1-STATE-003 | ENTREGADA and CANCELADA terminal | 1 | Empty terminal transition sets, no rollback | Status endpoint | Terminal rows in complete matrix + explicit tests | Done |
-| P1-STATE-004 | Invalid/idempotent transition returns clear 400 | 1/2 | `BusinessRuleError` with stable `INVALID_STATUS_TRANSITION` | Status endpoint | Known-invalid, same-state and unknown-state distinction | Done |
-| P1-STATE-005 | Concurrent transitions are serialized | Project contract | Service transaction + shared WorkOrder `FOR UPDATE` repository query | Status endpoint | Serial-valid race + mutually exclusive terminal race | Done |
-| P1-FE-001 | Work-order list table: plate/client/status/date/total | 1 | `WorkOrdersPage`, `OrderTable`, localized formatters and `StatusBadge` | `/orders` | `WorkOrdersPage.test.jsx` rendering test | Done |
-| P1-FE-002 | Status and plate filters | 1 | Controlled `OrderFilters` + server query through `workOrdersApi` | `/orders` | Filter request/trim/reset interaction test | Done |
-| P1-FE-003 | Work-order pagination | 1 | Backend metadata-driven `Pagination` | `/orders` | Next-page request and disabled boundary test | Done |
-| P1-FE-004 | Create order selecting bike by plate | 1 | `BikeLookup`, local workflow state and explicit create payload | `/orders/new` | Existing-bike creation/navigation test | Done |
-| P1-FE-005 | Quick client and bike registration | 1 | Sequential `QuickRegistration`, Client/Bike API modules and automatic selection | `/orders/new` | Full client→bike chain test | Done |
-| P1-FE-006 | Detail shows client, bike, items and total | 1 | `WorkOrderDetailPage`, resource cards and exact decimal presentation | `/orders/:id` | Detail/related data/items/subtotal/total rendering test | Done |
-| P1-FE-007 | Detail exposes valid transition actions only | 1 | Central frontend transition map + operational `StatusActions`; backend remains authoritative | `/orders/:id` | Allowed/hidden/terminal/error and action-label tests | Done |
-| P1-FE-008 | Detail manages items | 1 | Item form/table, accessible scroll region, delete confirmation and authoritative refetch | `/orders/:id` | Add/delete/payload/refetch and region tests | Done |
-| P1-UX-001 | Clear errors and loading indicators | 1 | Shared live loading/error panels, scoped feedback, localized messages and readable contrast | Required views | List/detail/create loading and API error tests | Done |
-| P1-UX-002 | Empty, disabled and duplicate-submit states | Project contract | Empty panels, submit locks, terminal state and responsive CSS system | Required views | Empty/retry/double-submit/terminal tests | Done |
-| P1-UX-003 | Responsive and accessibility polish | Project contract | Required markers, visible focus, semantic/focusable table regions, contained mobile item scroll and 375/768/desktop CSS | Required views | Accessible-role assertions plus ADMIN/MECANICO browser review | Done |
-| P1-DOC-001 | Source, migrations and setup README | 1 | Backend/frontend source, Sequelize migrations and current root README | Repository delivery | Clean migration, boot, build and E2E verification | Done |
-| P1-DOC-002 | Postman collection | Project contract | Complete Phase 1 Client/Bike/Work Orders/Items/Status collection | Phase 1 API | Collection structure review + E2E API smoke | Done |
-| P2-DATA-001 | User model with unique email, role and active | 2 | User model + `202608240005-create-users.js` | Auth APIs | Schema/auth integration tests | Done |
-| P2-DATA-002 | Refresh tokens stored only as digests | Project option | RefreshToken model/migration + SHA-256 lookup | Refresh/logout | Persistence inspection test | Done |
-| P2-AUTH-001 | Initial ADMIN seed | 2 | Idempotent env-driven `seedInitialAdmin` | Login | Seed/hash/idempotency test | Done |
-| P2-AUTH-002 | ADMIN-only user registration | 2 | UserService + authenticate/authorize + validation | `POST /api/auth/register` | Roles/401/403/duplicate/hash tests | Done |
-| P2-AUTH-003 | Generic login with bcrypt cost >=10 and signed JWT | 2 | AuthService + login validator/controller | `POST /api/auth/login` | Success/normalized/invalid/inactive tests | Done |
-| P2-AUTH-004 | Authenticated current profile, safe payload | 2 | `authenticate` + DB active-user lookup | `GET /api/auth/me` | Bearer matrix + safe profile tests | Done |
-| P2-AUTH-005 | Refresh rotation via HttpOnly cookie | Project option | Transactional AuthService rotation | `POST /api/auth/refresh` | Cookie/rotation/expiry/concurrency tests | Done |
-| P2-AUTH-006 | Logout revokes refresh and clears cookie | Project option | Current-token transactional revocation | `POST /api/auth/logout` | Logout/idempotency/session-scope test | Done |
-| P2-AUTH-007 | Rotated-token reuse revokes active family | Project contract | Family tracking + replay revocation | Refresh endpoint | Replay/independent-family/concurrency tests | Done |
-| P2-RBAC-001 | All business endpoints require authentication | 2 | Router-level authenticate before authorization/validation | All business endpoints | Missing/invalid/inactive token tests | Done |
-| P2-RBAC-002 | Wrong role returns 403 | 2 | Reusable `authorize(...roles)` + AuthorizationError | Restricted endpoints | Middleware and HTTP boundary tests | Done |
-| P2-RBAC-003 | MECANICO may add items and move to three states | 2 | Item route + transactional status actor policy | Items/status | Complete allowed-action path | Done |
-| P2-RBAC-004 | MECANICO cannot deliver, cancel or delete item | 2 | Static item role guard + status service authorization | Items/status | 403 and persistence tests | Done |
-| P2-USER-001 | ADMIN lists users | 2 | UserService/UserRepository safe ordered listing | `GET /api/users` | ADMIN/401/403/deep-payload tests | Done |
-| P2-USER-002 | ADMIN changes user role | 2 | Validated UserService update | `PATCH /api/users/:id/role` | Update/validation/404/403/immediate-effect tests | Done |
-| P2-USER-003 | ADMIN activates/deactivates users | 2 | Strict boolean UserService update | `PATCH /api/users/:id/active` | Deactivate/reactivate/validation/404/403 tests | Done |
-| P2-USER-004 | Password/hash never returned | 2 | Safe User model + explicit auth serializers/attributes | Auth APIs | Deep JSON payload/model assertions | Done |
-| P2-AUDIT-001 | History schema with actor/from/to/note/time | 2 | Migration/model + WorkOrder/User associations and FKs | History endpoint | Schema metadata/FK + content tests | Done |
-| P2-AUDIT-002 | Initial `NULL -> RECIBIDA` with creator | 2 interpretation | WorkOrder creation + audit insert in one transaction | Create/history | Initial event + forced-insert rollback tests | Done |
-| P2-AUDIT-003 | Every valid change, including cancel, creates one row | 2 | Locked status update + history insert in one transaction | Status/history | Actor/from/to/note/cancel exact row tests | Done |
-| P2-AUDIT-004 | Rejected/idempotent changes create no history | 2 | Workflow/RBAC validation before writes | Status/history | Invalid/same/terminal/forbidden absence tests | Done |
-| P2-AUDIT-005 | History immutable and newest first | 2 | Append-only repository/API + ordered read | History endpoint | Safe response/newest-first/timestamp-tie tests | Done |
-| P2-AUDIT-006 | History index includes required source prefix | 2 | `ix_work_order_status_history_order_created_id` | N/A | MySQL `STATISTICS` metadata test | Done |
-| P2-AUDIT-007 | History pagination, max 100 and stable tie order | 2 | Validated bounded `findAndCountAll` query | `GET /api/work-orders/:id/history` | 150-event 100/50/default/validation test | Done |
-| P2-AUDIT-008 | History display target under one second | 2 | Indexed bounded backend query; UI remains HITO 10 | History API | Local 150-row query-plan/performance check | Done |
-| P2-FE-001 | Login and protected/role routes | 2 | `LoginPage`, `ProtectedRoute`, `AnonymousOnlyRoute`, `RoleRoute` | `/login`, protected views | `App.test.jsx` login/guard/role matrix | Done |
-| P2-FE-002 | Session restore, renewal and logout | 2 | Memory-only `AuthContext`, session coordinator and Axios interceptors | Application shell | `AuthContext.test.jsx`, `httpClientAuth.test.js` including five concurrent 401s | Done |
-| P2-FE-003 | ADMIN user list/create/role/active UI | 2 | `UsersPage`, explicit role draft/save and narrow users API module | `/admin/users` | `UsersPage.test.jsx` list/create/explicit-role-save/active tests | Done |
-| P2-FE-004 | Role-aware work-order actions | 2 | Role-filtered operational status/item controls; backend remains authoritative | `/orders/:id` | `WorkOrderDetailPage.test.jsx` ADMIN/MECANICO controls | Done |
-| P2-FE-005 | History timeline shows date/user/from/to/note | 2 | Paginated `HistoryTimeline` with independent UI states | `/orders/:id` | `HistoryTimeline.test.jsx` render/order/pagination/error/empty tests | Done |
-| P2-SEC-001 | Login rate limiting | 2 | Dedicated configurable login limiter | `POST /api/auth/login` | Stable 429 endpoint test | Done |
-| P2-SEC-002 | Helmet, restricted CORS and body limit | Project contract | `src/app.js`, `corsPolicy.js`, exact `FRONTEND_ORIGIN`, 100 KiB JSON parser | API boundary | `security.test.js`, credentialed auth integration flow | Done |
-| P2-SEC-003 | Secure cookie policy and secret validation | 2/project contract | HttpOnly/path/SameSite/Secure cookie + startup validator | Auth startup/cookies | Cookie and configuration tests | Done |
-| P2-SEC-004 | No stack, SQL, JWT or secret leakage | Project contract | Central parser/AppError/unexpected-error sanitization + safe serializers/log review | Error responses/logs | `security.test.js`, auth/RBAC safe-payload suites | Done |
+| P0-INF-001 | Backend Node/Express inicia | Fundación | `server.js`, `app.js` | `GET /api/health` | `health.test.js` | Foundation |
+| P0-INF-002 | Frontend React inicia y compila | Fundación | Vite/React shell | `/orders` | `App.test.jsx` + build | Done |
+| P0-INF-003 | Manejo técnico central de errores | Fundación | `AppError`, 404/error middleware | error envelope | `notFound.test.js` | Foundation |
+| P0-INF-004 | MySQL local reproducible | Fundación | `docker-compose.yml` | N/A | health de Compose | Foundation |
+| P0-INF-005 | Base exclusiva de tests | Fundación | `testDatabaseGuard`, `DB_NAME_TEST`, Umzug | N/A | guard + schema suite | Done |
+| P0-DOC-001 | Monolito modular documentado | Fundación | `architecture.md`, ADR-001 | N/A | revisión documental | Foundation |
+| P0-DOC-002 | ER completo documentado | Fundación | `database.md` | N/A | revisión documental | Foundation |
+| P0-DOC-003 | Convenciones API/error documentadas | Fundación | `api.md` | `/api` | revisión documental | Foundation |
+| P1-DATA-001 | Client y relación 1:N Bike | 1 | modelo/migración/asociación | persistencia | schema integration | Done |
+| P1-DATA-002 | Bike con FK Client válida | 1 | Bike + `fk_bikes_client` | persistencia | FK/asociación | Done |
+| P1-DATA-003 | Normalización y unicidad de placa en dos capas | 1 | validator/service/setter + UNIQUE | `POST /api/bikes` | duplicate HTTP + DB | Done |
+| P1-DATA-004 | WorkOrder con FK Bike válida | 1 | modelo/migración | persistencia | FK/asociación | Done |
+| P1-DATA-005 | WorkOrderItem y relación | 1 | modelo/migración | persistencia | FK/asociación | Done |
+| P1-DATA-006 | Cantidad mayor que cero | 1 | validator/model/CHECK | Items API | HTTP + DB rejection | Done |
+| P1-DATA-007 | Valor unitario mayor/igual cero | 1 | validator/model/CHECK | Items API | HTTP + DB rejection | Done |
+| P1-DATA-008 | Dinero en `DECIMAL` | 1 | `DECIMAL(15,2)` | persistencia | exact reload | Done |
+| P1-BE-001 | Crear cliente | 1 | módulo Client por capas | `POST /api/clients` | clientsBikes integration | Done |
+| P1-BE-002 | Buscar clientes | 1 | consulta parcial parametrizada | `GET /api/clients?search=` | búsqueda/empty | Done |
+| P1-BE-003 | Detalle cliente | 1 | service/repository | `GET /api/clients/:id` | 200/404/ID | Done |
+| P1-BE-004 | Crear motocicleta | 1 | módulo Bike + relación/conflicto | `POST /api/bikes` | create/FK/duplicate | Done |
+| P1-BE-005 | Buscar por placa | 1 | búsqueda parcial normalizada | `GET /api/bikes?plate=` | search matrix | Done |
+| P1-BE-006 | Detalle motocicleta | 1 | include Client | `GET /api/bikes/:id` | 200/404/ID | Done |
+| P1-BE-007 | Crear orden sólo con Bike válida, inicial RECIBIDA | 1 | WorkOrder service/defaults | `POST /api/work-orders` | create/default/FK | Done |
+| P1-BE-008 | Listar/filtrar órdenes | 1 | eager query y filtros | `GET /api/work-orders` | status/plate/N+1 | Done |
+| P1-BE-009 | Paginar órdenes con metadata | 1 | `findAndCountAll`, máximo 100 | orders list | page/meta/order | Done |
+| P1-BE-010 | Detalle con Client/Bike/items | 1 | include graph/serializer | `GET /api/work-orders/:id` | detail graph | Done |
+| P1-BE-011 | Agregar MANO_OBRA/REPUESTO | 1 | item validator/service/repository | POST items | type/validation/404 | Done |
+| P1-BE-012 | Eliminar ítem | 1 | transacción y revalidación bloqueada | DELETE item | delete/zero/404 | Done |
+| P1-BE-013 | Backend recalcula total add/delete | 1 | aggregate DECIMAL + ADR-004 | items/detail | 130000/0.30/rollback | Done |
+| P1-BE-014 | Concurrencia de ítems conserva total | Contrato | transacción + WorkOrder lock | Items API | add/add, add/delete | Done |
+| P1-STATE-001 | Flujo forward canónico | 1 | mapa + service transaccional | PATCH status | path + 6×6 | Done |
+| P1-STATE-002 | Cancelar desde cuatro estados | 1 | aristas explícitas | PATCH status | cancellation matrix | Done |
+| P1-STATE-003 | ENTREGADA/CANCELADA terminales | 1 | destinos vacíos | PATCH status | terminal matrix | Done |
+| P1-STATE-004 | Transición inválida/idempotente devuelve 400 claro | 1/2 | `BusinessRuleError` | PATCH status | inválida/mismo estado | Done |
+| P1-STATE-005 | Transiciones concurrentes serializadas | Contrato | transaction + `FOR UPDATE` | PATCH status | races | Done |
+| P1-FE-001 | Tabla placa/cliente/estado/fecha/total | 1 | page/table/formatters | `/orders` | render | Done |
+| P1-FE-002 | Filtros estado/placa | 1 | controlled filters/API | `/orders` | filter request | Done |
+| P1-FE-003 | Paginación de órdenes | 1 | `Pagination` con metadata | `/orders` | next/boundary | Done |
+| P1-FE-004 | Crear seleccionando Bike por placa | 1 | `BikeLookup` + payload explícito | `/orders/new` | flujo con Bike existente | Done |
+| P1-FE-005 | Registro rápido Client/Bike | 1 | `QuickRegistration` secuencial | `/orders/new` | client→bike | Done |
+| P1-FE-006 | Detalle con relaciones/items/total | 1 | detail page/components | `/orders/:id` | detail render | Done |
+| P1-FE-007 | Sólo acciones de estado válidas | 1 | mapa visual de transiciones | `/orders/:id` | permitida/terminal | Done |
+| P1-FE-008 | Gestión de ítems | 1 | form/table/confirm/refetch | `/orders/:id` | add/delete | Done |
+| P1-UX-001 | Errores y loaders claros | 1 | panels/feedback localizados | vistas requeridas | state cases | Done |
+| P1-UX-002 | Empty/disabled/doble-submit | Contrato | estados UI y locks | vistas requeridas | state cases | Done |
+| P1-UX-003 | Responsive/accesibilidad | Contrato | focus/labels/mobile cards | vistas requeridas | role assertions + smoke | Done |
+| P1-DOC-001 | Source, migraciones y setup README | 1 | repo + guía española | entrega | clean migration/boot/build | Done |
+| P1-DOC-002 | Colección Postman | Contrato | colección completa | API | estructura + smoke | Done |
+| P2-DATA-001 | User único con role/active | 2 | modelo/migración User | Auth | schema/auth tests | Done |
+| P2-DATA-002 | Refresh sólo como digest | Opción proyecto | modelo/migración + SHA-256 | refresh/logout | persistence inspection | Done |
+| P2-AUTH-001 | Seed ADMIN inicial | 2 | `seedInitialAdmin` env/idempotente | login | seed/hash/idempotency | Done |
+| P2-AUTH-002 | Registro sólo ADMIN | 2 | auth/RBAC/validation | `POST /api/auth/register` | roles/401/403/duplicate | Done |
+| P2-AUTH-003 | Login genérico, bcrypt y JWT | 2 | AuthService | `POST /api/auth/login` | login matrix | Done |
+| P2-AUTH-004 | Perfil autenticado seguro | 2 | authenticate + DB lookup | `GET /api/auth/me` | token/profile matrix | Done |
+| P2-AUTH-005 | Rotación refresh en HttpOnly cookie | Opción proyecto | AuthService transaccional | refresh | cookie/rotation/race | Done |
+| P2-AUTH-006 | Logout revoca y limpia | Opción proyecto | revocación de token actual | logout | idempotent/session-scope | Done |
+| P2-AUTH-007 | Replay revoca familia activa | Contrato | family tracking/revocation | refresh | replay/families/race | Done |
+| P2-RBAC-001 | Toda ruta negocio autentica | 2 | router authenticate | business API | token matrix | Done |
+| P2-RBAC-002 | Rol incorrecto devuelve 403 | 2 | `authorize` + error | restricted API | unit/HTTP | Done |
+| P2-RBAC-003 | MECANICO agrega ítems/avanza tres estados | 2 | routes + política de estado | items/status | ruta permitida | Done |
+| P2-RBAC-004 | MECANICO no entrega/cancela/elimina | 2 | role guards/service | items/status | 403 + persistence | Done |
+| P2-USER-001 | ADMIN lista usuarios | 2 | UserService/repository seguro | `GET /api/users` | 200/401/403 | Done |
+| P2-USER-002 | ADMIN cambia rol | 2 | validated update | PATCH role | update/errors/effect | Done |
+| P2-USER-003 | ADMIN activa/desactiva | 2 | strict boolean update | PATCH active | update/errors/effect | Done |
+| P2-USER-004 | Password/hash nunca retorna | 2 | modelo/serializadores seguros | Auth/User APIs | aserciones profundas | Done |
+| P2-AUDIT-001 | Esquema history con actor/from/to/note/time | 2 | migración/modelo/FKs | history | metadata/contenido | Done |
+| P2-AUDIT-002 | Evento inicial con creador | Interpretación 2 | creación + insert atómico | create/history | event/rollback | Done |
+| P2-AUDIT-003 | Cada cambio válido/cancel crea una fila | 2 | locked update + insert | status/history | exact row | Done |
+| P2-AUDIT-004 | Rechazados/idempotentes sin historial | 2 | validación antes de writes | status/history | absence cases | Done |
+| P2-AUDIT-005 | Historial inmutable y newest-first | 2 | consulta append-only/ordenada | history | seguridad/orden/empates | Done |
+| P2-AUDIT-006 | Índice conserva prefijo requerido | 2 | composite descending index | N/A | MySQL metadata | Done |
+| P2-AUDIT-007 | Paginación history, máximo 100, ties | 2 | bounded query | GET history | 150 rows | Done |
+| P2-AUDIT-008 | Historial menor a 1s | 2 | indexed bounded query | history UI/API | 9.40 ms observation | Done |
+| P2-FE-001 | Login y guardas de ruta/rol | 2 | pages/guards | `/login` + privadas | route matrix | Done |
+| P2-FE-002 | Restaurar, renovar y cerrar sesión | 2 | AuthContext/interceptors | shell | bootstrap + five 401 | Done |
+| P2-FE-003 | UI ADMIN de usuarios | 2 | UsersPage/users API | `/admin/users` | list/create/role/active | Done |
+| P2-FE-004 | Acciones por rol | 2 | role-filtered controls | detail | ADMIN/MECANICO | Done |
+| P2-FE-005 | Timeline fecha/actor/from/to/note | 2 | HistoryTimeline paginado | detalle | render/estados/página | Done |
+| P2-SEC-001 | Rate limiting de login | 2 | login limiter | login | stable 429 | Done |
+| P2-SEC-002 | Helmet, CORS restringido, body limit | Contrato | app/CORS/parser | API | security suite | Done |
+| P2-SEC-003 | Cookie y secretos seguros | 2/Contrato | cookie/startup validation | Auth | config/cookie tests | Done |
+| P2-SEC-004 | Sin fuga de stack/SQL/JWT/secreto | Contrato | sanitizador/serializadores | errores/logs | payload seguro/500 | Done |
 
-## Maintenance rule
+## Regla de mantenimiento
 
-Every milestone must replace planned implementation/test references with concrete files and mark a row Done only after its automated evidence passes. Source requirements and project-contract enhancements remain distinguishable in the Phase column. Critical functional rows are additionally cross-checked against the named cases in `test-acceptance-matrix.md`.
+Cada cambio debe actualizar implementación, prueba y trazabilidad en el mismo hito. Los requisitos fuente y extensiones del contrato permanecen distinguibles en “Fase fuente”.

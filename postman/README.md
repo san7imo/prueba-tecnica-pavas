@@ -1,35 +1,51 @@
-# Postman
+# Guía de Postman
 
-Import `PAVAS-Moto-Workshop.postman_collection.json`. Set collection variables `adminEmail` and `adminPassword` to the local seeded ADMIN; no credential is included in Git. Bearer `{{accessToken}}` is configured collection-wide for protected requests. Run Auth in this order:
+Importe `PAVAS-Moto-Workshop.postman_collection.json`. La colección contiene 5 carpetas y 22 requests, con `baseUrl=http://localhost:3000/api` por defecto.
 
-1. Auth / Login (captures `accessToken` and Postman's cookie jar captures the HttpOnly refresh cookie)
-2. Auth / Me
-3. Auth / Refresh (rotates the cookie and replaces `accessToken`)
-4. Auth / Register User (stores `managedUserId`)
+## Configuración
 
-Then run Users while still logged in as ADMIN:
+Defina estas variables de colección antes de comenzar:
 
-1. Users / List Users
-2. Users / Change User Role (`managedUserRole` is `ADMIN` or `MECANICO`)
-3. Users / Change User Active (`managedUserActive` is a JSON boolean)
+- `adminEmail`: email del ADMIN creado con el seed;
+- `adminPassword`: contraseña local del seed; la colección no incluye una;
+- `baseUrl`: URL base de la API si no usa el valor local.
 
-Then run protected Phase 1 requests in folder order:
+`{{accessToken}}` está configurado como Bearer para las rutas protegidas. La request de login captura el access token automáticamente; el cookie jar de Postman conserva la cookie `HttpOnly` de refresh.
 
-1. Clients / Create client
-2. Clients / Search clients
-3. Clients / Get client
-4. Bikes / Create bike
-5. Bikes / Search bikes
-6. Bikes / Get bike
-7. Work Orders / Create Work Order
-8. Work Orders / Add Work Order Item
-9. Work Orders / List Work Orders
-10. Work Orders / Filter Work Orders
-11. Work Orders / Get Work Order
-12. Work Orders / Update Work Order Status
-13. Work Orders / Get Status History
-14. Work Orders / Delete Work Order Item
+## Orden recomendado
 
-The collection defaults `baseUrl` to `http://localhost:3000/api`. Create requests capture `clientId`, `bikeId`, the normalized `bikePlate`, `workOrderId` and `itemId` for later requests. Item tests verify exact totals. `toStatus` defaults to `DIAGNOSTICO`; change it to each next legal target (`EN_PROCESO`, `LISTA`, `ENTREGADA`) or use `CANCELADA` from a non-terminal order. The history request verifies pagination and the safe actor shape after creation/status events.
+### Auth
 
-Run Auth / Logout last. HITO 9 Auth, Users, protected Phase 1 endpoints and status history are present.
+1. `Iniciar sesión` — captura `accessToken` y cookie.
+2. `Consultar usuario actual`.
+3. `Renovar sesión` — rota cookie y reemplaza access token.
+4. `Registrar usuario` — guarda `managedUserId`.
+
+### Usuarios
+
+Mantenga la sesión `ADMIN`:
+
+1. `Listar usuarios`.
+2. `Cambiar rol de usuario` — `managedUserRole` acepta `ADMIN` o `MECANICO`.
+3. `Cambiar estado activo` — `managedUserActive` debe ser boolean JSON.
+
+### Flujo de negocio
+
+1. Clientes / `Crear cliente`.
+2. Clientes / `Buscar clientes`.
+3. Clientes / `Consultar cliente`.
+4. Motocicletas / `Crear motocicleta`.
+5. Motocicletas / `Buscar motocicletas`.
+6. Motocicletas / `Consultar motocicleta`.
+7. Órdenes de trabajo / `Crear orden de trabajo`.
+8. Órdenes de trabajo / `Agregar ítem`.
+9. Órdenes de trabajo / `Listar órdenes`.
+10. Órdenes de trabajo / `Filtrar órdenes`.
+11. Órdenes de trabajo / `Consultar orden`.
+12. Órdenes de trabajo / `Cambiar estado`.
+13. Órdenes de trabajo / `Consultar historial`.
+14. Órdenes de trabajo / `Eliminar ítem`.
+
+Las requests de creación capturan `clientId`, `bikeId`, `bikePlate`, `workOrderId` e `itemId`. Los scripts de ítems verifican totales exactos. `toStatus` inicia en `DIAGNOSTICO`; cámbielo siguiendo `EN_PROCESO`, `LISTA`, `ENTREGADA`, o use `CANCELADA` desde una orden no terminal.
+
+Ejecute Auth / `Cerrar sesión` al final. No versione valores reales de `adminPassword` ni tokens exportados.

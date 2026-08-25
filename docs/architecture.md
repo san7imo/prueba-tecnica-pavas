@@ -1,33 +1,33 @@
-# Architecture
+# Arquitectura
 
-## Status and scope
+## Estado y alcance
 
-This document defines the implemented architecture through HITO 11: complete Phase 1, Phase 2 sessions/RBAC/audit/frontend, and the approved HTTP/security hardening boundary.
+Este documento describe la arquitectura implementada al cierre de HITO 14: Fase 1 completa, autenticación, RBAC, auditoría, frontend autenticado, controles de seguridad y suite crítica de aceptación de Fase 2.
 
-## Architectural Style
+## Estilo arquitectónico
 
-PAVAS Moto Workshop uses a **modular layered monolith**. The assessment covers one cohesive workshop domain, a modest number of entities and a single delivery unit. A monolith therefore provides fast delivery and straightforward transactions without sacrificing separation of responsibilities.
+PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller es cohesivo, tiene siete entidades y requiere transacciones directas sobre una única base relacional. Una sola API Express permite conservar límites claros sin introducir costes operativos que la prueba no necesita.
 
-Microservices would add deployment, network, data-consistency and observability costs without solving an assessment requirement. Modules remain explicit so they can evolve independently inside one application.
+Los microservicios añadirían red, despliegues, observabilidad y consistencia distribuida sin resolver un requisito. Los módulos internos conservan responsabilidades explícitas y pueden evolucionar sin convertir la aplicación en un bloque de CRUD sin estructura.
 
-## Backend request flow
+## Flujo de una petición backend
 
 ```text
-HTTP Request
+Petición HTTP
      ↓
-Helmet security headers
+Helmet
      ↓
-Exact-origin credentialed CORS
+CORS con origen exacto y credenciales
      ↓
-Bounded JSON parser
+Parser JSON limitado a 100 KiB
      ↓
 Route
      ↓
 Authentication
      ↓
-Authorization when role-restricted
+Authorization cuando aplica
      ↓
-Validation Middleware
+Validation middleware
      ↓
 Controller
      ↓
@@ -40,132 +40,120 @@ Sequelize
 MySQL
 ```
 
-This security-first order applies to every protected endpoint so unauthorized callers receive 401/403 before validation details. Public health/login/refresh/logout skip the boundary; `/me` authenticates without a role restriction. Workflow-specific status authorization remains in the locked service after transition validation.
+En rutas protegidas, autenticación y autorización se ejecutan antes de exponer detalles de validación. Health, login, refresh y logout son públicos; `/me` exige autenticación. La autorización de destinos de estado se completa dentro del servicio y de la transacción bloqueada.
 
-## Backend responsibilities
+## Responsabilidades del backend
 
 ### Routes
 
-Map URL and HTTP method, attach middleware and delegate to controllers. Routes contain no business rules.
+Mapean método y URL, conectan middlewares y delegan en controllers. No contienen reglas de negocio.
 
 ### Controllers
 
-Extract validated request data, invoke a service and map successful results to HTTP responses. Controllers do not mutate Sequelize models, calculate totals or decide transitions.
+Extraen la entrada ya validada, llaman un service y asignan la respuesta HTTP. No mutan modelos, calculan totales ni deciden transiciones.
 
 ### Services
 
-Own business rules, domain authorization, transactions and workflows spanning multiple writes. Work-order state and total rules have one authoritative service implementation.
+Son dueños de reglas de negocio, autorización de dominio, transacciones y operaciones con varias escrituras. Estados, auditoría y totales tienen una única implementación autoritativa.
 
 ### Repositories
 
-Own reusable persistence queries, includes, filtering, pagination and row locking. Complex work-order graphs remain out of controllers and services.
+Concentran consultas reutilizables, filtros, includes, paginación y bloqueos de fila. Los grafos complejos no se construyen en controllers.
 
 ### Models
 
-Represent the schema, associations and persistence constraints. They provide safe serialization and never contain HTTP behavior.
+Representan esquema, asociaciones, validaciones de persistencia y serialización segura. No conocen HTTP.
 
 ### Validators
 
-Validate external bodies, query strings and parameters before service execution. Database constraints remain a second line of defense.
+Validan cuerpos, queries y parámetros externos antes de ejecutar servicios. Las restricciones de MySQL siguen siendo la barrera final.
 
-### Middlewares
+### Middlewares y errores
 
-Centralize authentication, authorization, validation mapping, rate limiting, not-found behavior and HTTP error handling.
+Centralizan autenticación, roles, rate limiting, 404 y manejo de errores. Las clases `AppError`, `ValidationError`, `AuthenticationError`, `AuthorizationError`, `NotFoundError`, `ConflictError` y `BusinessRuleError` transportan códigos públicos seguros; un único error middleware evita filtrar SQL, JWT, paths o stacks.
 
-### Errors
+## Transacciones y concurrencia
 
-Application errors carry a safe code, status and message. A single error middleware emits the public error envelope and prevents SQL, JWT, stack or secret disclosure.
+Las operaciones con varias escrituras son atómicas:
 
-## Transactions and concurrency
+- **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea o elimina el ítem, recalcula `SUM(count * unit_value)` en MySQL y persiste el total antes de commit. El mismo lock serializa add/add y add/delete.
+- **Creación de orden:** la orden `RECIBIDA` y su evento inicial `NULL -> RECIBIDA` se confirman o revierten juntas.
+- **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente un evento. Un competidor espera y valida contra el resultado confirmado.
+- **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
-Multi-write business operations must be atomic. HITO 4 item-total mutations run through a service-owned Sequelize transaction and lock their target work-order row with `SELECT ... FOR UPDATE`. Create then inserts the item; delete resolves the immutable owning order, locks that order, revalidates the item with a locking read and removes it. Both paths aggregate persisted item rows and update the order before commit. This common order lock serializes competing create/create and create/delete operations.
+El total se calcula con operandos `DECIMAL` y viaja como string; no se usa `Number` para dinero. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
 
-MySQL performs the HITO 4 `SUM(count * unit_value)` using exact `DECIMAL` operands and casts the aggregate to `DECIMAL(15,2)`. The application carries the result as a string and never performs monetary arithmetic with JavaScript `Number`. See ADR-004.
+El historial se consulta con límite/offset acotado, un join del actor que selecciona sólo ID/nombre y orden `created_at DESC, id DESC`. El índice físico `(work_order_id, created_at DESC, id DESC)` evita N+1 y soporta el desempate determinista.
 
-HITO 9 extends the HITO 5 status transaction without changing its lock order: read WorkOrder `FOR UPDATE`, validate the graph, validate the actor, update status and insert one history row before commit. A waiting transition reads the winner's committed state, so two same-target requests yield one success, one HTTP 400 and exactly one audit row. Order creation likewise wraps the order and initial `NULL -> RECIBIDA` event in one transaction. See ADR-003.
+## Persistencia y migraciones
 
-History reads use a dedicated repository query with bounded limit/offset, a single eager actor join selecting only ID/name, and `created_at DESC, id DESC`. The physical `(work_order_id, created_at DESC, id DESC)` index supports filtering and ordering without N+1 reads.
+MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug ejecuta siete migraciones ESM y registra su estado en `SequelizeMeta`. No se usa `sequelize.sync` como estrategia de esquema.
 
-## Database and migrations
+Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).
 
-MySQL 8 is the persistence engine and Sequelize is the mapper/query layer. HITO 1 implements deterministic ESM migrations through Umzug/`SequelizeMeta`; the application does not use `sequelize.sync` as a schema strategy.
+## Arquitectura frontend
 
-HITO 7 extends the stack with User and RefreshToken; HITO 8 adds `UserService`/UserRepository without schema changes; HITO 9 adds the seventh migration and a narrow history repository. Auth/audit request flow remains layered: Route → security middleware → Validator → Controller → Service → Repository → Sequelize. Controllers serialize service results; transactions and domain authorization remain in services.
-
-Development and integration tests use separate databases. See [testing.md](testing.md).
-
-## Frontend architecture
-
-The React application uses Vite and feature-oriented modules:
+La aplicación React usa Vite y módulos orientados a funcionalidad:
 
 ```text
 App / routes
      ↓
-Layouts and pages
+Layouts y pages
      ↓
-Feature components and hooks
+Feature components y hooks
      ↓
 API clients
      ↓
 Express API
 ```
 
-Server data is held close to the consuming page or feature. Authentication uses a narrowly scoped `AuthContext`; forms use local state. Redux is not part of the architecture.
-
-React Router owns protected, anonymous-only and ADMIN role guards. Axios uses a business client for Bearer requests and a separate auth client for login/refresh/logout. A shared memory-only session coordinator deduplicates concurrent refresh attempts and limits each 401 request to one retry.
-
-HITO 10 extends the HITO 6 structure as:
-
 ```text
 src/
-├── api/                    business/auth Axios clients + resource modules
-├── components/ui/          shared loading, error, empty and status states
-├── constants/              display labels and transition map
-├── context/ and hooks/     AuthContext and narrow access hook
-├── features/auth/          memory-only session/refresh coordinator
-├── features/workOrders/    workflow, permissions, history and list hook
-├── layouts/                application shell
-├── pages/                  route-level orchestration and local state
-├── routes/                 route table and session/role guards
-└── utils/                  safe API errors and exact decimal presentation
+├── api/                    clientes Axios y módulos de recursos
+├── components/ui/          estados compartidos de carga, error y vacío
+├── constants/              labels y mapa visual de transiciones
+├── context/ y hooks/       AuthContext y acceso acotado
+├── features/auth/          coordinador de sesión en memoria
+├── features/workOrders/    órdenes, permisos e historial
+├── layouts/                shell de aplicación
+├── pages/                  orquestación por ruta
+├── routes/                 rutas y guardas de sesión/rol
+└── utils/                  errores seguros y formato decimal
 ```
 
-The browser never supplies WorkOrder `status` or `total` during creation. Mutations refetch detail so the persisted backend total and status remain authoritative. Item subtotals are informational and use decimal-string/`BigInt` arithmetic rather than `Number`. The centralized frontend transition map improves the workflow but does not replace backend state validation.
+Los datos de servidor viven cerca de la pantalla que los consume. `AuthContext` se limita a sesión; los formularios usan estado local; Redux no es necesario.
 
-The browser never persists either token in Web Storage. Access JWTs remain in memory; the refresh JWT is an HttpOnly cookie. UI role filtering is presentational defense in depth and never replaces backend authorization.
+React Router implementa guardas protegidas, anónimas y de `ADMIN`. Axios separa el cliente de negocio del cliente auth para evitar recursión. Un coordinador en memoria deduplica refresh concurrentes y limita cada 401 a un reintento.
 
-For local development the Axios base defaults to `/api` and Vite proxies it to port 3000. `VITE_API_BASE_URL` can instead point to a deployed API; the API accepts credentials from exactly `FRONTEND_ORIGIN` and rejects other browser origins.
+El navegador nunca envía `status` o `total` autoritativos. Tras mutar, vuelve a consultar el detalle. Los subtotales informativos usan strings decimales/`BigInt`. Los controles ocultos por rol mejoran UX, pero el backend conserva la autoridad.
 
-## API conventions
+El access token sólo vive en memoria; el refresh token sólo en cookie `HttpOnly`. Para desarrollo, Axios usa `/api` y Vite lo redirige a `http://localhost:3000`; un frontend separado usa `VITE_API_BASE_URL` y debe coincidir exactamente con `FRONTEND_ORIGIN`.
 
-- JSON only under `/api`.
-- Single resources use `{ "data": {} }`.
-- Paginated collections use `{ "data": [], "meta": {} }`; unpaginated Client/Bike collections use `{ "data": [] }`.
-- Errors use `{ "error": { "code": "...", "message": "..." } }`.
-- Validation may add safe `details`.
-- History uses deterministic `created_at DESC, id DESC` ordering.
+## Convenciones API
 
-See [api.md](api.md).
+- JSON bajo `/api`.
+- Recurso: `{ "data": {} }`.
+- Colección paginada: `{ "data": [], "meta": {} }`.
+- Error: `{ "error": { "code": "...", "message": "..." } }`.
+- Validación puede añadir `details` seguros.
+- Historial: `created_at DESC, id DESC`.
 
-## Work-order query strategy
+Consulte [API](api.md).
 
-The HITO 3 list uses one paginated Sequelize `findAndCountAll` operation with eager `WorkOrder → Bike → Client` includes. `distinct: true` keeps the order count correct if the include graph later introduces row multiplication. The protected HITO 8 request executes one active-user authentication query followed by one count and one data query, independent of result count, and therefore avoids N+1 reads.
+## Estrategia de consultas
 
-Pagination defaults to page 1/page size 20 and rejects sizes above 100. Results use `entry_date DESC, id DESC`: entry date is the operational date shown by the assessment UI, while ID provides deterministic ordering for equal timestamps.
+El listado de órdenes usa `findAndCountAll` con el grafo `WorkOrder → Bike → Client`; `distinct: true` mantiene el conteo correcto. La petición protegida realiza una lectura de usuario, un count y una consulta de página, independientemente del número de resultados. La paginación usa 1/20 por defecto, máximo 100, y orden `entry_date DESC, id DESC`.
 
-## Security architecture
+## Arquitectura de seguridad
 
-The security boundary lives on the backend. HITO 7 implements bcrypt, short-lived signed access JWTs, database-checked active users, hashed rotating refresh tokens in HttpOnly cookies, family-scoped replay response and a login-specific rate limiter. Refresh rotation locks the presented token row in a transaction; replay revocation commits before the public 401 response. See ADR-002 and [security.md](security.md).
+El backend es la frontera de seguridad. bcrypt protege contraseñas; access JWT y refresh JWT usan secretos distintos; los usuarios activos se recargan desde MySQL; refresh tokens se guardan sólo como SHA-256 digest; RBAC se aplica en rutas y servicios; Helmet, CORS exacto, límite JSON y rate limiting se instalan antes del negocio.
 
-UI visibility is never authorization. HITO 8 protects every business route and enforces ADMIN/MECANICO boundaries in middleware plus the status service. HITO 11 places Helmet, exact-origin credentialed CORS and the 100 KiB JSON limit before routes, validates production origin/cookie/secret invariants before startup, and sanitizes parser and unexpected errors. The API deliberately disables CSP because it serves JSON only; the frontend hosting layer owns its document CSP.
+La API JSON desactiva CSP porque no sirve HTML; la CSP corresponde al host del frontend. Consulte [Seguridad](security.md) y [ADR-002](decisions/ADR-002-refresh-token-rotation.md).
 
-## Error handling
+## Supuestos de operación y despliegue
 
-The HITO 0 base includes `AppError`, a 404 middleware and one error middleware. Domain modules add explicit validation, not-found, conflict and business errors while preserving the same centralized public envelope. Malformed/oversized JSON map to safe 400/413 responses and unexpected failures return a generic 500 without internal details.
-
-## Operational assumptions
-
-- API and frontend are separately runnable processes in the monorepo.
-- MySQL is the only required infrastructure service.
-- No cache, queue, WebSocket or event bus is needed.
-- The source `.docx` assessment files remain preserved at repository root.
+- API y frontend son procesos separados del monorepo.
+- MySQL es el único servicio de infraestructura obligatorio.
+- No se necesitan caché, colas, WebSockets ni bus de eventos.
+- En producción se requiere TLS, origen HTTPS exacto, cookies Secure, secretos gestionados, logs redactados y backups.
+- Los `.docx` originales permanecen en la raíz y no forman parte de la implementación.

@@ -1,123 +1,108 @@
 # PAVAS Moto Workshop
 
-## Overview
+Prueba Técnica Full Stack JavaScript
 
-PAVAS Moto Workshop is a production-minded MVP for managing motorcycle workshop work orders. The repository is being delivered incrementally under the milestone contract in `AGENTS.md`.
+## Descripción
 
-The repository includes the complete Phase 1 product plus Phase 2 sessions, RBAC/user administration, work-order status audit history, authenticated role-aware frontend, security hardening, the HITO 12 critical acceptance matrix and the HITO 13 UI/accessibility polish.
+PAVAS Moto Workshop es un MVP para gestionar órdenes de trabajo de un taller de motocicletas. Incluye el alcance obligatorio de las fases 1 y 2 de la prueba de PAVAS S.A.S.: clientes, motocicletas, órdenes, ítems, totales, flujo de estados, autenticación, roles, administración de usuarios e historial auditable.
 
-## Features
+El proyecto prioriza reglas de negocio explícitas, consistencia transaccional, seguridad, pruebas automatizadas y una instalación local reproducible. Los documentos originales de la prueba se conservan sin modificaciones en la raíz del repositorio.
 
-Implemented through HITO 13:
+## Funcionalidades
 
-- executable Express API foundation with `GET /api/health`;
-- executable React/Vite foundation;
-- centralized technical 404 and error handling;
-- environment-driven Sequelize connection factory;
-- MySQL development service through Docker Compose;
-- lint and smoke-test tooling;
-- architecture, data model, business-rule and traceability documentation;
-- deterministic Phase 1 migrations and Sequelize models for Client, Bike, WorkOrder and WorkOrderItem;
-- Client create/search/detail API;
-- Bike create/normalized-plate search/detail API with nested client data;
-- application and database enforcement of unique normalized plates;
-- WorkOrder creation with validated Bike, server-controlled `RECIBIDA`/`0.00` defaults and optional server entry time;
-- paginated WorkOrder listing with status/normalized-plate filters and eager Bike/Client data;
-- WorkOrder detail with Bike, Client, persisted total and existing items;
-- WorkOrder item creation/deletion with validation, atomic recalculation and safe decimal strings;
-- WorkOrder row locking plus tested add/add and add/delete concurrency consistency;
-- server-authoritative `SUM(count * unitValue)` totals and rollback coverage;
-- canonical WorkOrder state machine with terminal states, cancellation and stable HTTP 400 errors;
-- transactional `FOR UPDATE` status changes with exhaustive matrix and concurrency tests;
-- responsive application shell and React Router views for `/orders`, `/orders/new` and `/orders/:id`;
-- server-filtered order list with pagination, status badges and complete loading/error/empty states;
-- existing-bike lookup plus integrated quick Client/Bike registration;
-- WorkOrder detail with item creation/deletion, confirmations, valid status actions and server-authoritative total refresh;
-- exact decimal-string subtotal and COP presentation without floating-point monetary arithmetic;
-- focused frontend behavior tests for the critical Phase 1 workflows;
-- guarded MySQL integration tests for the persistence and HTTP layers;
-- Postman folders for the complete Phase 1 Client, Bike and WorkOrder API.
-- User and hashed RefreshToken persistence with reversible migrations;
-- env-driven idempotent initial ADMIN seed;
-- generic bcrypt login, `/auth/me` and DB-backed inactive-user enforcement;
-- short-lived access JWTs and HttpOnly refresh cookies;
-- transactional refresh rotation, replacement links, family replay detection and session-scoped logout;
-- login-specific rate limiting plus MySQL replay/concurrency tests.
-- authenticated Client, Bike and WorkOrder API boundaries;
-- reusable ADMIN/MECANICO authorization middleware with stable 401/403 semantics;
-- ADMIN registration, safe user listing and role/active administration;
-- immediate access-token rejection after role or active changes;
-- MECANICO item/status permissions enforced in backend with workflow/RBAC separation.
-- immutable WorkOrderStatusHistory persistence with physical WorkOrder/User foreign keys;
-- atomic initial `NULL -> RECIBIDA` audit events tied to the authenticated creator;
-- atomic transition/audit writes with notes, cancellation evidence and rollback coverage;
-- authenticated ADMIN/MECANICO history API with safe actor serialization;
-- deterministic indexed history pagination (`createdAt DESC, id DESC`) tested with 150 tied events;
-- competing same-target transitions proven to create exactly one audit row.
-- `/login` with generic credential errors, bootstrap loading and authenticated-user redirect;
-- memory-only access-token session state restored by the HttpOnly refresh cookie;
-- centralized Bearer injection, one controlled retry and single-flight refresh coordination for concurrent 401 responses;
-- protected business routes plus an ADMIN-only `/admin/users` guard;
-- identity/role navigation and logout that always clears local state;
-- ADMIN user list/create/role/active controls with deactivation and self-mutation confirmations;
-- role-aware order detail actions that hide delete/deliver/cancel controls from MECANICO;
-- optional transition notes and a paginated newest-first status-history timeline;
-- focused frontend tests for session restoration, guards, five concurrent 401 responses, users, permissions and history states.
-- global Helmet headers, exact-origin credentialed CORS and a 100 KiB JSON request limit;
-- startup validation for environment, origin, JWT lifetimes/secrets and production cookie invariants;
-- safe malformed/oversized JSON errors plus generic sanitization of unexpected failures;
-- explicit JWT purpose/algorithm boundary, cookie-clearing and CORS integration regressions;
-- documented dependency audit, CSRF/XSS/SQL-injection posture and residual production risks.
-- requirement-to-risk-to-test acceptance matrix spanning backend, frontend, concurrency and security;
-- explicit frontend regressions for failed refresh cleanup, memory-only tokens, MECANICO allowed actions and user administration states.
-- polished responsive workshop shell with consistent required-field, contrast and focus treatment;
-- keyboard-focusable table regions, contained mobile item scrolling and explicit ADMIN role-change confirmation;
-- operational status-action labels, localized feedback and accessible transition-note length guidance.
+### Fase 1
 
-## Assessment Scope
+- registro, búsqueda y consulta de clientes;
+- registro y búsqueda de motocicletas con placa normalizada y única;
+- creación, consulta, filtros y paginación de órdenes de trabajo;
+- gestión transaccional de `MANO_OBRA` y `REPUESTO`;
+- total autoritativo calculado por el backend con aritmética `DECIMAL`;
+- máquina de estados con transiciones válidas y cancelación controlada;
+- interfaz React para listado, creación y detalle de órdenes;
+- estados de carga, error, vacío y prevención de envíos duplicados.
 
-The final solution will cover the mandatory requirements of PAVAS assessment Phase 1 and Phase 2. Optional refresh/logout support and a Postman collection are intentionally included by the repository contract.
+### Fase 2
 
-## Architecture
+- autenticación con access JWT y refresh token en cookie `HttpOnly`;
+- rotación, revocación y detección de reutilización de refresh tokens;
+- roles `ADMIN` y `MECANICO` con autorización en backend;
+- administración básica de usuarios para `ADMIN`;
+- historial inmutable de cambios de estado con actor, fecha y nota;
+- timeline paginado en el detalle de la orden;
+- sesión persistente y renovación transparente en el frontend;
+- endurecimiento HTTP con Helmet, CORS restringido, límite de body y rate limiting.
 
-The application uses a modular layered monolith: routes, controllers, services, repositories, Sequelize models and MySQL on the backend; feature-oriented pages/components, narrow API modules and local workflow state on the frontend.
+Refresh/logout y la colección Postman eran opcionales en el enunciado original, pero este repositorio los implementa como parte de su contrato de ingeniería.
 
-See [docs/architecture.md](docs/architecture.md).
+## Stack tecnológico
 
-## Technology Stack
+| Área | Tecnologías |
+|---|---|
+| Backend | Node.js, Express, Sequelize, MySQL, JWT, bcrypt, Helmet |
+| Frontend | React, React Router, Axios, Vite |
+| Pruebas | Vitest, Supertest, React Testing Library |
+| Calidad | ESLint, migraciones Umzug, npm audit |
 
-- Node.js 20.19+, 22.13+ or 24+
-- Express
-- MySQL 8
-- Sequelize
-- React with Vite
-- React Router
-- Axios
-- Vitest, Supertest and React Testing Library
-- ESLint
+Las versiones compatibles de Node.js declaradas por ambos paquetes son `^20.19.0 || ^22.13.0 || >=24.0.0`.
 
-## Repository Structure
+## Arquitectura
+
+La solución es un monolito modular por capas, acompañado por una aplicación React independiente dentro del mismo repositorio:
+
+```text
+Frontend React
+      ↓ HTTP/JSON
+Express API
+      ↓
+Route → Auth/RBAC → Validation → Controller → Service → Repository
+                                                           ↓
+                                                      Sequelize
+                                                           ↓
+                                                        MySQL
+```
+
+Los servicios concentran reglas de negocio y transacciones; los repositorios concentran persistencia y bloqueos; el backend es siempre la autoridad para permisos, estados y totales. Consulte [Arquitectura](docs/architecture.md) y [ADR-001](docs/decisions/ADR-001-modular-monolith.md).
+
+## Estructura del repositorio
 
 ```text
 .
-├── backend/      Express application, migrations and Phase 1 API modules
-├── frontend/     React application
-├── docs/         Architecture and engineering documentation
-├── docker/       Local MySQL initialization files
-├── postman/      Postman collection for implemented endpoints
-├── AGENTS.md     Engineering execution contract
-└── docker-compose.yml
+├── backend/
+│   ├── migrations/       migraciones Sequelize/Umzug
+│   ├── seeders/          seed del ADMIN inicial
+│   ├── src/              API modular por capas
+│   └── tests/            pruebas unitarias y de integración
+├── frontend/
+│   ├── src/              interfaz React por funcionalidades
+│   └── tests/            pruebas de componentes y sesión
+├── docs/                 documentación, trazabilidad y ADR
+├── docker/mysql/init/    creación de la base exclusiva de tests
+├── postman/              colección y guía de uso
+├── docker-compose.yml
+└── AGENTS.md             contrato de ejecución del proyecto
 ```
 
-## Requirements
+## Requisitos previos
 
-- Node.js 20.19+, 22.13+ or 24+
-- npm 10+
-- Docker with either Compose v2 (`docker compose`) or Compose v1 (`docker-compose`)
+- Node.js compatible con los rangos anteriores;
+- npm incluido con Node.js;
+- Docker con Compose v2 (`docker compose`) o Compose v1 (`docker-compose`);
+- `openssl` recomendado para generar secretos.
 
-## Quick Start
+MySQL 8.4 se ejecuta mediante Docker Compose. No se requiere Redis, colas ni infraestructura adicional.
 
-1. Copy the safe example environment files and replace local passwords:
+## Instalación rápida
+
+Los siguientes pasos parten de un clon limpio y usan los lockfiles versionados.
+
+1. Clone el repositorio y entre en su carpeta:
+
+   ```bash
+   git clone <repository-url>
+   cd <repository-folder>
+   ```
+
+2. Cree los archivos locales de entorno:
 
    ```bash
    cp .env.example .env
@@ -125,160 +110,255 @@ See [docs/architecture.md](docs/architecture.md).
    cp frontend/.env.example frontend/.env
    ```
 
-2. Start MySQL:
+3. Reemplace en `backend/.env` los secretos y la contraseña del seed. Genere dos secretos distintos, por ejemplo:
+
+   ```bash
+   openssl rand -hex 32
+   openssl rand -hex 32
+   ```
+
+4. Levante MySQL y espere a que esté saludable:
 
    ```bash
    docker-compose up -d mysql
+   docker-compose ps
    ```
 
-3. Install and run the backend:
+   Si su instalación usa Compose v2, sustituya `docker-compose` por `docker compose`.
+
+5. Instale el backend, aplique las migraciones y cree el ADMIN inicial:
 
    ```bash
    cd backend
-   npm install
+   npm ci
+   npm run db:migrate
+   npm run db:migrate:status
+   npm run db:seed:admin
    npm run dev
    ```
 
-4. In another terminal, install and run the frontend:
+6. En otra terminal, instale y levante el frontend:
 
    ```bash
    cd frontend
-   npm install
+   npm ci
    npm run dev
    ```
 
-The API health endpoint is `http://localhost:3000/api/health`; Vite defaults to `http://localhost:5173` and proxies `/api` to the local backend.
+## Variables de entorno
 
-## Environment Variables
+El archivo raíz `.env` configura el contenedor MySQL. `backend/.env` configura la API y `frontend/.env` el cliente.
 
-Root `.env` configures local MySQL. `backend/.env` configures the API, exact frontend origin, separate access/refresh secrets, bcrypt, cookie, login limiter and ADMIN seed. `frontend/.env` configures the API base URL. Only `.env.example` files belong in Git; production secrets must be random, distinct and at least 32 characters. Production requires an HTTPS `FRONTEND_ORIGIN` and `COOKIE_SECURE=true`.
+| Variable | Uso |
+|---|---|
+| `DB_HOST`, `DB_PORT` | host y puerto de MySQL vistos por la API |
+| `DB_NAME` | base de desarrollo, por defecto `pavas_workshop` |
+| `DB_NAME_TEST` | base exclusiva de integración, por defecto `pavas_workshop_test` |
+| `DB_USER`, `DB_PASSWORD` | credenciales locales de MySQL |
+| `JWT_ACCESS_SECRET` | firma del access token; mínimo 32 caracteres |
+| `JWT_REFRESH_SECRET` | firma distinta para refresh; mínimo 32 caracteres |
+| `JWT_ACCESS_EXPIRES_IN` | vida del access token, por defecto `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | vida del refresh token, por defecto `7d` |
+| `BCRYPT_ROUNDS` | coste bcrypt entre 10 y 15 |
+| `FRONTEND_ORIGIN` | origen exacto autorizado por CORS |
+| `COOKIE_SECURE`, `COOKIE_SAME_SITE` | política de la cookie de refresh |
+| `ADMIN_SEED_NAME` | nombre del ADMIN inicial |
+| `ADMIN_SEED_EMAIL` | email normalizado del ADMIN inicial |
+| `ADMIN_SEED_PASSWORD` | contraseña del seed, mínimo 12 caracteres |
+| `VITE_API_BASE_URL` | base de la API; `/api` usa el proxy local de Vite |
 
-See the comments in each example file. Test integration suites must use `DB_NAME_TEST`, never the development or production database.
+No reutilice secretos, no use valores de ejemplo en producción y nunca versione archivos `.env`. La API valida al iniciar que los secretos sean distintos y que la configuración de producción sea segura. Consulte [Seguridad](docs/security.md).
 
-## Database Setup
+## Base de datos
 
-MySQL uses separate `pavas_workshop` and `pavas_workshop_test` databases. Seven deterministic migrations currently create the Phase 1 domain, identity/session tables and status history:
+El proyecto usa dos bases separadas:
 
-```bash
-cd backend
-npm run db:migrate
+```text
+desarrollo: pavas_workshop
+pruebas:    pavas_workshop_test
 ```
 
-Sequelize `sync({ alter: true })` is not an accepted schema strategy.
+Siete migraciones deterministas crean `clients`, `bikes`, `work_orders`, `work_order_items`, `users`, `refresh_tokens` y `work_order_status_history`.
 
-## Seed / Demo Accounts
+| Comando backend | Propósito |
+|---|---|
+| `npm run db:migrate` | aplica todas las migraciones pendientes |
+| `npm run db:migrate:status` | muestra migraciones ejecutadas y pendientes |
+| `npm run db:migrate:down` | revierte la última migración |
+| `npm run db:migrate:test` | aplica migraciones sobre la base de tests |
+| `npm run db:migrate:reset:test` | revierte toda la base de tests; es destructivo y exclusivo de `NODE_ENV=test` |
 
-After migrations, define `ADMIN_SEED_NAME`, `ADMIN_SEED_EMAIL` and a password of at least 12 characters, then run:
+No se usa `sequelize.sync({ alter: true })`. Consulte [Base de datos](docs/database.md).
+
+## Seed y primer inicio de sesión
+
+Configure `ADMIN_SEED_NAME`, `ADMIN_SEED_EMAIL` y `ADMIN_SEED_PASSWORD` en `backend/.env`, ejecute las migraciones y luego:
 
 ```bash
 cd backend
 npm run db:seed:admin
 ```
 
-The command normalizes email, hashes the password and is idempotent for an existing ADMIN email. It never prints the password. No credential is committed.
+El seed normaliza el email, aplica bcrypt y crea un usuario `ADMIN` activo. Es idempotente: si el mismo email ya pertenece a un `ADMIN`, no lo duplica; si pertenece a otro rol, falla de forma explícita. La contraseña nunca se imprime ni se versiona.
 
-## Execution
+Después de levantar ambos procesos, abra `http://localhost:5173` e inicie sesión con el email y la contraseña que configuró localmente.
 
-Backend scripts:
+## URLs locales
 
-```bash
-npm run dev
-npm start
-npm test
-npm run lint
+| Servicio | URL predeterminada |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| Health | `http://localhost:3000/api/health` |
+| MySQL | `127.0.0.1:3306` |
+
+El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe coincidir en `backend/.env`.
+
+## Comandos
+
+### Backend
+
+| Comando | Propósito |
+|---|---|
+| `npm run dev` | inicia la API con recarga de Node.js |
+| `npm start` | inicia la API sin modo watch |
+| `npm test` | ejecuta 14 suites sobre MySQL de pruebas |
+| `npm run test:watch` | ejecuta Vitest en modo interactivo |
+| `npm run lint` | valida el código con ESLint |
+| `npm run db:seed:admin` | crea de forma idempotente el ADMIN inicial |
+
+### Frontend
+
+| Comando | Propósito |
+|---|---|
+| `npm run dev` | inicia Vite en desarrollo |
+| `npm run build` | genera el bundle de producción |
+| `npm run preview` | sirve localmente el bundle generado |
+| `npm test` | ejecuta 10 suites de Vitest/RTL |
+| `npm run test:watch` | ejecuta Vitest en modo interactivo |
+| `npm run lint` | valida el código con ESLint |
+
+## Flujo de demostración
+
+Recorrido recomendado para el evaluador:
+
+```text
+Login ADMIN
+  → crear cliente
+  → crear motocicleta
+  → crear orden
+  → agregar REPUESTO y MANO_OBRA
+  → verificar el total
+  → cambiar el estado
+  → consultar el historial
 ```
 
-Frontend scripts:
+Para comprobar RBAC, cree un usuario `MECANICO`, inicie sesión con él y verifique que puede agregar ítems y avanzar por estados intermedios, pero no puede entregar/cancelar, borrar ítems ni administrar usuarios.
+
+## Reglas de negocio principales
+
+```text
+RECIBIDA → DIAGNOSTICO → EN_PROCESO → LISTA → ENTREGADA
+```
+
+`CANCELADA` es válida desde `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. `ENTREGADA` y `CANCELADA` son terminales. Las transiciones inválidas o al mismo estado devuelven HTTP 400 y no generan historial.
+
+- `ADMIN`: acceso completo a las acciones implementadas.
+- `MECANICO`: lectura, creación de recursos de negocio e ítems, y avance a `DIAGNOSTICO`, `EN_PROCESO` y `LISTA`; sin administración, borrado de ítems, entrega o cancelación.
+
+Consulte [Reglas de negocio](docs/business-rules.md).
+
+## Pruebas
+
+Con MySQL saludable y los entornos locales configurados:
 
 ```bash
-npm run dev
+cd backend
+npm test
+npm run lint
+
+cd ../frontend
+npm test
+npm run lint
 npm run build
-npm test
-npm run lint
 ```
 
-## Development
+El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `test`, si el nombre no contiene `test` o si coincide con la base de desarrollo. No ejecute las suites contra datos reales.
 
-Use short, coherent changes and Conventional Commits with `feat`, `fix`, `test`, `docs`, `refactor`, `chore` or `security`. Do not advance milestones without passing the current acceptance checklist and receiving approval.
+Baseline verificado al cierre de HITO 14:
 
-## API Summary
-
-Implemented endpoints include health, protected Phase 1 resources/status/items, paginated work-order history, all contractual Auth endpoints and ADMIN-only user list/role/active APIs. Payloads, cookies, authorization and errors are documented in [docs/api.md](docs/api.md).
-
-## Authentication
-
-Login issues a 15-minute-by-default access JWT and a longer refresh JWT in an HttpOnly cookie. The frontend keeps the access token only in memory, restores sessions with `/auth/refresh`, coordinates concurrent refresh attempts and clears state on logout/session expiry. Refresh tokens are stored by the backend only as SHA-256 digests, rotate transactionally and use family-scoped replay detection. See [docs/security.md](docs/security.md) and ADR-002.
-
-## Role Permissions
-
-Enforced in the backend. Both roles can create/read current business resources and add items; only ADMIN can delete items, deliver/cancel orders, register or administer users. See [docs/business-rules.md](docs/business-rules.md).
-
-## Business Rules
-
-The canonical total, state machine, atomic audit ledger and role matrix are active in the backend. See [docs/business-rules.md](docs/business-rules.md).
-
-## Testing
-
-```bash
-cd backend && DB_PORT=3306 npm test
-cd frontend && npm test
+```text
+Backend:        14 suites, 192 pruebas
+Frontend:       10 suites, 46 pruebas
+Matriz crítica: 103 casos/filas PASS
+Migraciones:    7 ejecutadas, 0 pendientes
 ```
 
-Backend tests require the dedicated MySQL test database and verify Phase 1, sessions, RBAC, user administration, audit atomicity/order/pagination, security headers/CORS/parser boundaries, immediate token invalidation and concurrency. Frontend tests verify Phase 1 workflows plus session bootstrap/logout, route guards, single-flight refresh/retry, user administration, role-aware actions and the history timeline. See [docs/testing.md](docs/testing.md) and the [critical acceptance matrix](docs/test-acceptance-matrix.md).
-
-## Security Notes
-
-- Never commit `.env` files or real credentials.
-- Do not log passwords, tokens, cookies, hashes or secrets.
-- Authentication, backend authorization, login rate limiting, Helmet, exact-origin credentialed CORS and bounded JSON parsing are active.
-- Raw refresh tokens exist only in HttpOnly cookies; password hashes and token digests never appear in API payloads.
-- Access tokens are held only in JavaScript memory; neither token type is written to `localStorage` or `sessionStorage`.
-- CSP is intentionally owned by the frontend host because the Express service is JSON-only; see the threat model and production recommendations in `docs/security.md`.
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [Database model](docs/database.md)
-- [API conventions](docs/api.md)
-- [Business rules](docs/business-rules.md)
-- [Testing strategy](docs/testing.md)
-- [Critical test acceptance matrix](docs/test-acceptance-matrix.md)
-- [Requirements traceability](docs/requirements-traceability.md)
-- [Security](docs/security.md)
-- [ADR-001](docs/decisions/ADR-001-modular-monolith.md)
-- [ADR-002](docs/decisions/ADR-002-refresh-token-rotation.md)
-- [ADR-003](docs/decisions/ADR-003-work-order-state-machine.md)
-- [ADR-004](docs/decisions/ADR-004-server-side-order-total.md)
-
-## Architectural Decisions
-
-Accepted decisions are stored under `docs/decisions/`. ADR-002 records the implemented persisted refresh-token rotation and family replay response.
+Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs/test-acceptance-matrix.md).
 
 ## Postman
 
-Import [the Postman collection](postman/PAVAS-Moto-Workshop.postman_collection.json) for Auth, Users and protected business APIs. Login captures `accessToken`; Postman manages the HttpOnly cookie and sends Bearer authorization collection-wide. No real credentials are included. See [postman/README.md](postman/README.md).
+Importe `postman/PAVAS-Moto-Workshop.postman_collection.json`, configure `adminEmail` y `adminPassword`, y confirme que `baseUrl` sea `http://localhost:3000/api` o la URL de su API.
 
-## Assumptions
+Ejecute primero `Auth / Iniciar sesión`. Su script guarda `accessToken`; el cookie jar de Postman conserva la cookie `HttpOnly`. Después puede recorrer las carpetas Usuarios, Clientes, Motocicletas y Órdenes de trabajo. No se incluyen credenciales reales. Consulte [Guía de Postman](postman/README.md).
 
-- MySQL 8 is the target database.
-- Dates use the migration-defined MySQL `DATETIME(3)` representation and will be exposed in ISO 8601 form by their future APIs.
-- Plate normalization is technical only; no Colombian plate regex will be invented.
-- WorkOrder `entryDate` requires an ISO 8601 date-time with timezone when provided and otherwise uses current server time.
-- The HITO 6 creation screen intentionally omits `entryDate`, so the backend server time is the single default.
-- WorkOrder pages default to 1/20, reject page sizes above 100 and use `entryDate DESC, id DESC`.
-- History pages default to 1/20, reject page sizes above 100 and use `createdAt DESC, id DESC`.
-- Every API-created order records `NULL -> RECIBIDA` with the authenticated creator and a null system note.
+## Resumen de seguridad
 
-## Known Limitations
+- bcrypt con coste mínimo 10;
+- access JWT de vida corta y secreto dedicado;
+- refresh JWT en cookie `HttpOnly`, con rotación y detección de reutilización;
+- autorización RBAC en backend;
+- CORS de origen exacto, Helmet y body JSON de 100 KiB;
+- rate limiting específico para login;
+- validación de entrada y errores públicos sanitizados;
+- consultas Sequelize parametrizadas y restricciones de MySQL;
+- historial inmutable con actor autenticado.
 
-Last-ADMIN protection is outside this MVP, so an ADMIN may change its own role or active flag. The UI confirms self-demotion and refreshes the session immediately; self-deactivation logs the user out. Local development works through the Vite proxy; a separately hosted frontend must exactly match `FRONTEND_ORIGIN`.
+## Ambientes
 
-`npm audit` reports two moderate records for one Sequelize 6.37.8 → `uuid` 8.3.2 advisory chain. The application does not invoke the affected buffer-taking UUID APIs; Sequelize 6.37.8 is the newest v6 release, and npm proposes an unsafe downgrade to Sequelize 3. No forced fix was applied. This accepted residual risk must be rechecked before release.
+| Ambiente | Base de datos | Cookies/CORS | Secretos |
+|---|---|---|---|
+| `development` | `DB_NAME` | HTTP local, origen exacto | valores locales no versionados |
+| `test` | `DB_NAME_TEST` | configuración controlada por suites | fixtures deterministas |
+| `production` | base dedicada | HTTPS, `COOKIE_SECURE=true`, origen HTTPS exacto | gestor de secretos recomendado |
 
-## Current Milestone
+## Consideraciones para producción
 
-**HITO 13 — UI/UX Polish implemented locally.** Awaiting milestone review; no HITO 14 work is included.
+- terminar TLS en un proxy confiable y definir conscientemente `trust proxy` antes de usar IP del cliente;
+- almacenar y rotar secretos en un gestor dedicado;
+- usar un rate limiter distribuido o WAF si se despliegan varias instancias;
+- configurar CSP en el host del frontend;
+- centralizar logs redactados, métricas, alertas y respaldos de MySQL;
+- ejecutar migraciones, pruebas y audits como gates del despliegue.
 
-## Roadmap
+Este repositorio no implementa infraestructura de despliegue.
 
-The milestone sequence is defined in `AGENTS.md`: Phase 1 domain/API/UI first, followed by Phase 2 authentication, RBAC, audit, security, critical tests, polish and submission verification.
+## Supuestos y limitaciones conocidas
+
+- MySQL 8/InnoDB es el motor objetivo.
+- No se impone una expresión regular de placa colombiana; sólo normalización técnica y unicidad.
+- No hay MFA, recuperación de contraseña ni protección de “último ADMIN”; son decisiones de alcance del MVP.
+- El rate limiter es local al proceso.
+- No se incluye logout de todos los dispositivos.
+- Sequelize 6.37.8 incorpora transitivamente `uuid` 8.3.2 con un advisory moderado relacionado con APIs de UUID que esta aplicación no invoca. El fix automático propone un downgrade incompatible a Sequelize 3; por ello no se ejecutó `npm audit fix --force`. El riesgo residual está analizado en [Seguridad](docs/security.md).
+
+## Documentación
+
+- [Arquitectura](docs/architecture.md)
+- [API](docs/api.md)
+- [Base de datos](docs/database.md)
+- [Reglas de negocio](docs/business-rules.md)
+- [Seguridad](docs/security.md)
+- [Estrategia de pruebas](docs/testing.md)
+- [Matriz crítica de aceptación](docs/test-acceptance-matrix.md)
+- [Trazabilidad de requisitos](docs/requirements-traceability.md)
+- [Checklist de entrega](docs/submission-checklist.md)
+- [ADR-001 — Monolito modular](docs/decisions/ADR-001-modular-monolith.md)
+- [ADR-002 — Rotación de refresh tokens](docs/decisions/ADR-002-refresh-token-rotation.md)
+- [ADR-003 — Máquina de estados](docs/decisions/ADR-003-work-order-state-machine.md)
+- [ADR-004 — Total calculado en servidor](docs/decisions/ADR-004-server-side-order-total.md)
+- [Postman](postman/README.md)
+
+## Decisiones arquitectónicas
+
+Los cuatro ADR aceptados explican por qué se eligieron un monolito modular, refresh tokens persistidos y rotativos, una máquina de estados explícita y el cálculo transaccional del total en MySQL. No se añadieron microservicios, cachés, colas ni dependencias sin una necesidad del alcance.

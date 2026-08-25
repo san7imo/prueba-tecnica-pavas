@@ -1,40 +1,32 @@
-# ADR-001: Modular Layered Monolith
+# ADR-001: Monolito modular por capas
 
-## Status
+## Estado
 
-Accepted
+Aceptado
 
-## Context
+## Contexto
 
-The assessment implements one motorcycle-workshop domain with a React client, an Express API and a MySQL database. It requires transactional operations across orders, totals and history, must be delivered incrementally and should remain understandable to a reviewer.
+La prueba implementa un único dominio de taller con cliente React, API Express y MySQL. Requiere transacciones sobre órdenes, totales e historial, entrega incremental y comprensión sencilla por parte del evaluador.
 
-The architecture needs clear ownership of HTTP concerns, business rules and persistence without adding operational systems unrelated to the assessment.
+Se necesita separar HTTP, negocio y persistencia sin sistemas operativos ajenos al alcance.
 
-## Decision
+## Decisión
 
-Use a modular layered monolith. The backend is one Express application divided into routes, controllers, services, repositories, models, validators, middleware and errors. MySQL is the single source of persistent truth through Sequelize and deterministic migrations.
+Usar un monolito modular por capas. La aplicación Express se divide en routes, controllers, services, repositories, models, validators, middlewares y errors. MySQL es la fuente persistente mediante Sequelize y migraciones deterministas.
 
-The frontend is a separate React application organized by feature while remaining in the same repository.
+El frontend es una aplicación React separada y organizada por funcionalidades dentro del mismo repositorio.
 
-## Alternatives Considered
+## Alternativas consideradas
 
-- **Unlayered CRUD application:** faster initially, but encourages business rules in controllers and weakens testability and transaction ownership.
-- **Microservices:** adds network boundaries, deployment units, distributed consistency and observability work without a domain or scale requirement.
-- **Serverless functions:** fragments transaction and middleware boundaries and does not improve the required local assessment workflow.
+- **CRUD sin capas:** más rápido al inicio, pero mezcla reglas en controllers y debilita tests/transacciones.
+- **Microservicios:** agregan red, despliegues y consistencia distribuida sin requisito de dominio o escala.
+- **Funciones serverless:** fragmentan middleware y transacciones sin mejorar la evaluación local.
 
-## Consequences
+## Consecuencias
 
-Positive consequences:
-
-- simple local and production execution;
-- straightforward MySQL transactions;
-- explicit separation of concerns;
-- cohesive integration tests;
-- fewer operational dependencies.
-
-Tradeoffs:
-
-- modules share one runtime and database;
-- discipline is required to prevent cross-layer shortcuts;
-- independent scaling/deployment is not available, which is acceptable for this scope.
+- ejecución local sencilla y transacciones directas;
+- responsabilidades explícitas y pruebas de integración cohesionadas;
+- pocas dependencias operativas;
+- módulos comparten runtime y base, por lo que se exige disciplina entre capas;
+- no hay despliegue/escalado independiente, aceptable para este MVP.
 

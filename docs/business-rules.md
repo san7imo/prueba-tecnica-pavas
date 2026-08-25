@@ -1,10 +1,10 @@
-# Business Rules
+# Reglas de negocio
 
-## Status
+## Estado
 
-These rules are the approved domain contract. Phase 1 behavior, authentication, HITO 8 backend authorization and HITO 9 audit history are implemented.
+Este documento es el contrato de dominio implementado para las fases 1 y 2.
 
-## Work-order state machine
+## Máquina de estados de la orden
 
 ```mermaid
 stateDiagram-v2
@@ -19,7 +19,7 @@ stateDiagram-v2
     LISTA --> CANCELADA
 ```
 
-Canonical transition map:
+Mapa canónico:
 
 ```javascript
 {
@@ -32,43 +32,41 @@ Canonical transition map:
 }
 ```
 
-| From | Allowed targets |
+| Estado actual | Destinos permitidos |
 |---|---|
 | `RECIBIDA` | `DIAGNOSTICO`, `CANCELADA` |
 | `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
 | `EN_PROCESO` | `LISTA`, `CANCELADA` |
 | `LISTA` | `ENTREGADA`, `CANCELADA` |
-| `ENTREGADA` | — |
-| `CANCELADA` | — |
+| `ENTREGADA` | ninguno |
+| `CANCELADA` | ninguno |
 
-- `ENTREGADA` and `CANCELADA` are terminal.
-- ADMIN rollback from `ENTREGADA` is optional in the source and deliberately excluded.
-- Unknown target states are request validation errors; known but disallowed transitions return HTTP 400 with `INVALID_STATUS_TRANSITION`.
-- A same-state request is rejected and never creates history.
-- The service locks the WorkOrder row inside a transaction and validates from the status read under that lock. Competing transitions therefore behave as a legal serial ordering rather than overwriting from stale state.
-- The optional `note` field is accepted, trimmed, capped at 1000 characters and persisted only in the audit row for a valid transition.
+- `ENTREGADA` y `CANCELADA` son terminales.
+- El rollback de `ENTREGADA` para `ADMIN` era opcional y se excluye deliberadamente.
+- Un destino desconocido falla en validación; una arista conocida pero inválida devuelve HTTP 400 con `INVALID_STATUS_TRANSITION`.
+- Solicitar el mismo estado se rechaza y nunca crea historial.
+- La orden se bloquea en una transacción y se valida desde el estado leído bajo lock.
+- `note` es opcional, se recorta, admite máximo 1000 caracteres y sólo se persiste para una transición válida.
 
-## Work-order creation
+## Creación de órdenes
 
-- A valid existing Bike is required; the database FK remains the final integrity barrier.
-- `entryDate` accepts an unambiguous ISO 8601 date-time with timezone and defaults to current server time when omitted.
-- Every API-created order starts in `RECIBIDA` with persisted total `0.00`.
-- Client-supplied `status`, `total`, IDs and timestamps are ignored through explicit whitelists.
-- The order and its initial `NULL -> RECIBIDA` event commit or roll back together; the event always identifies the authenticated creator and uses a null note.
+- Requiere una `Bike` existente; la FK es la barrera final.
+- `entryDate` acepta ISO 8601 con zona horaria; si se omite, usa la hora del servidor.
+- Toda orden API inicia en `RECIBIDA`, total `0.00`.
+- `status`, `total`, IDs y timestamps enviados por el cliente se ignoran mediante allowlists.
+- Orden y evento `NULL -> RECIBIDA` son atómicos; el actor es el usuario autenticado y la nota inicial es `null`.
 
-## Audit history
+## Historial de auditoría
 
-- Work-order creation atomically records `NULL -> RECIBIDA` with the authenticated creator.
-- Every valid later transition creates exactly one immutable history row in the same transaction.
-- Cancellation is audited.
-- Rejected and idempotent transitions create no row.
-- History is ordered by `created_at DESC, id DESC`.
-- History defaults to page 1 and page size 20; page size is capped at 100.
-- A missing parent order returns 404 instead of an empty history response.
-- Both roles may read history; records expose only actor ID/name and have no update/delete API.
-- An indexed query and a test with more than 100 events support the source `<1s` display target under assessment-scale local data.
+- Cada transición válida, incluida cancelación, agrega exactamente una fila inmutable.
+- Intentos inválidos, idempotentes o sin permiso no agregan filas.
+- El orden es `created_at DESC, id DESC`.
+- La página predeterminada es 1/20 y el máximo es 100.
+- Una orden inexistente devuelve 404, no una lista ambigua vacía.
+- Ambos roles pueden consultar; el actor expone sólo ID y nombre.
+- No existen endpoints de update/delete para historial.
 
-## Work-order items
+## Ítems de orden
 
 ```text
 type in MANO_OBRA | REPUESTO
@@ -76,11 +74,11 @@ count > 0
 unitValue >= 0
 ```
 
-Both roles can create either item type through `POST /api/work-orders/:id/items`. Only ADMIN can call `DELETE /api/work-orders/items/:itemId`; MECANICO receives HTTP 403 without changing the item or total.
+Ambos roles pueden crear ítems. Sólo `ADMIN` puede eliminarlos; `MECANICO` recibe 403 sin alterar ítem ni total.
 
-Inputs accept at most two decimal places and are normalized to fixed-scale decimal strings. `count` must fit `DECIMAL(10,2)` and `unitValue` must fit `DECIMAL(15,2)`. HITO 1 model validation and named MySQL CHECK constraints remain the persistence barriers.
+Los decimales admiten hasta dos posiciones. `count` cabe en `DECIMAL(10,2)` y `unitValue` en `DECIMAL(15,2)`. La validación de modelo y los CHECK de MySQL son barreras adicionales.
 
-Item mutation and total recalculation are atomic. The owning WorkOrder row is locked with `FOR UPDATE`, and the mutation, aggregate and stored total either all commit or all roll back. A deletion revalidates the item after acquiring the order lock so a concurrent change cannot produce a stale total.
+Cada mutación bloquea la orden, modifica el ítem, agrega todos los ítems persistidos y actualiza el total en una sola transacción. La eliminación relee el ítem después del lock para evitar totales obsoletos.
 
 ## Total
 
@@ -88,47 +86,46 @@ Item mutation and total recalculation are atomic. The owning WorkOrder row is lo
 total = SUM(item.count * item.unitValue)
 ```
 
-The backend is authoritative. The frontend may display a preview but cannot submit an authoritative persisted total. MySQL evaluates the aggregate with `DECIMAL`, casts the final value to `DECIMAL(15,2)` and returns a string; JavaScript `Number` is never used for monetary calculation. Deleting the final item produces `0.00`.
-
-Example:
+El backend es la autoridad. MySQL calcula con `DECIMAL`, castea a `DECIMAL(15,2)` y devuelve string; no se usa `Number` para dinero. Eliminar el último ítem deja `0.00`.
 
 ```text
 2 * 50,000 + 1 * 30,000 = 130,000
 ```
 
-## Plate normalization
+## Normalización de placa
 
-Plate values are trimmed, uppercased and stripped of unnecessary spaces before storage/search. Uniqueness is enforced in the application and database. No Colombian-format regex is assumed.
+La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar o buscar. La unicidad se aplica en servicio y base de datos. No se inventa una regex de formato colombiano.
 
-## Role matrix
+## Matriz RBAC
 
-| Action | ADMIN | MECANICO |
-|---|---:|---:|
-| Read clients/bikes/orders | Yes | Yes |
-| Create clients/bikes/orders | Yes | Yes |
-| Create items | Yes | Yes |
-| Delete items | Yes | No |
-| Move to `DIAGNOSTICO` | Yes | Yes |
-| Move to `EN_PROCESO` | Yes | Yes |
-| Move to `LISTA` | Yes | Yes |
-| Move to `ENTREGADA` | Yes | No |
-| Move to `CANCELADA` | Yes | No |
-| View history | Yes | Yes |
-| Administer users | Yes | No |
+| Acción | `ADMIN` | `MECANICO` |
+|---|:---:|:---:|
+| Leer clientes/motocicletas/órdenes | Sí | Sí |
+| Crear clientes/motocicletas/órdenes | Sí | Sí |
+| Crear ítems | Sí | Sí |
+| Eliminar ítems | Sí | No |
+| Avanzar a `DIAGNOSTICO` | Sí | Sí |
+| Avanzar a `EN_PROCESO` | Sí | Sí |
+| Avanzar a `LISTA` | Sí | Sí |
+| Avanzar a `ENTREGADA` | Sí | No |
+| Avanzar a `CANCELADA` | Sí | No |
+| Consultar historial | Sí | Sí |
+| Administrar usuarios | Sí | No |
 
-All business endpoints require authentication. Static role middleware runs before request validators. For state changes, the locked service validates the workflow before actor permission: invalid graph edge is 400, while a workflow-valid forbidden target is 403. UI hiding is not an authorization boundary.
+Todos los endpoints de negocio exigen autenticación. Para estados, primero se valida la arista bajo lock: una arista inválida es 400; una arista válida pero prohibida al actor es 403. La UI no es frontera de autorización.
 
-User self-deactivation and self-role change are allowed. The affected access token fails its next request; preserving a last ADMIN is an operational concern deliberately outside this MVP milestone.
+La auto-desactivación y el cambio del propio rol están permitidos. El access token afectado falla en la siguiente petición. Preservar un último `ADMIN` queda fuera de este MVP.
 
-## Authentication rules
+## Reglas de autenticación
 
-- Inactive users cannot authenticate.
-- Login errors are generic.
-- Passwords use bcrypt with cost at least 10.
-- Passwords and hashes never appear in responses.
-- Access JWTs are short-lived.
-- Refresh tokens are HttpOnly, persisted only as digests, rotated and revocable.
-- Reuse of a rotated token revokes its active token family and returns 401.
-- Each login creates an independent family; replay or logout never revokes other login families.
-- `/auth/me` reloads the user, so inactive users lose access immediately rather than only when the access JWT expires.
-- Refresh rotation is serialized with a row lock; a concurrent second use is treated as replay and leaves no active compromised descendant.
+- usuarios inactivos no autentican;
+- login usa un error genérico;
+- bcrypt usa coste entre 10 y 15;
+- contraseñas y hashes nunca salen en respuestas;
+- access JWT es de vida corta;
+- refresh JWT sólo viaja en cookie `HttpOnly` y se persiste como digest;
+- cada refresh rota y revoca al predecesor;
+- reutilizar un token rotado revoca su familia activa y devuelve 401;
+- cada login inicia una familia independiente;
+- `/auth/me` recarga al usuario y aplica cambios de rol/activo inmediatamente;
+- refresh concurrente se serializa con row lock y trata el segundo uso como posible replay.

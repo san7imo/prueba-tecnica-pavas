@@ -1,30 +1,29 @@
-# Database Model
+# Base de datos
 
-## Status
+## Estado
 
-The physical schema contains the four Phase 1 domain tables, the HITO 7 `users` and `refresh_tokens` identity tables, and the HITO 9 immutable `work_order_status_history` audit table.
+El esquema físico contiene las cuatro tablas de dominio de Fase 1, `users` y `refresh_tokens` para identidad/sesión, y `work_order_status_history` como ledger inmutable de Fase 2. Siete migraciones son la fuente de verdad.
 
-## Conventions
+## Convenciones
 
-- MySQL 8 and InnoDB.
-- `snake_case` table and column names.
-- `BIGINT UNSIGNED` auto-increment primary keys.
-- Foreign keys enforced by the database.
-- Money stored as `DECIMAL(15,2)`, never binary floating point.
-- Item quantity stored as `DECIMAL(10,2)` to support both discrete parts and fractional labor hours.
-- Schema changes applied only through deterministic migrations.
-- Timestamps stored consistently and exposed as ISO 8601 values.
+- MySQL 8.4 e InnoDB.
+- Tablas y columnas en `snake_case`.
+- PK `BIGINT UNSIGNED` autoincrementales.
+- FKs y restricciones aplicadas por MySQL.
+- Dinero en `DECIMAL(15,2)`; cantidades en `DECIMAL(10,2)`.
+- Timestamps en `DATETIME(3)` y salida API ISO 8601.
+- Cambios de esquema sólo mediante migraciones deterministas.
 
-## Entity relationship diagram
+## Diagrama entidad-relación
 
 ```mermaid
 erDiagram
-    CLIENT ||--o{ BIKE : owns
-    BIKE ||--o{ WORK_ORDER : receives
-    WORK_ORDER ||--o{ WORK_ORDER_ITEM : contains
-    WORK_ORDER ||--o{ WORK_ORDER_STATUS_HISTORY : records
-    USER ||--o{ WORK_ORDER_STATUS_HISTORY : changes
-    USER ||--o{ REFRESH_TOKEN : holds
+    CLIENT ||--o{ BIKE : posee
+    BIKE ||--o{ WORK_ORDER : recibe
+    WORK_ORDER ||--o{ WORK_ORDER_ITEM : contiene
+    WORK_ORDER ||--o{ WORK_ORDER_STATUS_HISTORY : registra
+    USER ||--o{ WORK_ORDER_STATUS_HISTORY : ejecuta
+    USER ||--o{ REFRESH_TOKEN : mantiene
 
     CLIENT {
       bigint id PK
@@ -74,110 +73,145 @@ erDiagram
       datetime created_at
       datetime updated_at
     }
-    WORK_ORDER_STATUS_HISTORY {
-      bigint id PK
-      bigint work_order_id FK
-      enum from_status "nullable"
-      enum to_status
-      text note "nullable"
-      bigint changed_by_user_id FK
-      datetime created_at
-    }
     REFRESH_TOKEN {
       bigint id PK
       bigint user_id FK
       uuid family_id
-      char token_hash
+      char token_hash UK
       datetime expires_at
       datetime revoked_at "nullable"
       bigint replaced_by_token_id FK "nullable"
       datetime created_at
     }
+    WORK_ORDER_STATUS_HISTORY {
+      bigint id PK
+      bigint work_order_id FK
+      enum from_status "nullable"
+      enum to_status
+      varchar note "nullable"
+      bigint changed_by_user_id FK
+      datetime created_at
+    }
 ```
 
-The diagram represents the implemented backend domain. Seven migrations are currently the schema source of truth.
+## `clients`
 
-## Client
-
-| Column | Conceptual type | Rules |
+| Columna | Tipo | Reglas |
 |---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `name` | VARCHAR(150) | required |
-| `phone` | VARCHAR(30) | required |
-| `email` | VARCHAR(254) | nullable |
-| `created_at` | DATETIME(3) | required |
-| `updated_at` | DATETIME(3) | required |
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `name` | `VARCHAR(150)` | requerida |
+| `phone` | `VARCHAR(30)` | requerida |
+| `email` | `VARCHAR(254)` | nullable |
+| `created_at`, `updated_at` | `DATETIME(3)` | requeridas |
 
-Relationship: one client owns many bikes.
+Un cliente posee muchas motocicletas.
 
-## Bike
+## `bikes`
 
-| Column | Conceptual type | Rules |
+| Columna | Tipo | Reglas |
 |---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `plate` | VARCHAR(20) | required, normalized, UNIQUE `uq_bikes_plate` |
-| `brand` | VARCHAR(100) | required |
-| `model` | VARCHAR(100) | required |
-| `cylinder` | VARCHAR(50) | nullable |
-| `client_id` | BIGINT UNSIGNED | FK `fk_bikes_client` to `clients.id`, required |
-| timestamps | DATETIME(3) | required |
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `plate` | `VARCHAR(20)` | requerida, normalizada, UNIQUE `uq_bikes_plate` |
+| `brand` | `VARCHAR(100)` | requerida |
+| `model` | `VARCHAR(100)` | requerida |
+| `cylinder` | `VARCHAR(50)` | nullable |
+| `client_id` | `BIGINT UNSIGNED` | FK `fk_bikes_client`, requerida |
+| timestamps | `DATETIME(3)` | requeridos |
 
-The model setter and HITO 2 service trim, uppercase and remove whitespace before persistence/search. The service performs an application conflict check and maps a residual Sequelize/MySQL uniqueness error to HTTP 409; the database unique index remains authoritative. No country-specific regex is assumed.
+Setter, service y validador recortan, convierten a mayúsculas y eliminan whitespace. El service hace un pre-check y mapea la violación residual a HTTP 409; el índice UNIQUE es autoritativo.
 
-## WorkOrder
+## `work_orders`
 
-| Column | Conceptual type | Rules |
+| Columna | Tipo | Reglas |
 |---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `bike_id` | BIGINT UNSIGNED | FK `fk_work_orders_bike` to `bikes.id`, required |
-| `entry_date` | DATETIME(3) | required |
-| `fault_description` | TEXT | required |
-| `status` | ENUM | canonical status values, required |
-| `total` | DECIMAL(15,2) | required, backend-controlled, default `0.00` |
-| timestamps | DATETIME(3) | required |
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `bike_id` | `BIGINT UNSIGNED` | FK `fk_work_orders_bike`, requerida |
+| `entry_date` | `DATETIME(3)` | requerida |
+| `fault_description` | `TEXT` | requerida |
+| `status` | `ENUM` | seis estados canónicos, requerida |
+| `total` | `DECIMAL(15,2)` | backend-controlled, default `0.00` |
+| timestamps | `DATETIME(3)` | requeridos |
 
-Relationships: one bike has many work orders; one work order has many items and history records.
+Una motocicleta tiene muchas órdenes; una orden tiene muchos ítems y eventos. La API fija `RECIBIDA`/`0.00`, aunque los defaults de DB actúan como defensa adicional.
 
-HITO 3 creates orders with explicit backend-controlled `RECIBIDA` and `0.00` values even though database defaults provide a second safety layer. The API accepts an unambiguous ISO 8601 entry date or uses current server time when omitted.
+## `work_order_items`
 
-## WorkOrderItem
-
-| Column | Conceptual type | Rules |
+| Columna | Tipo | Reglas |
 |---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `work_order_id` | BIGINT UNSIGNED | FK `fk_work_order_items_order` to `work_orders.id`, required |
-| `type` | ENUM | `MANO_OBRA` or `REPUESTO` |
-| `description` | VARCHAR(255) | required |
-| `count` | DECIMAL(10,2) | CHECK `chk_work_order_items_count_positive`: greater than zero |
-| `unit_value` | DECIMAL(15,2) | CHECK `chk_work_order_items_unit_value_nonnegative`: greater/equal zero |
-| timestamps | DATETIME(3) | required |
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `work_order_id` | `BIGINT UNSIGNED` | FK `fk_work_order_items_order`, requerida |
+| `type` | `ENUM` | `MANO_OBRA` o `REPUESTO` |
+| `description` | `VARCHAR(255)` | requerida |
+| `count` | `DECIMAL(10,2)` | CHECK `chk_work_order_items_count_positive` |
+| `unit_value` | `DECIMAL(15,2)` | CHECK `chk_work_order_items_unit_value_nonnegative` |
+| timestamps | `DATETIME(3)` | requeridos |
 
-`DECIMAL(15,2)` supports exact monetary values up to 9,999,999,999,999.99, which is comfortably above assessment-scale Colombian-peso work orders. `DECIMAL(10,2)` permits fractional quantities without forcing binary floating-point arithmetic.
+`DECIMAL(15,2)` admite hasta 13 dígitos enteros y dos decimales. La cantidad permite repuestos discretos y horas fraccionarias sin float binario.
 
-## Item-total consistency
+## Consistencia de ítems y total
 
-Each item mutation locks the owning `work_orders` row in an InnoDB transaction. The repository recalculates from persisted rows using:
+Cada mutación bloquea la fila de `work_orders` dentro de una transacción. El total se recalcula desde filas persistidas:
 
 ```sql
 CAST(COALESCE(SUM(`count` * `unit_value`), 0) AS DECIMAL(15,2))
 ```
 
-The `COALESCE` defines an empty order as `0.00`; the cast matches `work_orders.total`. MySQL performs multiplication and summation on exact decimal values, and Sequelize/mysql2 returns the result as a string. The backend does not convert it to binary floating point. This bounded aggregate is documented in ADR-004 and requires no new dependency.
+`COALESCE` define una orden vacía como `0.00`; mysql2/Sequelize devuelve el decimal como string. El backend no lo convierte a `Number`. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
 
-## Referential policy
+## `users`
 
-All Phase 1 foreign keys use:
+| Columna | Tipo | Reglas |
+|---|---|---|
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `name` | `VARCHAR(150)` | requerida |
+| `email` | `VARCHAR(254)` | normalizado, UNIQUE `uq_users_email` |
+| `password_hash` | `VARCHAR(255)` | requerido, nunca serializado |
+| `role` | `ENUM` | `ADMIN` o `MECANICO` |
+| `active` | `BOOLEAN` | requerido, default true |
+| timestamps | `DATETIME(3)` | requeridos |
+
+El email se recorta y pasa a minúsculas. La administración no modifica el esquema.
+
+## `refresh_tokens`
+
+| Columna | Tipo | Reglas |
+|---|---|---|
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `user_id` | `BIGINT UNSIGNED` | FK `fk_refresh_tokens_user`, delete RESTRICT |
+| `family_id` | `CHAR(36)` | familia UUID de sesión |
+| `token_hash` | `CHAR(64)` | SHA-256 digest UNIQUE |
+| `expires_at` | `DATETIME(3)` | requerida, indexada |
+| `revoked_at` | `DATETIME(3)` | nullable |
+| `replaced_by_token_id` | `BIGINT UNSIGNED` | self-FK, nullable, delete SET NULL |
+| `created_at` | `DATETIME(3)` | requerida |
+
+Nunca se persiste el token crudo. Rotación conserva `family_id`; replay revoca los tokens activos de esa familia. Los índices `ix_refresh_tokens_family_active`, `ix_refresh_tokens_user_family` e `ix_refresh_tokens_expires_at` apoyan revocación y consulta.
+
+## `work_order_status_history`
+
+| Columna | Tipo | Reglas |
+|---|---|---|
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `work_order_id` | `BIGINT UNSIGNED` | FK a `work_orders`, requerida |
+| `from_status` | `ENUM` | nullable sólo para el evento inicial |
+| `to_status` | `ENUM` | requerida |
+| `note` | `VARCHAR(1000)` | nullable |
+| `changed_by_user_id` | `BIGINT UNSIGNED` | FK a `users`, requerida |
+| `created_at` | `DATETIME(3)` | requerida, inmutable |
+
+Índice:
 
 ```text
-ON DELETE RESTRICT
-ON UPDATE CASCADE
+(work_order_id ASC, created_at DESC, id DESC)
 ```
 
-`RESTRICT` prevents removing a client, bike or order while dependent operational/history-bearing data exists. `CASCADE` on key update keeps references consistent, although primary-key updates are not part of the application workflow. No aggressive delete cascade is introduced.
+Conserva el prefijo pedido por la prueba y añade `id` como desempate determinista. Las FKs de orden/actor usan `ON DELETE RESTRICT`; no existen endpoints de update/delete.
 
-## Implemented migrations
+## Política referencial
 
-The schema is created in dependency order:
+Las FKs operativas usan `ON DELETE RESTRICT` y `ON UPDATE CASCADE`. Esto preserva clientes, motocicletas, órdenes, actores y evidencia mientras existan dependencias. Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
+
+## Migraciones
 
 ```text
 202608240001-create-clients.js
@@ -189,61 +223,11 @@ The schema is created in dependency order:
 202608240007-create-work-order-status-history.js
 ```
 
-Umzug executes ESM migrations and records them in `SequelizeMeta`. Each migration provides `up` and `down`. Sequelize `sync` is not used.
+Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; la suite de esquema verifica apply/revert/reapply.
 
-## User
+## Ambientes de base de datos
 
-| Column | Conceptual type | Rules |
-|---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `name` | VARCHAR(150) | required |
-| `email` | VARCHAR(254) | normalized, required, UNIQUE `uq_users_email` |
-| `password_hash` | VARCHAR(255) | required, never serialized |
-| `role` | ENUM | `ADMIN` or `MECANICO` |
-| `active` | BOOLEAN | required |
-| timestamps | DATETIME(3) | required |
+- desarrollo: `pavas_workshop` mediante `DB_NAME`;
+- integración: `pavas_workshop_test` mediante `DB_NAME_TEST`.
 
-Email is trimmed and lowercased by seed/input code and the model setter. Only `ADMIN` and `MECANICO` are valid. HITO 8 adds ADMIN-only user management without changing this schema.
-
-## WorkOrderStatusHistory
-
-| Column | Conceptual type | Rules |
-|---|---|---|
-| `id` | BIGINT | PK |
-| `work_order_id` | BIGINT | FK to `work_orders.id`, required |
-| `from_status` | ENUM | nullable only for initial event |
-| `to_status` | ENUM | required |
-| `note` | VARCHAR(1000) | nullable |
-| `changed_by_user_id` | BIGINT | FK to `users.id`, required |
-| `created_at` | DATETIME | required, immutable |
-
-Required index:
-
-```text
-(work_order_id, created_at DESC, id DESC)
-```
-
-The source-required `(work_order_id, created_at DESC)` prefix is preserved; `id DESC` provides deterministic ordering for timestamp ties. There are no update or delete history endpoints.
-
-`fk_work_order_status_history_order` and `fk_work_order_status_history_user` use `ON DELETE RESTRICT` and `ON UPDATE CASCADE`. Migration `202608240007` creates the physical descending index `ix_work_order_status_history_order_created_id`. Work-order creation now atomically creates `NULL -> RECIBIDA` with the authenticated creator. This interprets the source field “from_status nullable para el primer estado” explicitly and traceably.
-
-## RefreshToken
-
-| Column | Conceptual type | Rules |
-|---|---|---|
-| `id` | BIGINT UNSIGNED | PK, auto increment |
-| `user_id` | BIGINT UNSIGNED | FK `fk_refresh_tokens_user`, required, delete RESTRICT |
-| `family_id` | CHAR(36) | required session-family UUID |
-| `token_hash` | CHAR(64) | UNIQUE SHA-256 digest `uq_refresh_tokens_hash` |
-| `expires_at` | DATETIME(3) | required, indexed |
-| `revoked_at` | DATETIME(3) | nullable |
-| `replaced_by_token_id` | BIGINT UNSIGNED | self-FK, nullable, delete SET NULL |
-| `created_at` | DATETIME(3) | required |
-
-Raw refresh tokens are never persisted. Rotation retains the family identifier. Reuse of a rotated/revoked token revokes active tokens in that family.
-
-Indexes `ix_refresh_tokens_family_active` and `ix_refresh_tokens_user_family` support family revocation and session inspection. User deletion is restricted while token evidence exists; the optional replacement link uses `SET NULL` so removing a referenced token would not block cleanup.
-
-## Database environments
-
-Development uses `pavas_workshop`; integration tests use `pavas_workshop_test`. The implemented guard requires `NODE_ENV=test`, requires a name explicitly containing `test`, and rejects the development target. Integration tests apply and revert the full migration stack and close Sequelize connections. See [testing.md](testing.md).
+La guarda exige `NODE_ENV=test`, un nombre que contenga `test` y un objetivo distinto de desarrollo. Las suites migran, limpian determinísticamente y cierran conexiones.
