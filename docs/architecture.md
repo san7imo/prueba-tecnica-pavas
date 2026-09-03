@@ -6,7 +6,12 @@ Este documento describe la arquitectura implementada al cierre de HITO 14: Fase 
 
 ## Estilo arquitectónico
 
-PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller es cohesivo, tiene siete entidades y requiere transacciones directas sobre una única base relacional. Una sola API Express permite conservar límites claros sin introducir costes operativos que la prueba no necesita.
+PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller
+es cohesivo y requiere transacciones directas sobre una única base relacional.
+Las siete entidades originales se preservan y HITO 1 añade `AuditEvent` como
+fundación persistente, sin activar aún su API. Una sola API Express permite
+conservar límites claros sin introducir costes operativos que la prueba no
+necesita.
 
 Los microservicios añadirían red, despliegues, observabilidad y consistencia distribuida sin resolver un requisito. Los módulos internos conservan responsabilidades explícitas y pueden evolucionar sin convertir la aplicación en un bloque de CRUD sin estructura.
 
@@ -87,7 +92,10 @@ El historial se consulta con límite/offset acotado, un join del actor que selec
 
 ## Persistencia y migraciones
 
-MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug ejecuta siete migraciones ESM y registra su estado en `SequelizeMeta`. No se usa `sequelize.sync` como estrategia de esquema.
+MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug
+ejecuta once migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
+nuevas migraciones de HITO 1 sólo añaden fundamentos compatibles con filas
+legacy. No se usa `sequelize.sync` como estrategia de esquema.
 
 Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).
 

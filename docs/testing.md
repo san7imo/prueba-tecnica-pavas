@@ -66,11 +66,19 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 ### Esquema — `schema.integration.test.js`
 
-- aplica las siete migraciones desde cero;
+- aplica las once migraciones desde cero;
 - verifica asociaciones, FKs, ENUM, UNIQUE y CHECK;
+- verifica columnas lifecycle, tabla/índices de audit, asignación y actor de ítem;
 - prueba placa normalizada y `DECIMAL` como string;
 - valida columnas/índice descendente del historial y FKs `RESTRICT`;
 - revierte todas, confirma ausencia y reaplica.
+
+### Upgrade de productización — `productizationSchema.integration.test.js`
+
+- aplica primero las siete migraciones originales;
+- inserta filas legacy relacionadas;
+- aplica 008–011 y confirma campos nuevos nulos sin pérdida de datos;
+- revierte sólo 008–011, confirma que las filas originales sobreviven y reaplica.
 
 La suite omite deliberadamente validación de modelo en casos concretos para demostrar que MySQL sigue siendo barrera final.
 

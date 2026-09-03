@@ -360,6 +360,7 @@ Este repositorio no implementa infraestructura de despliegue.
 
 ## Documentación
 
+- [Guía de defensa técnica](docs/guia-defensa.md)
 - [Arquitectura](docs/architecture.md)
 - [API](docs/api.md)
 - [Base de datos](docs/database.md)

@@ -20,4 +20,5 @@ npm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
-
+AGENTS.md
+guia-defensa.md

@@ -2,7 +2,11 @@
 
 ## Estado
 
-El esquema físico contiene las cuatro tablas de dominio de Fase 1, `users` y `refresh_tokens` para identidad/sesión, y `work_order_status_history` como ledger inmutable de Fase 2. Siete migraciones son la fuente de verdad.
+El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
+fundaciones de persistencia de productización: lifecycle de clientes/motos,
+`audit_events`, responsable de orden y actor de ítem. Once migraciones son la
+fuente de verdad. Los campos nuevos son compatibles con datos legacy; sus
+flujos de negocio se activan en hitos posteriores.
 
 ## Convenciones
 
@@ -24,12 +28,20 @@ erDiagram
     WORK_ORDER ||--o{ WORK_ORDER_STATUS_HISTORY : registra
     USER ||--o{ WORK_ORDER_STATUS_HISTORY : ejecuta
     USER ||--o{ REFRESH_TOKEN : mantiene
+    USER ||--o{ CLIENT : elimina
+    USER ||--o{ BIKE : elimina
+    USER ||--o{ WORK_ORDER : responsable
+    USER ||--o{ WORK_ORDER_ITEM : crea
+    USER ||--o{ AUDIT_EVENT : ejecuta
 
     CLIENT {
       bigint id PK
       varchar name
       varchar phone
       varchar email "nullable"
+      datetime deleted_at "nullable"
+      bigint deleted_by_user_id FK "nullable"
+      varchar delete_reason "nullable"
       datetime created_at
       datetime updated_at
     }
@@ -40,6 +52,9 @@ erDiagram
       varchar model
       varchar cylinder "nullable"
       bigint client_id FK
+      datetime deleted_at "nullable"
+      bigint deleted_by_user_id FK "nullable"
+      varchar delete_reason "nullable"
       datetime created_at
       datetime updated_at
     }
@@ -50,6 +65,7 @@ erDiagram
       text fault_description
       enum status
       decimal total
+      bigint assigned_mechanic_id FK "nullable"
       datetime created_at
       datetime updated_at
     }
@@ -60,6 +76,7 @@ erDiagram
       varchar description
       decimal count
       decimal unit_value
+      bigint created_by_user_id FK "nullable"
       datetime created_at
       datetime updated_at
     }
@@ -92,6 +109,18 @@ erDiagram
       bigint changed_by_user_id FK
       datetime created_at
     }
+    AUDIT_EVENT {
+      bigint id PK
+      enum entity_type
+      bigint entity_id
+      enum action
+      bigint actor_user_id FK
+      json before_data "nullable"
+      json after_data "nullable"
+      json metadata "nullable"
+      varchar reason "nullable"
+      datetime created_at
+    }
 ```
 
 ## `clients`
@@ -102,9 +131,17 @@ erDiagram
 | `name` | `VARCHAR(150)` | requerida |
 | `phone` | `VARCHAR(30)` | requerida |
 | `email` | `VARCHAR(254)` | nullable |
+| `deleted_at` | `DATETIME(3)` | nullable; `NULL` significa activo |
+| `deleted_by_user_id` | `BIGINT UNSIGNED` | FK nullable a `users` |
+| `delete_reason` | `VARCHAR(1000)` | nullable |
 | `created_at`, `updated_at` | `DATETIME(3)` | requeridas |
 
 Un cliente posee muchas motocicletas.
+
+`chk_clients_delete_state` exige que los tres campos lifecycle estén todos
+nulos o todos informados y que la razón no quede vacía. Los índices
+`ix_clients_lifecycle_name_id` e `ix_clients_deleted_by_user` soportan vistas
+administrativas e integridad referencial.
 
 ## `bikes`
 
@@ -116,9 +153,16 @@ Un cliente posee muchas motocicletas.
 | `model` | `VARCHAR(100)` | requerida |
 | `cylinder` | `VARCHAR(50)` | nullable |
 | `client_id` | `BIGINT UNSIGNED` | FK `fk_bikes_client`, requerida |
+| `deleted_at` | `DATETIME(3)` | nullable; `NULL` significa activa |
+| `deleted_by_user_id` | `BIGINT UNSIGNED` | FK nullable a `users` |
+| `delete_reason` | `VARCHAR(1000)` | nullable |
 | timestamps | `DATETIME(3)` | requeridos |
 
 Setter, service y validador recortan, convierten a mayúsculas y eliminan whitespace. El service hace un pre-check y mapea la violación residual a HTTP 409; el índice UNIQUE es autoritativo.
+
+`chk_bikes_delete_state` aplica la misma coherencia lifecycle. Los índices
+`ix_bikes_lifecycle_plate_id` y `ix_bikes_client_lifecycle_plate_id` soportan
+la maestra por placa y la relación paginada por propietario.
 
 ## `work_orders`
 
@@ -130,9 +174,14 @@ Setter, service y validador recortan, convierten a mayúsculas y eliminan whites
 | `fault_description` | `TEXT` | requerida |
 | `status` | `ENUM` | seis estados canónicos, requerida |
 | `total` | `DECIMAL(15,2)` | backend-controlled, default `0.00` |
+| `assigned_mechanic_id` | `BIGINT UNSIGNED` | FK nullable a `users` |
 | timestamps | `DATETIME(3)` | requeridos |
 
 Una motocicleta tiene muchas órdenes; una orden tiene muchos ítems y eventos. La API fija `RECIBIDA`/`0.00`, aunque los defaults de DB actúan como defensa adicional.
+
+Las órdenes existentes permanecen sin asignar. El índice
+`ix_work_orders_assignee_status_entry_id` prepara las consultas My Orders y
+Unassigned; la validación de rol/activo se incorpora en HITO 7.
 
 ## `work_order_items`
 
@@ -144,9 +193,14 @@ Una motocicleta tiene muchas órdenes; una orden tiene muchos ítems y eventos. 
 | `description` | `VARCHAR(255)` | requerida |
 | `count` | `DECIMAL(10,2)` | CHECK `chk_work_order_items_count_positive` |
 | `unit_value` | `DECIMAL(15,2)` | CHECK `chk_work_order_items_unit_value_nonnegative` |
+| `created_by_user_id` | `BIGINT UNSIGNED` | FK nullable a `users`; legacy permitido |
 | timestamps | `DATETIME(3)` | requeridos |
 
 `DECIMAL(15,2)` admite hasta 13 dígitos enteros y dos decimales. La cantidad permite repuestos discretos y horas fraccionarias sin float binario.
+
+`created_by_user_id` permanece nullable hasta activar la atribución obligatoria
+en HITO 12. `ix_work_order_items_created_by_user` satisface la FK de forma
+explícita.
 
 ## Consistencia de ítems y total
 
@@ -207,9 +261,31 @@ Nunca se persiste el token crudo. Rotación conserva `family_id`; replay revoca 
 
 Conserva el prefijo pedido por la prueba y añade `id` como desempate determinista. Las FKs de orden/actor usan `ON DELETE RESTRICT`; no existen endpoints de update/delete.
 
+## `audit_events`
+
+| Columna | Tipo | Reglas |
+|---|---|---|
+| `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `entity_type` | `ENUM` | catálogo contractual, requerido |
+| `entity_id` | `BIGINT UNSIGNED` | identidad polimórfica sin FK |
+| `action` | `ENUM` | catálogo contractual, requerido |
+| `actor_user_id` | `BIGINT UNSIGNED` | FK `fk_audit_events_actor`, requerida |
+| `before_data`, `after_data`, `metadata` | `JSON` | nullable |
+| `reason` | `VARCHAR(1000)` | nullable en persistencia |
+| `created_at` | `DATETIME(3)` | requerida |
+
+No existe `updated_at`. Los índices por fecha, entidad, actor y acción terminan
+en `created_at DESC, id DESC` para paginación determinista. En HITO 1 sólo se
+habilita la persistencia; las allowlists, escrituras transaccionales y lectura
+ADMIN pertenecen a HITO 2.
+
 ## Política referencial
 
-Las FKs operativas usan `ON DELETE RESTRICT` y `ON UPDATE CASCADE`. Esto preserva clientes, motocicletas, órdenes, actores y evidencia mientras existan dependencias. Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
+Las FKs operativas usan `ON DELETE RESTRICT`. En general usan
+`ON UPDATE CASCADE`; `deleted_by_user_id` usa también `ON UPDATE RESTRICT`
+porque MySQL no admite una acción referencial CASCADE sobre una columna
+participante de un CHECK. Los IDs de usuario no se actualizan en el producto.
+Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
 
 ## Migraciones
 
@@ -221,9 +297,15 @@ Las FKs operativas usan `ON DELETE RESTRICT` y `ON UPDATE CASCADE`. Esto preserv
 202608240005-create-users.js
 202608240006-create-refresh-tokens.js
 202608240007-create-work-order-status-history.js
+202609030008-add-master-data-lifecycle.js
+202609030009-create-audit-events.js
+202609030010-add-work-order-assignment.js
+202609030011-add-work-order-item-creator.js
 ```
 
-Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; la suite de esquema verifica apply/revert/reapply.
+Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; las
+suites de esquema verifican instalación limpia, actualización con filas legacy,
+restricciones físicas, rollback y reaplicación.
 
 ## Ambientes de base de datos
 

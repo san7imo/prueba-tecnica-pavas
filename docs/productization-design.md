@@ -90,16 +90,19 @@ Se conservan las columnas existentes y se agregan:
 
 CHECK lógico `chk_clients_delete_state`: los tres campos están todos en `NULL`
 o todos informados. La FK del actor se denomina
-`fk_clients_deleted_by_user`.
+`fk_clients_deleted_by_user` y usa `ON DELETE RESTRICT` / `ON UPDATE RESTRICT`.
+La actualización de IDs de usuario no forma parte del producto; `RESTRICT`
+permite que MySQL mantenga esta columna dentro del CHECK lifecycle.
 
 Índice inicial: `(deleted_at, name, id)` para vistas lifecycle ordenadas. La búsqueda libre por nombre/teléfono/email puede seguir usando contains en la primera entrega; HITO 15 medirá antes de añadir otra estrategia.
 
 ### 4.2 `bikes`
 
 Se agregan las mismas tres columnas lifecycle con CHECK
-`chk_bikes_delete_state` y FK `fk_bikes_deleted_by_user`. La placa permanece
-en la fila y el índice `uq_bikes_plate` continúa siendo global, por lo cual
-eliminar no libera la placa.
+`chk_bikes_delete_state` y FK `fk_bikes_deleted_by_user`, con las mismas
+acciones `RESTRICT`. La placa permanece en la fila y el índice
+`uq_bikes_plate` continúa siendo global, por lo cual eliminar no libera la
+placa.
 
 Índices iniciales:
 
