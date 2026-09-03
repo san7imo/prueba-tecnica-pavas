@@ -6,11 +6,12 @@ export const workOrdersApi = {
     return response.data.data;
   },
 
-  async list({ status = '', plate = '', page = 1, pageSize = 20 } = {}) {
+  async list({ status = '', plate = '', bikeId = '', page = 1, pageSize = 20 } = {}) {
     const response = await httpClient.get('/work-orders', {
       params: {
         ...(status ? { status } : {}),
         ...(plate ? { plate } : {}),
+        ...(bikeId ? { bikeId } : {}),
         page,
         pageSize,
       },

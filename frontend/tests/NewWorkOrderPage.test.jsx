@@ -33,7 +33,7 @@ describe('NewWorkOrderPage', () => {
   });
 
   it('finds and selects an existing bike, then creates an order without status or total', async () => {
-    bikesApi.list.mockResolvedValue([bikeFixture]);
+    bikesApi.list.mockResolvedValue({ data: [bikeFixture], meta: {} });
     workOrdersApi.create.mockResolvedValue({ id: 15 });
     renderPage();
 
@@ -50,7 +50,7 @@ describe('NewWorkOrderPage', () => {
   });
 
   it('chains quick client and bike registration and auto-selects the new bike', async () => {
-    bikesApi.list.mockResolvedValue([]);
+    bikesApi.list.mockResolvedValue({ data: [], meta: {} });
     clientsApi.create.mockResolvedValue(clientFixture);
     bikesApi.create.mockResolvedValue(bikeFixture);
     renderPage();
@@ -80,7 +80,7 @@ describe('NewWorkOrderPage', () => {
   });
 
   it('shows backend errors and prevents duplicate order submissions', async () => {
-    bikesApi.list.mockResolvedValue([bikeFixture]);
+    bikesApi.list.mockResolvedValue({ data: [bikeFixture], meta: {} });
     let rejectOrder;
     workOrdersApi.create.mockReturnValue(new Promise((_resolve, reject) => { rejectOrder = reject; }));
     renderPage();

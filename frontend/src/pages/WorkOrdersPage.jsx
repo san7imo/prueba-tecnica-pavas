@@ -8,10 +8,13 @@ import { OrderFilters } from '../features/workOrders/components/OrderFilters.jsx
 import { OrderTable } from '../features/workOrders/components/OrderTable.jsx';
 import { Pagination } from '../features/workOrders/components/Pagination.jsx';
 import { useWorkOrders } from '../features/workOrders/hooks/useWorkOrders.js';
+import { useAuth } from '../hooks/useAuth.js';
 
 const EMPTY_FILTERS = { status: '', plate: '' };
 
 export const WorkOrdersPage = () => {
+  const { user } = useAuth();
+  const isAdmin = user.role === 'ADMIN';
   const [draft, setDraft] = useState(EMPTY_FILTERS);
   const [applied, setApplied] = useState(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -43,9 +46,9 @@ export const WorkOrdersPage = () => {
           <h1 id="orders-title">Órdenes de trabajo</h1>
           <p>Consulta el avance, los vehículos y el valor acumulado de cada servicio.</p>
         </div>
-        <Link className="button button--primary button--prominent" to="/orders/new">
+        {isAdmin ? <Link className="button button--primary button--prominent" to="/orders/new">
           <span aria-hidden="true">＋</span> Nueva orden
-        </Link>
+        </Link> : null}
       </div>
 
       <div className="panel filters-panel">
@@ -69,9 +72,9 @@ export const WorkOrdersPage = () => {
               <button className="button button--secondary" type="button" onClick={clearFilters}>
                 Limpiar filtros
               </button>
-            ) : (
+            ) : isAdmin ? (
               <Link className="button button--primary" to="/orders/new">Crear primera orden</Link>
-            )}
+            ) : null}
           />
         ) : null}
         {!loading && !error && orders.length > 0 ? (

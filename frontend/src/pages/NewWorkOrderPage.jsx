@@ -39,11 +39,11 @@ export const NewWorkOrderPage = () => {
     setCreatedClient(null);
     setRegistrationError('');
     try {
-      const result = await bikesApi.list(plate.trim());
-      setBikes(result);
+      const result = await bikesApi.list({ plate: plate.trim() });
+      setBikes(result.data);
       setSearched(true);
-      if (result.length === 1) setSelectedBike(result[0]);
-      if (result.length === 0) setBikeForm({ ...EMPTY_BIKE, plate: plate.trim().toUpperCase() });
+      if (result.data.length === 1) setSelectedBike(result.data[0]);
+      if (result.data.length === 0) setBikeForm({ ...EMPTY_BIKE, plate: plate.trim().toUpperCase() });
     } catch (error) {
       setBikes([]);
       setSearched(true);

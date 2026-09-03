@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { workOrdersApi } from '../src/api/workOrdersApi.js';
 import { WorkOrdersPage } from '../src/pages/WorkOrdersPage.jsx';
 import { orderFixture } from './fixtures.js';
+import { renderWithAuth } from './testUtils.jsx';
 
 vi.mock('../src/api/workOrdersApi.js', () => ({
   workOrdersApi: { list: vi.fn() },
@@ -15,7 +16,7 @@ const emptyResult = {
   meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
 };
 
-const renderPage = () => render(<MemoryRouter><WorkOrdersPage /></MemoryRouter>);
+const renderPage = () => renderWithAuth(<MemoryRouter><WorkOrdersPage /></MemoryRouter>);
 
 describe('WorkOrdersPage', () => {
   beforeEach(() => {

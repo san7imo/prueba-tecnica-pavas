@@ -21,11 +21,25 @@ describe('feature API modules', () => {
 
   it('unwraps Client and Bike envelopes', async () => {
     httpClient.post.mockResolvedValueOnce({ data: { data: { id: 1 } } });
-    httpClient.get.mockResolvedValueOnce({ data: { data: [{ id: 2 }] } });
+    httpClient.get.mockResolvedValueOnce({ data: { data: [{ id: 2 }], meta: { page: 1 } } });
 
     await expect(clientsApi.create({ name: 'Ana', phone: '300' })).resolves.toEqual({ id: 1 });
-    await expect(bikesApi.list('ABC')).resolves.toEqual([{ id: 2 }]);
-    expect(httpClient.get).toHaveBeenCalledWith('/bikes', { params: { plate: 'ABC' } });
+    await expect(bikesApi.list({ plate: 'ABC' })).resolves.toEqual({ data: [{ id: 2 }], meta: { page: 1 } });
+    expect(httpClient.get).toHaveBeenCalledWith('/bikes', { params: { plate: 'ABC', page: 1, pageSize: 20 } });
+  });
+
+  it('sends lifecycle mutations and owner changes with their reasons', async () => {
+    httpClient.patch.mockResolvedValue({ data: { data: { id: 2 } } });
+    httpClient.delete.mockResolvedValue({ data: { data: { id: 1 } } });
+    httpClient.post.mockResolvedValue({ data: { data: { id: 2 } } });
+
+    await bikesApi.changeOwner(2, { clientId: 8, reason: 'Venta registrada.' });
+    await clientsApi.remove(1, 'Solicitud del cliente.');
+    await bikesApi.restore(2, 'Regresa al taller.');
+
+    expect(httpClient.patch).toHaveBeenCalledWith('/bikes/2/owner', { clientId: 8, reason: 'Venta registrada.' });
+    expect(httpClient.delete).toHaveBeenCalledWith('/clients/1', { data: { reason: 'Solicitud del cliente.' } });
+    expect(httpClient.post).toHaveBeenCalledWith('/bikes/2/restore', { reason: 'Regresa al taller.' });
   });
 
   it('sends only active list filters with pagination', async () => {

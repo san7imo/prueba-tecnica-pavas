@@ -6,15 +6,35 @@ export const clientsApi = {
     return response.data.data;
   },
 
-  async list(search = '') {
+  async list({ search = '', lifecycle = 'active', page = 1, pageSize = 20 } = {}) {
     const response = await httpClient.get('/clients', {
-      params: search ? { search } : undefined,
+      params: {
+        ...(search ? { search } : {}),
+        ...(lifecycle !== 'active' ? { lifecycle } : {}),
+        page,
+        pageSize,
+      },
     });
-    return response.data.data;
+    return response.data;
   },
 
   async getById(id) {
     const response = await httpClient.get(`/clients/${id}`);
+    return response.data.data;
+  },
+
+  async update(id, payload) {
+    const response = await httpClient.patch(`/clients/${id}`, payload);
+    return response.data.data;
+  },
+
+  async remove(id, reason) {
+    const response = await httpClient.delete(`/clients/${id}`, { data: { reason } });
+    return response.data.data;
+  },
+
+  async restore(id, payload) {
+    const response = await httpClient.post(`/clients/${id}/restore`, payload);
     return response.data.data;
   },
 };

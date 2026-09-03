@@ -4,7 +4,8 @@ import { useAuth } from '../hooks/useAuth.js';
 
 const navigation = [
   { to: '/orders', label: 'Órdenes', end: true },
-  { to: '/orders/new', label: 'Nueva orden', end: false },
+  { to: '/clients', label: 'Clientes', end: false },
+  { to: '/bikes', label: 'Motocicletas', end: false },
 ];
 
 export const AppShell = () => {
@@ -35,13 +36,10 @@ export const AppShell = () => {
           </NavLink>
         ))}
         {user.role === 'ADMIN' ? (
-          <NavLink
-            to="/admin/users"
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
-          >
-            <span className="nav-link__dot" aria-hidden="true" />
-            Usuarios
-          </NavLink>
+          <>
+            <NavLink to="/orders/new" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />Nueva orden</NavLink>
+            <NavLink to="/admin/users" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />Usuarios</NavLink>
+          </>
         ) : null}
       </nav>
 
@@ -56,7 +54,7 @@ export const AppShell = () => {
       <header className="topbar">
         <div>
           <p className="topbar__eyebrow">Centro de servicio</p>
-          <p className="topbar__title">Control de órdenes</p>
+          <p className="topbar__title">Gestión del taller</p>
         </div>
         <span className="topbar__environment">PAVAS Moto Workshop</span>
       </header>

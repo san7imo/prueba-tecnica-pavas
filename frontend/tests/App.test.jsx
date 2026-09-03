@@ -42,6 +42,8 @@ describe('App routing and session gates', () => {
     expect(await screen.findByRole('link', { name: /pavas taller/i })).toBeInTheDocument();
     expect(screen.getByText('Ada Admin')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^clientes$/i })).toHaveAttribute('href', '/clients');
+    expect(screen.getByRole('link', { name: /^motocicletas$/i })).toHaveAttribute('href', '/bikes');
     expect(await screen.findByText(/aún no hay órdenes/i)).toBeInTheDocument();
   });
 
@@ -62,6 +64,7 @@ describe('App routing and session gates', () => {
     await waitFor(() => expect(authApi.login).toHaveBeenCalledWith({ email: 'mauro@pavas.test', password: 'secret123' }));
     expect(await screen.findByText('Mauro Mecánico')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /nueva orden/i })).not.toBeInTheDocument();
   });
 
   it('never exposes backend credential-discovery details on login failure', async () => {
@@ -92,6 +95,14 @@ describe('App routing and session gates', () => {
     expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^usuarios$/i })).not.toBeInTheDocument();
     expect(usersApi.list).not.toHaveBeenCalled();
+  });
+
+  it('redirects a mechanic away from master-data mutation routes', async () => {
+    authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
+    render(<MemoryRouter initialEntries={['/clients/new']}><App /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /nuevo cliente/i })).not.toBeInTheDocument();
   });
 
   it('allows an administrator into user management', async () => {

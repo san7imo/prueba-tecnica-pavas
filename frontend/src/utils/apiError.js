@@ -7,7 +7,7 @@ export const getApiError = (error, fallback = DEFAULT_MESSAGE) => {
     return {
       code: typeof apiError.code === 'string' ? apiError.code : 'API_ERROR',
       message: apiError.message,
-      details: Array.isArray(apiError.details) ? apiError.details : [],
+      details: apiError.details && typeof apiError.details === 'object' ? apiError.details : [],
       status: error.response.status,
     };
   }
