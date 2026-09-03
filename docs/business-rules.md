@@ -2,7 +2,7 @@
 
 ## Estado
 
-Este documento es el contrato de dominio implementado para las fases 1 y 2.
+Este documento es el contrato de dominio implementado para las fases 1 y 2 y los hitos de productización aprobados hasta HITO 3.
 
 ## Máquina de estados de la orden
 
@@ -75,6 +75,17 @@ Mapa canónico:
 - `beforeData`, `afterData` y `metadata` tienen allowlists por entidad/acción; IDs, fechas y decimales usan representaciones deterministas.
 - Sólo `ADMIN` consulta la colección/detalle con filtros y paginación acotados. No existen endpoints normales para actualizar o eliminar eventos.
 
+## Lifecycle de clientes
+
+- Teléfono se canonicaliza retirando espacios, guiones, puntos y paréntesis; conserva un único `+` inicial y exige entre 7 y 20 dígitos. Email usa trim/lowercase. No se infiere país.
+- Nombre nunca es clave duplicada. Coincidencias exactas activas de phone/email devuelven `409 CLIENT_DUPLICATE_RISK`; el override exige `confirmDuplicate: true` y `duplicateReason`.
+- Una coincidencia eliminada devuelve `409 CLIENT_RESTORE_REQUIRED` y no admite override de creación/update.
+- Listado usa lifecycle `active` por defecto y paginación 1/20, máximo 100. Sólo ADMIN consulta `deleted/all` o detalle eliminado.
+- Sólo ADMIN crea, actualiza, elimina y restaura. Un eliminado es read-only hasta restore.
+- Delete lógico exige reason y se bloquea con `409 CLIENT_HAS_ACTIVE_BIKES` mientras exista una moto activa. Nunca elimina físicamente relaciones.
+- Restore exige reason, limpia los tres campos lifecycle y no restaura motos. Si colisiona con un cliente activo requiere override justificado.
+- Create/update/delete/restore y sus eventos audit se confirman o revierten en una transacción. Delete y creación de moto comparten el lock del cliente para evitar un propietario eliminado con moto activa.
+
 ## Ítems de orden
 
 ```text
@@ -109,8 +120,10 @@ La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar
 
 | Acción | `ADMIN` | `MECANICO` |
 |---|:---:|:---:|
-| Leer clientes/motocicletas/órdenes | Sí | Sí |
-| Crear clientes/motocicletas/órdenes | Sí | Sí |
+| Leer clientes activos/motocicletas/órdenes | Sí | Sí |
+| Leer clientes eliminados/all | Sí | No |
+| Crear/editar/eliminar/restaurar clientes | Sí | No |
+| Crear motocicletas/órdenes | Sí | Sí |
 | Crear ítems | Sí | Sí |
 | Eliminar ítems | Sí | No |
 | Avanzar a `DIAGNOSTICO` | Sí | Sí |

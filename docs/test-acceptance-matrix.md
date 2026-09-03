@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Esta matriz es el gate de HITO 12 y HITO 14. Relaciona los comportamientos obligatorios de Fase 1/Fase 2 y los controles de riesgo aprobados con evidencia concreta. `PASS` significa que el caso nombrado fue recolectado y pasó en la suite completa; no representa un objetivo porcentual de coverage.
+Esta matriz acumula la aceptación de las fases 1 y 2 y de los hitos de productización aprobados. Relaciona cada comportamiento obligatorio o control de riesgo con evidencia concreta. `PASS` significa que el caso nombrado fue recolectado y pasó en la suite completa; no representa un objetivo porcentual de coverage.
 
 Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite. El mapeo autoritativo es:
 
@@ -15,6 +15,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `P1-STATE-*` | `backend/tests/workOrderStatus.integration.test.js` |
 | `P2-AUDIT-*` | `backend/tests/workOrderHistory.integration.test.js`, `schema.integration.test.js` |
 | `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
+| `PZ-CLIENT-*` | `backend/tests/clientLifecycle.integration.test.js`, `clientContactMigration.integration.test.js` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -96,6 +97,18 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-AUDIT-006 | Filtros, rango de fechas, paginación y detalle son acotados | ADMIN read/filter cases | PASS |
 | PZ-AUDIT-007 | Sólo ADMIN lee; auth/RBAC preceden validación | audit authorization boundary | PASS |
 | PZ-AUDIT-008 | No hay API de mutación y operaciones rechazadas no generan filas | no-mutation/no-event cases | PASS |
+| PZ-CLIENT-001 | Migración canonicaliza contactos válidos y reaplica idempotente | contact migration valid case | PASS |
+| PZ-CLIENT-002 | Preflight inválido aborta sin cambios ni filtrar valores | contact migration rejection case | PASS |
+| PZ-CLIENT-003 | Phone/email se normalizan y formatos inválidos fallan | lifecycle contact validation case | PASS |
+| PZ-CLIENT-004 | Nombre compartido se permite; contacto activo exige override justificado | duplicate-risk/override cases | PASS |
+| PZ-CLIENT-005 | Contacto de eliminado obliga restore y no admite override de alta/update | restore-required cases | PASS |
+| PZ-CLIENT-006 | Listado pagina/busca y filtra active/deleted/all con RBAC | lifecycle list cases | PASS |
+| PZ-CLIENT-007 | Ambos leen activos; sólo ADMIN lee detalle eliminado | lifecycle detail boundary | PASS |
+| PZ-CLIENT-008 | PATCH allowlist/no-op/clear email produce audit exacto | update lifecycle cases | PASS |
+| PZ-CLIENT-009 | Soft delete preserva fila y bloquea cliente con motos activas | delete restriction cases | PASS |
+| PZ-CLIENT-010 | Restore limpia lifecycle, no restaura motos y audita override | restore cases | PASS |
+| PZ-CLIENT-011 | Sólo ADMIN muta clientes y auth/RBAC preceden validación | client mutation boundary | PASS |
+| PZ-CLIENT-012 | Fallo audit revierte lifecycle y carrera con alta de moto es consistente | rollback/concurrency cases | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |

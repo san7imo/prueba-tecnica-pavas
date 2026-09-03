@@ -1,4 +1,11 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { app } from '../src/app.js';
 import { models, sequelize } from '../src/config/databaseContext.js';
@@ -54,6 +61,16 @@ const createBike = async (clientId, overrides = {}) => {
   return response.body.data;
 };
 
+const clientCore = ({ id, name, phone, email }) => ({ id, name, phone, email });
+
+const activeClientShape = (client) => ({
+  ...clientCore(client),
+  lifecycle: 'active',
+  deletedAt: null,
+  deletedByUserId: null,
+  deleteReason: null,
+});
+
 beforeAll(async () => {
   assertSafeTestDatabase({
     nodeEnv: env.nodeEnv,
@@ -95,12 +112,12 @@ describe('Clients API', () => {
 
       expect(response.status).toBe(201);
       expect(response.body).toEqual({
-        data: {
+        data: activeClientShape({
           id: expect.any(Number),
           name: 'Juan Perez',
           phone: '3001234567',
           email: 'juan@example.com',
-        },
+        }),
       });
       expect(response.body.data.id).not.toBe(999999);
     });
@@ -180,6 +197,12 @@ describe('Clients API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(2);
+      expect(response.body.meta).toEqual({
+        page: 1,
+        pageSize: 20,
+        totalItems: 2,
+        totalPages: 1,
+      });
       expect(response.body.data.map(({ name }) => name)).toEqual([
         'Ana Torres',
         'Carlos Gomez',
@@ -206,7 +229,10 @@ describe('Clients API', () => {
         .query({ search: 'no-match' });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ data: [] });
+      expect(response.body).toEqual({
+        data: [],
+        meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+      });
     });
   });
 
@@ -255,7 +281,7 @@ describe('Bikes API', () => {
         model: 'FZ 2.0',
         cylinder: '149',
         clientId: client.id,
-        client,
+        client: clientCore(client),
       });
       expect(response.body.data.id).not.toBe(999999);
     });
@@ -366,7 +392,7 @@ describe('Bikes API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual(bike);
-      expect(response.body.data.client).toEqual(client);
+      expect(response.body.data.client).toEqual(clientCore(client));
     });
 
     it('returns 404 for a missing bike', async () => {

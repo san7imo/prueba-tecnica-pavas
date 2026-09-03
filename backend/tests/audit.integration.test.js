@@ -371,8 +371,8 @@ describe.sequential('Global business audit', () => {
 
   it('lists and filters events with bounded pagination and safe actor data', async () => {
     const first = await createClientThroughApi(adminRequest);
-    const secondResponse = await mechanicRequest(app).post('/api/clients').send({
-      name: 'Mechanic-created Client',
+    const secondResponse = await adminRequest(app).post('/api/clients').send({
+      name: 'Second Audit Client',
       phone: '3011112233',
       email: null,
     });

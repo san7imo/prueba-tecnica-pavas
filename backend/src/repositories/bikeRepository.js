@@ -37,6 +37,16 @@ export const bikeRepository = {
     });
   },
 
+  findActiveByClientForUpdate(clientId, transaction) {
+    return models.Bike.findAll({
+      attributes: ['id'],
+      where: { clientId, deletedAt: null },
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
   searchByPlate(plate) {
     return models.Bike.findAll({
       attributes: BIKE_ATTRIBUTES,

@@ -2,14 +2,15 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada al cierre de HITO 14: Fase 1 completa, autenticación, RBAC, auditoría, frontend autenticado, controles de seguridad y suite crítica de aceptación de Fase 2.
+Este documento describe la arquitectura implementada hasta HITO 3 de productización: conserva las fases 1 y 2 y añade las fundaciones de persistencia, la auditoría global y el lifecycle backend completo de clientes.
 
 ## Estilo arquitectónico
 
 PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller
 es cohesivo y requiere transacciones directas sobre una única base relacional.
 Las siete entidades originales se preservan; HITO 1 añadió `AuditEvent` como
-fundación persistente y HITO 2 activó sus escrituras y lectura `ADMIN`. Una sola API Express permite
+fundación persistente, HITO 2 activó la auditoría y HITO 3 completó el lifecycle
+backend de clientes. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -82,6 +83,7 @@ Centralizan autenticación, roles, rate limiting, 404 y manejo de errores. Las c
 Las operaciones con varias escrituras son atómicas:
 
 - **Altas de maestras/usuarios:** cliente, motocicleta o usuario y su evento `CREATED` se confirman o revierten juntos.
+- **Lifecycle de clientes:** update, soft delete y restore bloquean el cliente; delete bloquea además sus motos activas en orden canónico. Estado y evento global confirman o revierten juntos. Crear una moto toma primero el lock del cliente para serializarse contra delete.
 - **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea el ítem, recalcula `SUM(count * unit_value)`, persiste el total y agrega `ITEM_ADDED` antes de commit. El mismo lock serializa add/add y add/delete; la auditoría de delete se activa en su hito específico.
 - **Creación de orden:** la orden `RECIBIDA`, su history inicial `NULL → RECIBIDA` y `audit_events.CREATED` se confirman o revierten juntos.
 - **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente una fila de history y un evento global. Un competidor espera y valida contra el resultado confirmado.
@@ -94,9 +96,10 @@ Los historiales se consultan con límite/offset acotado, un join del actor que s
 ## Persistencia y migraciones
 
 MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug
-ejecuta once migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
-nuevas migraciones de HITO 1 sólo añaden fundamentos compatibles con filas
-legacy. No se usa `sequelize.sync` como estrategia de esquema.
+ejecuta doce migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
+migraciones de HITO 1 añaden fundamentos compatibles con filas legacy; la 012
+prevalida y canonicaliza contactos de clientes sin inventar datos. No se usa
+`sequelize.sync` como estrategia de esquema.
 
 Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).
 

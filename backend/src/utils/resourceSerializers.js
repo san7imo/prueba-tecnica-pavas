@@ -11,6 +11,18 @@ export const serializeClient = (resource) => {
   };
 };
 
+export const serializeManagedClient = (resource) => {
+  const client = plain(resource);
+  const deletedAt = client.deletedAt ?? null;
+  return {
+    ...serializeClient(client),
+    lifecycle: deletedAt === null ? 'active' : 'deleted',
+    deletedAt: deletedAt === null ? null : new Date(deletedAt).toISOString(),
+    deletedByUserId: client.deletedByUserId ?? null,
+    deleteReason: client.deleteReason ?? null,
+  };
+};
+
 export const serializeUser = (resource) => {
   const user = plain(resource);
   return {

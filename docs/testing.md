@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  18 suites, 219 pruebas
+Backend:  20 suites, 239 pruebas
 Frontend: 10 suites, 46 pruebas
-Matriz:   103 filas PASS
+Matriz:   123 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -66,7 +66,7 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 ### Esquema — `schema.integration.test.js`
 
-- aplica las once migraciones desde cero;
+- aplica las doce migraciones desde cero;
 - verifica asociaciones, FKs, ENUM, UNIQUE y CHECK;
 - verifica columnas lifecycle, tabla/índices de audit, asignación y actor de ítem;
 - prueba placa normalizada y `DECIMAL` como string;
@@ -77,10 +77,17 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 - aplica primero las siete migraciones originales;
 - inserta filas legacy relacionadas;
-- aplica 008–011 y confirma campos nuevos nulos sin pérdida de datos;
-- revierte sólo 008–011, confirma que las filas originales sobreviven y reaplica.
+- aplica 008–012 y confirma campos nuevos nulos/safe canonicalization sin pérdida de datos;
+- revierte 008–012, confirma que las filas originales sobreviven y reaplica.
 
 La suite omite deliberadamente validación de modelo en casos concretos para demostrar que MySQL sigue siendo barrera final.
+
+### Migración de contactos — `clientContactMigration.integration.test.js`
+
+- canonicaliza phone/email válidos y conserva `updated_at`;
+- down/reapply data-only permanece idempotente sin inventar formato perdido;
+- preflight inválido aborta antes de modificar una fila;
+- diagnóstico expone sólo IDs/campos, no contactos persistidos.
 
 ### Auditoría global — `auditSnapshots.test.js` y `audit.integration.test.js`
 
@@ -101,6 +108,17 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 - motocicleta con cliente anidado;
 - duplicados exactos, por mayúsculas y espacios → 409;
 - relación de cliente inválida y búsqueda de placa normalizada.
+
+### Lifecycle de clientes — `clientLifecycle.integration.test.js`
+
+- phone/email canónicos, formatos inválidos y nombre no único;
+- conflicto activo, override justificado y deleted-match restore-required;
+- listado paginado active/deleted/all, búsqueda y frontera ADMIN/MECANICO;
+- PATCH allowlist, clear email, no-op y audit before/after desacoplado;
+- soft delete sin borrado físico, reason y bloqueo por motos activas;
+- restore sin cascada de motos y override duplicado trazable;
+- rollback de update/delete/restore cuando falla audit;
+- carrera delete cliente/crear moto serializada por lock del cliente.
 
 ### Órdenes e ítems — `workOrders.integration.test.js`
 

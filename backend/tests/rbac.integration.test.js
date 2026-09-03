@@ -109,17 +109,28 @@ describe.sequential('HITO 8 role-based access control', () => {
     expect(inactive.body.error.code).toBe('INVALID_ACCESS_TOKEN');
   });
 
-  it('allows ADMIN and MECANICO to create and read clients, bikes and work orders', async () => {
-    for (const [index, headers] of [adminHeaders(), mechanicHeaders()].entries()) {
+  it('restricts client creation to ADMIN while preserving current bike/order roles', async () => {
+    const clients = [];
+    for (const index of [0, 1]) {
       const clientResponse = await request(app)
         .post('/api/clients')
-        .set(headers)
+        .set(adminHeaders())
         .send({
           name: `Business Client ${index}`,
           phone: `300000000${index}`,
           email: `business.client.${index}@example.test`,
         });
       expect(clientResponse.status).toBe(201);
+      clients.push(clientResponse.body.data);
+    }
+
+    const forbiddenClient = await request(app)
+      .post('/api/clients')
+      .set(mechanicHeaders())
+      .send({});
+    expect(forbiddenClient.status).toBe(403);
+
+    for (const [index, headers] of [adminHeaders(), mechanicHeaders()].entries()) {
       await request(app).get('/api/clients').set(headers).expect(200);
 
       const bikeResponse = await request(app)
@@ -129,7 +140,7 @@ describe.sequential('HITO 8 role-based access control', () => {
           plate: `RB${index}001`,
           brand: 'Honda',
           model: 'CB',
-          clientId: clientResponse.body.data.id,
+          clientId: clients[index].id,
         });
       expect(bikeResponse.status).toBe(201);
       await request(app).get(`/api/bikes/${bikeResponse.body.data.id}`).set(headers).expect(200);

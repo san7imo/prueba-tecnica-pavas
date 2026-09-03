@@ -101,7 +101,7 @@ describe.sequential('Persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(11);
+    expect(applied).toHaveLength(12);
     models = initializeModels(sequelize);
   });
 
@@ -120,7 +120,7 @@ describe.sequential('Persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(11);
+    expect(await migrator.executed()).toHaveLength(12);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -629,11 +629,11 @@ describe.sequential('Persistence schema', () => {
     });
 
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(11);
+    expect(reverted).toHaveLength(12);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(11);
+    expect(reapplied).toHaveLength(12);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
   }, 30000);
 });

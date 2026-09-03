@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 83 requisitos: 77 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 95 requisitos: 89 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -92,6 +92,18 @@ La tabla contiene 83 requisitos: 77 `Done` y 6 `Foundation`. No existen filas `P
 | P2-SEC-002 | Helmet, CORS restringido, body limit | Contrato | app/CORS/parser | API | security suite | Done |
 | P2-SEC-003 | Cookie y secretos seguros | 2/Contrato | cookie/startup validation | Auth | config/cookie tests | Done |
 | P2-SEC-004 | Sin fuga de stack/SQL/JWT/secreto | Contrato | sanitizador/serializadores | errores/logs | payload seguro/500 | Done |
+| PZ-CLIENT-001 | Contactos existentes se canonicalizan con preflight atómico | HITO 3 | migración `012` data-only | persistencia | contact migration valid/invalid | Done |
+| PZ-CLIENT-002 | Phone/email usan formato canónico validado | HITO 3 | validator, setter y normalizador compartido | Client API | contact validation | Done |
+| PZ-CLIENT-003 | Riesgo duplicado usa contacto exacto, nunca nombre | HITO 3 | ClientService + búsqueda exacta activa/eliminada | POST/PATCH/restore Client | duplicate-risk matrix | Done |
+| PZ-CLIENT-004 | Override de duplicado activo exige confirmación y razón | HITO 3 | validación + evento con metadatos permitidos | POST/PATCH/restore Client | override/audit cases | Done |
+| PZ-CLIENT-005 | Contacto de eliminado obliga restaurar | HITO 3 | conflicto `CLIENT_RESTORE_REQUIRED` | POST/PATCH Client | restore-required cases | Done |
+| PZ-CLIENT-006 | Listado de clientes pagina, busca y filtra lifecycle | HITO 3 | repository/service paginado, máximo 100 | `GET /api/clients` | list/search/lifecycle cases | Done |
+| PZ-CLIENT-007 | Activos son legibles por ambos roles; eliminados sólo ADMIN | HITO 3 | autorización contextual backend | GET Client APIs | lifecycle RBAC cases | Done |
+| PZ-CLIENT-008 | Cliente activo admite PATCH allowlisted y auditable | HITO 3 | transacción, lock y snapshots desacoplados | `PATCH /api/clients/:id` | update/no-op/rollback | Done |
+| PZ-CLIENT-009 | Soft delete preserva historia y bloquea motos activas | HITO 3 | lock Client→Bike, sin cascade | `DELETE /api/clients/:id` | delete/restriction/race | Done |
+| PZ-CLIENT-010 | Restore limpia lifecycle sin restaurar motocicletas | HITO 3 | transacción y auditoría `RESTORED` | `POST /api/clients/:id/restore` | restore/override/rollback | Done |
+| PZ-CLIENT-011 | Sólo ADMIN puede mutar maestras de clientes | HITO 3 | RBAC previo a validación | Client mutation APIs | auth boundary cases | Done |
+| PZ-CLIENT-012 | Alta de moto y borrado de cliente serializan el propietario | HITO 3 | lock canónico sobre Client | POST Bike / DELETE Client | concurrency invariant | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

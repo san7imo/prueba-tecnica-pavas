@@ -1,5 +1,12 @@
 import { DataTypes, Model } from 'sequelize';
 
+import {
+  isValidClientEmail,
+  isValidClientPhone,
+  normalizeClientEmail,
+  normalizeClientPhone,
+} from '../utils/clientContacts.js';
+
 export class Client extends Model {}
 
 export const initializeClient = (sequelize) =>
@@ -18,11 +25,40 @@ export const initializeClient = (sequelize) =>
       phone: {
         type: DataTypes.STRING(30),
         allowNull: false,
-        validate: { notEmpty: true },
+        set(value) {
+          this.setDataValue(
+            'phone',
+            typeof value === 'string' ? normalizeClientPhone(value) : value,
+          );
+        },
+        validate: {
+          isCanonicalPhone(value) {
+            if (!isValidClientPhone(value)) {
+              throw new Error('Phone must be a canonical client phone.');
+            }
+          },
+        },
       },
       email: {
         type: DataTypes.STRING(254),
         allowNull: true,
+        set(value) {
+          this.setDataValue(
+            'email',
+            typeof value === 'string' ? normalizeClientEmail(value) : value,
+          );
+        },
+        validate: {
+          isValidOptionalEmail(value) {
+            if (
+              value !== null &&
+              value !== undefined &&
+              !isValidClientEmail(value)
+            ) {
+              throw new Error('Email must be valid.');
+            }
+          },
+        },
       },
       deletedAt: {
         type: DataTypes.DATE(3),

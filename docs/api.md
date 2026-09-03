@@ -2,7 +2,7 @@
 
 ## Alcance implementado
 
-La API expone las rutas completas de Fase 1 y Fase 2. Clientes, motocicletas, órdenes y usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son públicos.
+La API expone las rutas completas de las fases 1 y 2 y el lifecycle backend de clientes de HITO 3. Clientes, motocicletas, órdenes y usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son públicos.
 
 ```text
 GET  /api/health
@@ -18,8 +18,11 @@ PATCH /api/users/:id/role
 PATCH /api/users/:id/active
 
 POST /api/clients
-GET  /api/clients?search=
+GET  /api/clients?search=&lifecycle=&page=&pageSize=
 GET  /api/clients/:id
+PATCH /api/clients/:id
+DELETE /api/clients/:id
+POST /api/clients/:id/restore
 
 POST /api/bikes
 GET  /api/bikes?plate=
@@ -194,26 +197,36 @@ PATCH, PUT o DELETE para el audit.
 
 ```http
 POST /api/clients
-Authorization: Bearer <accessToken>
+Authorization: Bearer <ADMIN accessToken>
 Content-Type: application/json
 
 {
   "name": "Juan Perez",
   "phone": "3001234567",
-  "email": "juan@example.com"
+  "email": "juan@example.com",
+  "confirmDuplicate": false
 }
 ```
 
-Roles: `ADMIN`, `MECANICO`. `name`/`phone` requeridos; `email` opcional pero válido. Se recorta texto y normaliza email. Éxito 201 con campos públicos; errores `400 VALIDATION_ERROR`.
+Sólo `ADMIN`. Nombre usa trim; email opcional usa trim/lowercase. Teléfono
+retira espacios, guiones, puntos y paréntesis, conserva un `+` inicial y exige
+7–20 dígitos. Una coincidencia activa exacta de phone/email devuelve
+`409 CLIENT_DUPLICATE_RISK` con `candidateIds`/`matchedFields` seguros. Si son
+personas distintas puede reenviarse `confirmDuplicate: true` junto con
+`duplicateReason`; el override queda auditado. Una coincidencia eliminada
+siempre devuelve `409 CLIENT_RESTORE_REQUIRED`.
 
 ### Buscar clientes
 
 ```http
-GET /api/clients?search=juan
+GET /api/clients?search=juan&lifecycle=active&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
-`search` opcional busca parcialmente nombre, teléfono/email mediante Sequelize parametrizado. Sin query devuelve todos, ordenados por nombre/ID. Colección no paginada. Éxito 200 `{ "data": [] }`.
+`search` opcional busca parcialmente nombre/email y reconoce teléfono con
+formato humano contra su forma canónica. `lifecycle` admite `active` (default),
+`deleted` y `all`; sólo `ADMIN` puede solicitar los dos últimos. Página default
+1/20, máximo 100; orden nombre/ID. Devuelve `{ "data": [], "meta": {} }`.
 
 ### Consultar cliente
 
@@ -222,7 +235,52 @@ GET /api/clients/:id
 Authorization: Bearer <accessToken>
 ```
 
-ID entero positivo. Errores: `400 VALIDATION_ERROR`, `404 CLIENT_NOT_FOUND`.
+ID entero positivo. Ambos roles leen activos; un detalle eliminado es sólo
+`ADMIN`. La respuesta añade `lifecycle`, `deletedAt`, `deletedByUserId` y
+`deleteReason`. Errores: 400, `404 CLIENT_NOT_FOUND`, 403 para un mecánico que
+intenta leer un eliminado.
+
+### Actualizar cliente
+
+```http
+PATCH /api/clients/:id
+Authorization: Bearer <ADMIN accessToken>
+Content-Type: application/json
+
+{ "name": "Nuevo nombre", "phone": "+57 300 123 4567", "email": null }
+```
+
+Acepta al menos uno de `name`, `phone`, `email`; `null` elimina el email. Un
+cliente eliminado responde `409 CLIENT_INACTIVE`. Los cambios efectivos crean
+`UPDATED`; un payload idempotente retorna el recurso sin inventar un evento.
+Cambiar phone/email aplica la misma política de duplicados y override que create.
+
+### Eliminar y restaurar
+
+```http
+DELETE /api/clients/:id
+Authorization: Bearer <ADMIN accessToken>
+Content-Type: application/json
+
+{ "reason": "Cliente solicitó archivar su registro" }
+```
+
+Delete es lógico y requiere reason. Persiste `deletedAt`, actor y razón; nunca
+borra motos/órdenes. Con motos activas responde `409 CLIENT_HAS_ACTIVE_BIKES`;
+si ya estaba eliminado, `409 CLIENT_ALREADY_DELETED`.
+
+```http
+POST /api/clients/:id/restore
+Authorization: Bearer <ADMIN accessToken>
+Content-Type: application/json
+
+{ "reason": "Cliente regresó al taller" }
+```
+
+Restore limpia los tres campos lifecycle, no restaura motocicletas y audita el
+estado anterior. Un activo responde `409 CLIENT_NOT_DELETED`. Si sus contactos
+coinciden con otro activo, exige `confirmDuplicate: true` y `duplicateReason`;
+ambas justificaciones quedan en el evento `RESTORED`.
 
 ## Motocicletas
 
@@ -242,7 +300,7 @@ Content-Type: application/json
 }
 ```
 
-Roles: `ADMIN`, `MECANICO`. Placa, marca, modelo y `clientId` positivo requeridos; `cylinder` opcional y string nullable. Normalización `trim → uppercase → remove whitespace`; persiste `ABC123`. Cliente debe existir.
+Roles actuales: `ADMIN`, `MECANICO`. Placa, marca, modelo y `clientId` positivo requeridos; `cylinder` opcional y string nullable. Normalización `trim → uppercase → remove whitespace`; persiste `ABC123`. Cliente debe existir y estar activo; uno eliminado devuelve `409 CLIENT_INACTIVE`.
 
 Éxito 201 con motocicleta y cliente anidado. Errores: 400, `404 CLIENT_NOT_FOUND`, `409 BIKE_PLATE_ALREADY_EXISTS`.
 

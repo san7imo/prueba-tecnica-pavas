@@ -4,9 +4,9 @@
 
 El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
 fundaciones de persistencia de productización: lifecycle de clientes/motos,
-`audit_events`, responsable de orden y actor de ítem. Once migraciones son la
-fuente de verdad. Los campos nuevos son compatibles con datos legacy; sus
-flujos de negocio se activan en hitos posteriores.
+`audit_events`, responsable de orden y actor de ítem. Doce migraciones son la
+fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
+forma segura sus contactos; las demás capacidades se activan por hito.
 
 ## Convenciones
 
@@ -124,6 +124,12 @@ erDiagram
 ```
 
 ## `clients`
+
+`phone` se almacena sin espacios, guiones, puntos ni paréntesis, conserva como
+máximo un `+` inicial y debe cumplir `^\+?\d{7,20}$`. `email` es nullable y,
+cuando existe, se almacena con trim/lowercase y formato válido. No hay UNIQUE
+en nombre, teléfono o email: los contactos compartidos requieren confirmación
+de negocio, no una simplificación física.
 
 | Columna | Tipo | Reglas |
 |---|---|---|
@@ -302,11 +308,17 @@ Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
 202609030009-create-audit-events.js
 202609030010-add-work-order-assignment.js
 202609030011-add-work-order-item-creator.js
+202609030012-normalize-client-contacts.js
 ```
 
 Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; las
 suites de esquema verifican instalación limpia, actualización con filas legacy,
 restricciones físicas, rollback y reaplicación.
+
+La 012 es data-only: primero inspecciona todas las filas y aborta indicando
+únicamente IDs/campos inválidos. Sólo si el preflight completo pasa actualiza
+teléfono/email en una transacción. Su `down` no inventa la puntuación o casing
+eliminados; retirar y reaplicar el registro de migración es idempotente.
 
 ## Ambientes de base de datos
 

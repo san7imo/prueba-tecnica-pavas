@@ -140,6 +140,23 @@ describe('audit metadata allowlists', () => {
       action: AUDIT_ACTION.DEACTIVATED,
       metadata: { previousActive: true, newActive: false },
     })).toEqual({ previousActive: true, newActive: false });
+
+    expect(sanitizeAuditMetadata({
+      entityType: AUDIT_ENTITY_TYPE.CLIENT,
+      action: AUDIT_ACTION.RESTORED,
+      metadata: {
+        duplicateOverride: true,
+        matchedFields: ['phone', 'secret'],
+        candidateIds: [3, 1],
+        duplicateReason: 'Shared family contact.',
+        arbitrary: 'discarded',
+      },
+    })).toEqual({
+      duplicateOverride: true,
+      matchedFields: ['phone'],
+      candidateIds: ['1', '3'],
+      duplicateReason: 'Shared family contact.',
+    });
   });
 
   it('returns null for metadata that an action does not allow', () => {

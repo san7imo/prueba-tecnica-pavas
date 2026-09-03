@@ -37,8 +37,17 @@ export const bikeService = {
     try {
       const bikeId = await sequelize.transaction(async (transaction) => {
         const options = { transaction };
-        const client = await clientRepository.findById(data.clientId, options);
+        const client = await clientRepository.findByIdForUpdate(
+          data.clientId,
+          transaction,
+        );
         if (!client) throw clientNotFound();
+        if (client.deletedAt !== null) {
+          throw new ConflictError({
+            code: 'CLIENT_INACTIVE',
+            message: 'Deleted clients cannot receive new motorcycles.',
+          });
+        }
         if (await bikeRepository.findByPlate(plate, options)) {
           throw plateConflict();
         }

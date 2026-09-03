@@ -304,6 +304,7 @@ mutación de producto posterior exige actor autenticado.
 |---|---|
 | `CREATED` de CLIENT con override | `duplicateOverride`, `matchedFields`, `candidateIds` |
 | `UPDATED` | `changedFields`; para CLIENT puede añadir los tres campos de duplicate override |
+| `RESTORED` de CLIENT con override | `duplicateOverride`, `matchedFields`, `candidateIds`, `duplicateReason` |
 | `OWNER_CHANGED` | `previousClientId`, `newClientId` |
 | `ASSIGNED`, `REASSIGNED`, `UNASSIGNED` | `previousMechanicId`, `newMechanicId` |
 | `STATUS_CHANGED` | `transitionKind: FORWARD | REGRESSION` |

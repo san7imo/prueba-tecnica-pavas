@@ -199,6 +199,32 @@ export const sanitizeAuditMetadata = ({ entityType, action, metadata }) => {
           ? value.reopenType
           : undefined,
       });
+    case AUDIT_ACTION.RESTORED:
+      if (
+        entityType !== AUDIT_ENTITY_TYPE.CLIENT ||
+        value.duplicateOverride !== true
+      ) {
+        return null;
+      }
+      return compact({
+        duplicateOverride: true,
+        matchedFields: Array.isArray(value.matchedFields)
+          ? [
+              ...new Set(
+                value.matchedFields.filter((field) =>
+                  ['phone', 'email'].includes(field),
+                ),
+              ),
+            ].sort()
+          : [],
+        candidateIds: allowedIds(value.candidateIds),
+        duplicateReason:
+          typeof value.duplicateReason === 'string' &&
+          value.duplicateReason.trim() !== '' &&
+          value.duplicateReason.trim().length <= 1000
+            ? value.duplicateReason.trim()
+            : undefined,
+      });
     case AUDIT_ACTION.ROLE_CHANGED:
       return compact({
         previousRole: USER_ROLES.includes(value.previousRole)
