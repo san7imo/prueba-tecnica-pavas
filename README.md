@@ -34,6 +34,13 @@ El proyecto prioriza reglas de negocio explícitas, consistencia transaccional, 
 
 Refresh/logout y la colección Postman eran opcionales en el enunciado original, pero este repositorio los implementa como parte de su contrato de ingeniería.
 
+### Productización — hitos completados
+
+- fundamentos de persistencia para ciclo de vida, responsable, actor de ítem y auditoría global;
+- eventos empresariales append-only con snapshots explícitos y sin secretos;
+- auditoría atómica de altas autenticadas, alta de ítems y cambios de estado existentes;
+- consulta paginada/filtrada del audit global, exclusiva para `ADMIN`.
+
 ## Stack tecnológico
 
 | Área | Tecnologías |

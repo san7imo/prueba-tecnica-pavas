@@ -1,7 +1,9 @@
 import { sequelize } from '../config/databaseContext.js';
+import { AUDIT_ACTION, AUDIT_ENTITY_TYPE } from '../constants/audit.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { workOrderItemRepository } from '../repositories/workOrderItemRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
+import { auditService } from './auditService.js';
 
 const workOrderNotFound = () =>
   new NotFoundError({
@@ -25,7 +27,7 @@ const persistExactTotal = async (workOrderId, transaction) => {
 };
 
 export const workOrderItemService = {
-  addItem(workOrderId, data) {
+  addItem(workOrderId, data, actor) {
     return sequelize.transaction(async (transaction) => {
       const workOrder = await workOrderRepository.findByIdForUpdate(
         workOrderId,
@@ -46,6 +48,12 @@ export const workOrderItemService = {
         transaction,
       );
       const workOrderTotal = await persistExactTotal(workOrderId, transaction);
+      await auditService.record({
+        entityType: AUDIT_ENTITY_TYPE.WORK_ORDER_ITEM,
+        action: AUDIT_ACTION.ITEM_ADDED,
+        actor,
+        after: item,
+      }, transaction);
 
       return { item, workOrderTotal };
     });

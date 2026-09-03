@@ -9,6 +9,7 @@ const WORK_ORDER_ATTRIBUTES = [
   'faultDescription',
   'status',
   'total',
+  'assignedMechanicId',
 ];
 const BIKE_ATTRIBUTES = ['id', 'plate', 'brand', 'model', 'cylinder', 'clientId'];
 const CLIENT_ATTRIBUTES = ['id', 'name', 'phone', 'email'];
@@ -47,7 +48,7 @@ export const workOrderRepository = {
 
   findByIdForUpdate(id, transaction) {
     return models.WorkOrder.findByPk(id, {
-      attributes: ['id', 'status'],
+      attributes: WORK_ORDER_ATTRIBUTES,
       transaction,
       lock: transaction.LOCK.UPDATE,
     });

@@ -275,9 +275,10 @@ Conserva el prefijo pedido por la prueba y añade `id` como desempate determinis
 | `created_at` | `DATETIME(3)` | requerida |
 
 No existe `updated_at`. Los índices por fecha, entidad, actor y acción terminan
-en `created_at DESC, id DESC` para paginación determinista. En HITO 1 sólo se
-habilita la persistencia; las allowlists, escrituras transaccionales y lectura
-ADMIN pertenecen a HITO 2.
+en `created_at DESC, id DESC` para paginación determinista. HITO 2 activa
+snapshots/metadata con allowlists cerradas, escrituras dentro de la misma
+transacción del dominio y lectura paginada exclusiva para `ADMIN`. El
+repositorio de audit sólo expone create/read; la API no ofrece update/delete.
 
 ## Política referencial
 

@@ -55,6 +55,7 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
   });
 
   beforeEach(async () => {
+    await models.AuditEvent.destroy({ where: {}, force: true });
     await models.RefreshToken.destroy({ where: {}, force: true });
     await models.User.destroy({ where: {}, force: true });
   });

@@ -2,7 +2,10 @@ import { userService } from '../services/userService.js';
 import { serializeManagedUser } from '../utils/resourceSerializers.js';
 
 export const registerUser = async (request, response) => {
-  const user = await userService.createUser(request.validated.body);
+  const user = await userService.createUser(
+    request.validated.body,
+    request.user,
+  );
   response.status(201).json({ data: serializeManagedUser(user) });
 };
 

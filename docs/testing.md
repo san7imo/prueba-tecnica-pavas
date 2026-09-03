@@ -7,7 +7,7 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  15 suites, 199 pruebas
+Backend:  18 suites, 219 pruebas
 Frontend: 10 suites, 46 pruebas
 Matriz:   103 filas PASS
 ```
@@ -81,6 +81,17 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 - revierte sólo 008–011, confirma que las filas originales sobreviven y reaplica.
 
 La suite omite deliberadamente validación de modelo en casos concretos para demostrar que MySQL sigue siendo barrera final.
+
+### Auditoría global — `auditSnapshots.test.js` y `audit.integration.test.js`
+
+- allowlists completas de snapshots y metadata determinista;
+- exclusión de password, hash, tokens, cookies y secretos;
+- actor tomado de autenticación aunque el body intente inyectarlo;
+- eventos atómicos para altas, ítems, estados y cancelación;
+- rollback de maestras, usuario, orden/history, ítem/total y estado/history ante fallo del evento;
+- filtros, fechas, paginación, detalle y actor seguro;
+- lectura sólo `ADMIN`, autenticación antes de validación y ausencia de API de mutación;
+- cero eventos para operaciones rechazadas.
 
 ### Clientes y motocicletas — `clientsBikes.integration.test.js`
 

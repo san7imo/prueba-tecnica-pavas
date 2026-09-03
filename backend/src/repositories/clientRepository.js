@@ -5,12 +5,18 @@ import { models } from '../config/databaseContext.js';
 const CLIENT_ATTRIBUTES = ['id', 'name', 'phone', 'email'];
 
 export const clientRepository = {
-  create(data) {
-    return models.Client.create(data, { fields: ['name', 'phone', 'email'] });
+  create(data, options = {}) {
+    return models.Client.create(data, {
+      fields: ['name', 'phone', 'email'],
+      transaction: options.transaction,
+    });
   },
 
-  findById(id) {
-    return models.Client.findByPk(id, { attributes: CLIENT_ATTRIBUTES });
+  findById(id, options = {}) {
+    return models.Client.findByPk(id, {
+      attributes: CLIENT_ATTRIBUTES,
+      transaction: options.transaction,
+    });
   },
 
   search(search) {

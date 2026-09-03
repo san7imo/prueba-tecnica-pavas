@@ -32,6 +32,9 @@ GET    /api/work-orders/:id/history?page=&pageSize=
 PATCH  /api/work-orders/:id/status
 POST   /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
+
+GET /api/audit-events?entityType=&entityId=&action=&actorUserId=&dateFrom=&dateTo=&page=&pageSize=
+GET /api/audit-events/:id
 ```
 
 ## Convenciones generales
@@ -166,6 +169,24 @@ PATCH /api/users/:id/active  { "active": true | false }
 ```
 
 El listado no pagina por el alcance acotado y ordena por nombre, email, ID. ID/rol/boolean inválido devuelve 400; ausente, `404 USER_NOT_FOUND`. Se permite cambiar el propio rol/estado; no existe protección del último ADMIN. El token afectado falla en su siguiente petición.
+
+## Auditoría empresarial global
+
+Sólo `ADMIN`. La colección acepta filtros opcionales `entityType`, `entityId`,
+`action`, `actorUserId`, `dateFrom` y `dateTo`, además de paginación 1/20 con
+máximo 100. Fechas requieren ISO 8601 con zona. El orden es
+`createdAt DESC, id DESC`.
+
+```http
+GET /api/audit-events?entityType=WORK_ORDER&action=STATUS_CHANGED&page=1&pageSize=20
+Authorization: Bearer <ADMIN accessToken>
+```
+
+Cada resultado expone `id`, `entityType`, `entityId`, `action`, actor seguro
+(`id`, `name`), `beforeData`, `afterData`, `metadata`, `reason` y `createdAt`.
+El detalle usa `GET /api/audit-events/:id`; un ID ausente devuelve
+`404 AUDIT_EVENT_NOT_FOUND`. `MECANICO` recibe 403. No existen rutas POST,
+PATCH, PUT o DELETE para el audit.
 
 ## Clientes
 

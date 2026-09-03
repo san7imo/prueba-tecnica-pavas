@@ -1,31 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 
-const ENTITY_TYPES = [
-  'CLIENT',
-  'BIKE',
-  'WORK_ORDER',
-  'WORK_ORDER_ITEM',
-  'USER',
-];
-
-const ACTIONS = [
-  'CREATED',
-  'UPDATED',
-  'SOFT_DELETED',
-  'RESTORED',
-  'OWNER_CHANGED',
-  'ASSIGNED',
-  'REASSIGNED',
-  'UNASSIGNED',
-  'STATUS_CHANGED',
-  'REOPENED',
-  'CANCELLED',
-  'ITEM_ADDED',
-  'ITEM_DELETED',
-  'ROLE_CHANGED',
-  'ACTIVATED',
-  'DEACTIVATED',
-];
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '../constants/audit.js';
 
 export class AuditEvent extends Model {}
 
@@ -38,7 +13,7 @@ export const initializeAuditEvent = (sequelize) =>
         primaryKey: true,
       },
       entityType: {
-        type: DataTypes.ENUM(...ENTITY_TYPES),
+        type: DataTypes.ENUM(...AUDIT_ENTITY_TYPES),
         allowNull: false,
         field: 'entity_type',
       },
@@ -48,7 +23,7 @@ export const initializeAuditEvent = (sequelize) =>
         field: 'entity_id',
       },
       action: {
-        type: DataTypes.ENUM(...ACTIONS),
+        type: DataTypes.ENUM(...AUDIT_ACTIONS),
         allowNull: false,
       },
       actorUserId: {

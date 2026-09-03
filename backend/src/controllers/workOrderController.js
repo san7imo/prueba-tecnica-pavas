@@ -7,7 +7,7 @@ import {
 export const createWorkOrder = async (request, response) => {
   const workOrder = await workOrderService.createWorkOrder(
     request.validated.body,
-    request.user.id,
+    request.user,
   );
   response.status(201).json({ data: serializeWorkOrder(workOrder) });
 };

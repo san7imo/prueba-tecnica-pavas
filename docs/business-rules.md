@@ -56,7 +56,7 @@ Mapa canónico:
 - `status`, `total`, IDs y timestamps enviados por el cliente se ignoran mediante allowlists.
 - Orden y evento `NULL -> RECIBIDA` son atómicos; el actor es el usuario autenticado y la nota inicial es `null`.
 
-## Historial de auditoría
+## Historial de estados
 
 - Cada transición válida, incluida cancelación, agrega exactamente una fila inmutable.
 - Intentos inválidos, idempotentes o sin permiso no agregan filas.
@@ -65,6 +65,15 @@ Mapa canónico:
 - Una orden inexistente devuelve 404, no una lista ambigua vacía.
 - Ambos roles pueden consultar; el actor expone sólo ID y nombre.
 - No existen endpoints de update/delete para historial.
+
+## Auditoría empresarial global
+
+- `work_order_status_history` conserva la secuencia especializada de estados; no es reemplazado por `audit_events`.
+- Las altas autenticadas de cliente, motocicleta, usuario y orden, el alta de ítem y las transiciones/cancelaciones existentes generan un solo evento empresarial específico.
+- El evento se escribe en la misma transacción que el dominio. Si falla, toda la mutación revierte; intentos inválidos o sin permiso no auditan.
+- El actor siempre es el usuario autenticado y no se acepta desde el body.
+- `beforeData`, `afterData` y `metadata` tienen allowlists por entidad/acción; IDs, fechas y decimales usan representaciones deterministas.
+- Sólo `ADMIN` consulta la colección/detalle con filtros y paginación acotados. No existen endpoints normales para actualizar o eliminar eventos.
 
 ## Ítems de orden
 
@@ -110,6 +119,7 @@ La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar
 | Avanzar a `ENTREGADA` | Sí | No |
 | Avanzar a `CANCELADA` | Sí | No |
 | Consultar historial | Sí | Sí |
+| Consultar auditoría empresarial global | Sí | No |
 | Administrar usuarios | Sí | No |
 
 Todos los endpoints de negocio exigen autenticación. Para estados, primero se valida la arista bajo lock: una arista inválida es 400; una arista válida pero prohibida al actor es 403. La UI no es frontera de autorización.

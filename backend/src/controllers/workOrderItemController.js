@@ -5,6 +5,7 @@ export const createWorkOrderItem = async (request, response) => {
   const result = await workOrderItemService.addItem(
     request.validated.params.id,
     request.validated.body,
+    request.user,
   );
 
   response.status(201).json({

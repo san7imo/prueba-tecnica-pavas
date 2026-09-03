@@ -34,8 +34,11 @@ export const userRepository = {
     });
   },
 
-  findManagedById(id) {
-    return models.User.findByPk(id, { attributes: MANAGED_ATTRIBUTES });
+  findManagedById(id, options = {}) {
+    return models.User.findByPk(id, {
+      attributes: MANAGED_ATTRIBUTES,
+      transaction: options.transaction,
+    });
   },
 
   listManaged() {

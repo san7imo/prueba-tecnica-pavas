@@ -8,8 +8,8 @@ Este documento describe la arquitectura implementada al cierre de HITO 14: Fase 
 
 PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller
 es cohesivo y requiere transacciones directas sobre una única base relacional.
-Las siete entidades originales se preservan y HITO 1 añade `AuditEvent` como
-fundación persistente, sin activar aún su API. Una sola API Express permite
+Las siete entidades originales se preservan; HITO 1 añadió `AuditEvent` como
+fundación persistente y HITO 2 activó sus escrituras y lectura `ADMIN`. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -81,14 +81,15 @@ Centralizan autenticación, roles, rate limiting, 404 y manejo de errores. Las c
 
 Las operaciones con varias escrituras son atómicas:
 
-- **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea o elimina el ítem, recalcula `SUM(count * unit_value)` en MySQL y persiste el total antes de commit. El mismo lock serializa add/add y add/delete.
-- **Creación de orden:** la orden `RECIBIDA` y su evento inicial `NULL -> RECIBIDA` se confirman o revierten juntas.
-- **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente un evento. Un competidor espera y valida contra el resultado confirmado.
+- **Altas de maestras/usuarios:** cliente, motocicleta o usuario y su evento `CREATED` se confirman o revierten juntos.
+- **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea el ítem, recalcula `SUM(count * unit_value)`, persiste el total y agrega `ITEM_ADDED` antes de commit. El mismo lock serializa add/add y add/delete; la auditoría de delete se activa en su hito específico.
+- **Creación de orden:** la orden `RECIBIDA`, su history inicial `NULL → RECIBIDA` y `audit_events.CREATED` se confirman o revierten juntos.
+- **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente una fila de history y un evento global. Un competidor espera y valida contra el resultado confirmado.
 - **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
 El total se calcula con operandos `DECIMAL` y viaja como string; no se usa `Number` para dinero. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
 
-El historial se consulta con límite/offset acotado, un join del actor que selecciona sólo ID/nombre y orden `created_at DESC, id DESC`. El índice físico `(work_order_id, created_at DESC, id DESC)` evita N+1 y soporta el desempate determinista.
+Los historiales se consultan con límite/offset acotado, un join del actor que selecciona sólo ID/nombre y orden `created_at DESC, id DESC`. El audit global admite filtros cerrados por entidad, identidad, acción, actor y rango de fechas, únicamente para `ADMIN`.
 
 ## Persistencia y migraciones
 

@@ -2,7 +2,10 @@ import { bikeService } from '../services/bikeService.js';
 import { serializeBike } from '../utils/resourceSerializers.js';
 
 export const createBike = async (request, response) => {
-  const bike = await bikeService.createBike(request.validated.body);
+  const bike = await bikeService.createBike(
+    request.validated.body,
+    request.user,
+  );
   response.status(201).json({ data: serializeBike(bike) });
 };
 

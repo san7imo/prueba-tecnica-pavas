@@ -2,7 +2,10 @@ import { clientService } from '../services/clientService.js';
 import { serializeClient } from '../utils/resourceSerializers.js';
 
 export const createClient = async (request, response) => {
-  const client = await clientService.createClient(request.validated.body);
+  const client = await clientService.createClient(
+    request.validated.body,
+    request.user,
+  );
   response.status(201).json({ data: serializeClient(client) });
 };
 

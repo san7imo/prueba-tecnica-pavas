@@ -14,6 +14,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `P1-BE-007` a `P1-BE-014` | `backend/tests/workOrders.integration.test.js` |
 | `P1-STATE-*` | `backend/tests/workOrderStatus.integration.test.js` |
 | `P2-AUDIT-*` | `backend/tests/workOrderHistory.integration.test.js`, `schema.integration.test.js` |
+| `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -87,6 +88,14 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-AUDIT-007 | 150 filas empatadas paginan 100/50 con desempate ID | large-history case | PASS |
 | P2-AUDIT-006 | Índice físico `(work_order_id, created_at DESC, id DESC)` | schema index metadata | PASS |
 | P2-AUDIT-010 | Misma transición concurrente deja un cambio/evento | carrera al mismo target | PASS |
+| PZ-AUDIT-001 | Snapshots/metadata usan allowlists deterministas por entidad/acción | snapshot and metadata cases | PASS |
+| PZ-AUDIT-002 | Password, hash, tokens, cookies y secretos no entran al audit | USER allowlist + registro HTTP | PASS |
+| PZ-AUDIT-003 | Altas, ítem, estado y cancelación generan una acción específica | mutation activation cases | PASS |
+| PZ-AUDIT-004 | Actor autenticado prevalece sobre cualquier campo enviado | client actor-injection case | PASS |
+| PZ-AUDIT-005 | Fallo del audit revierte maestras, usuario, orden/history, ítem/total y estado/history | forced audit failure cases | PASS |
+| PZ-AUDIT-006 | Filtros, rango de fechas, paginación y detalle son acotados | ADMIN read/filter cases | PASS |
+| PZ-AUDIT-007 | Sólo ADMIN lee; auth/RBAC preceden validación | audit authorization boundary | PASS |
+| PZ-AUDIT-008 | No hay API de mutación y operaciones rechazadas no generan filas | no-mutation/no-event cases | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |

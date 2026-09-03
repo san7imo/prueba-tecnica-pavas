@@ -10,16 +10,18 @@ const CLIENT_INCLUDE = {
 };
 
 export const bikeRepository = {
-  create(data) {
+  create(data, options = {}) {
     return models.Bike.create(data, {
       fields: ['plate', 'brand', 'model', 'cylinder', 'clientId'],
+      transaction: options.transaction,
     });
   },
 
-  findById(id) {
+  findById(id, options = {}) {
     return models.Bike.findByPk(id, {
       attributes: BIKE_ATTRIBUTES,
       include: CLIENT_INCLUDE,
+      transaction: options.transaction,
     });
   },
 
@@ -27,10 +29,11 @@ export const bikeRepository = {
     return models.Bike.findByPk(id, { attributes: ['id'], transaction });
   },
 
-  findByPlate(plate) {
+  findByPlate(plate, options = {}) {
     return models.Bike.findOne({
       attributes: ['id'],
       where: { plate },
+      transaction: options.transaction,
     });
   },
 

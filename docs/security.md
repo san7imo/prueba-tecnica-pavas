@@ -58,7 +58,7 @@ Todas las rutas de negocio autentican primero. RBAC vive en middleware y, para d
 
 Sequelize parametriza entrada. El único literal SQL de producción es una expresión fija y sin input para el total `DECIMAL`. UNIQUE, FKs, CHECK y ENUM agregan defensa. Totales, refresh, creación/auditoría y estado/auditoría son transaccionales con row locks.
 
-El historial es append-only. El actor proviene de `req.user`, nunca del body, y se serializa sólo con ID/nombre.
+Los dos ledgers son append-only. El actor de `audit_events` proviene de `req.user`, nunca del body, y se serializa sólo con ID/nombre. Snapshots y metadata se construyen campo por campo con allowlists por entidad/acción; passwords, hashes, tokens, cookies, secretos y valores de entorno no pueden entrar al evento. Sólo `ADMIN` puede leer el audit global y no existen rutas para modificarlo o borrarlo.
 
 ## Frontend, XSS y almacenamiento
 

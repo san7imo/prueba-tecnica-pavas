@@ -90,3 +90,22 @@ export const serializeWorkOrderStatusHistory = (resource) => {
     },
   };
 };
+
+export const serializeAuditEvent = (resource) => {
+  const event = plain(resource);
+  return {
+    id: event.id,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    action: event.action,
+    actor: {
+      id: event.actor.id,
+      name: event.actor.name,
+    },
+    beforeData: event.beforeData,
+    afterData: event.afterData,
+    metadata: event.metadata,
+    reason: event.reason,
+    createdAt: new Date(event.createdAt).toISOString(),
+  };
+};
