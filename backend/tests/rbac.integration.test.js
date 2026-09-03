@@ -109,7 +109,7 @@ describe.sequential('HITO 8 role-based access control', () => {
     expect(inactive.body.error.code).toBe('INVALID_ACCESS_TOKEN');
   });
 
-  it('restricts client/bike mutation to ADMIN while preserving current order-create roles', async () => {
+  it('restricts client, bike and work-order creation to ADMIN while both roles read', async () => {
     const clients = [];
     for (const index of [0, 1]) {
       const clientResponse = await request(app)
@@ -153,7 +153,7 @@ describe.sequential('HITO 8 role-based access control', () => {
 
       const orderResponse = await request(app)
         .post('/api/work-orders')
-        .set(headers)
+        .set(adminHeaders())
         .send({
           bikeId: bikeResponse.body.data.id,
           faultDescription: 'RBAC business access test.',
@@ -164,6 +164,12 @@ describe.sequential('HITO 8 role-based access control', () => {
         .set(headers)
         .expect(200);
     }
+
+    await request(app)
+      .post('/api/work-orders')
+      .set(mechanicHeaders())
+      .send({})
+      .expect(403);
   });
 
   it('allows both roles to add items but only ADMIN to delete them', async () => {

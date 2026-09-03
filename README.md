@@ -278,7 +278,10 @@ Login ADMIN
   → consultar el historial
 ```
 
-Para comprobar RBAC, cree un usuario `MECANICO`, inicie sesión con él y verifique que puede agregar ítems y avanzar por estados intermedios, pero no puede entregar/cancelar, borrar ítems ni administrar usuarios.
+Para comprobar RBAC, cree un usuario `MECANICO`, inicie sesión con él y
+verifique que puede consultar, agregar ítems y avanzar por estados intermedios,
+pero no puede crear órdenes, cambiar responsables, entregar/cancelar, borrar
+ítems ni administrar usuarios.
 
 ## Reglas de negocio principales
 
@@ -289,7 +292,9 @@ RECIBIDA → DIAGNOSTICO → EN_PROCESO → LISTA → ENTREGADA
 `CANCELADA` es válida desde `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. `ENTREGADA` y `CANCELADA` son terminales. Las transiciones inválidas o al mismo estado devuelven HTTP 400 y no generan historial.
 
 - `ADMIN`: acceso completo a las acciones implementadas.
-- `MECANICO`: lectura, creación de recursos de negocio e ítems, y avance a `DIAGNOSTICO`, `EN_PROCESO` y `LISTA`; sin administración, borrado de ítems, entrega o cancelación.
+- `MECANICO`: lectura, creación de ítems y avance a `DIAGNOSTICO`,
+  `EN_PROCESO` y `LISTA`; sin creación de órdenes/maestras, asignación,
+  administración, borrado de ítems, entrega o cancelación.
 
 Consulte [Reglas de negocio](docs/business-rules.md).
 

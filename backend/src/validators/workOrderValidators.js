@@ -14,6 +14,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const MAX_STATUS_NOTE_LENGTH = 1000;
+const MAX_ASSIGNMENT_REASON_LENGTH = 1000;
 const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/;
 
 const parseEntryDate = (value, details) => {
@@ -94,6 +95,24 @@ const optionalStatusNote = (value, details) => {
   return normalized || null;
 };
 
+const optionalAssignmentReason = (value, details) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') {
+    details.push({ field: 'reason', message: 'Reason must be a string or null.' });
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length > MAX_ASSIGNMENT_REASON_LENGTH) {
+    details.push({
+      field: 'reason',
+      message: `Reason must be at most ${MAX_ASSIGNMENT_REASON_LENGTH} characters.`,
+    });
+    return undefined;
+  }
+  return normalized || null;
+};
+
 export const validateCreateWorkOrder = (request, _response, next) => {
   const body = asObject(request.body);
   const details = [];
@@ -111,11 +130,19 @@ export const validateCreateWorkOrder = (request, _response, next) => {
     details,
   });
   const entryDate = parseEntryDate(body.entryDate, details);
+  const assignedMechanicId = body.assignedMechanicId === undefined
+    ? undefined
+    : positiveId({
+        value: body.assignedMechanicId,
+        field: 'assignedMechanicId',
+        label: 'Assigned mechanic id',
+        details,
+      });
 
   completeValidation({
     request,
     section: 'body',
-    value: { bikeId, faultDescription, entryDate },
+    value: { bikeId, faultDescription, entryDate, assignedMechanicId },
     details,
     next,
   });
@@ -154,6 +181,16 @@ export const validateWorkOrderList = (request, _response, next) => {
           label: 'Bike id',
           details,
         });
+  const assignedMechanicId =
+    request.query.assignedMechanicId === undefined ||
+    request.query.assignedMechanicId === ''
+      ? undefined
+      : positiveId({
+          value: request.query.assignedMechanicId,
+          field: 'assignedMechanicId',
+          label: 'Assigned mechanic id',
+          details,
+        });
 
   const page = paginationInteger({
     value: request.query.page,
@@ -172,10 +209,54 @@ export const validateWorkOrderList = (request, _response, next) => {
   completeValidation({
     request,
     section: 'query',
-    value: { status: rawStatus, plate, bikeId, page, pageSize },
+    value: {
+      status: rawStatus,
+      plate,
+      bikeId,
+      assignedMechanicId,
+      page,
+      pageSize,
+    },
     details,
     next,
   });
+};
+
+export const validateWorkOrderAssignment = (request, _response, next) => {
+  const body = asObject(request.body);
+  const details = [];
+  const id = positiveId({
+    value: request.params.id,
+    field: 'id',
+    label: 'Work order id',
+    details,
+  });
+
+  let mechanicId;
+  if (!Object.prototype.hasOwnProperty.call(body, 'mechanicId')) {
+    details.push({ field: 'mechanicId', message: 'Mechanic id is required.' });
+  } else if (body.mechanicId === null) {
+    mechanicId = null;
+  } else {
+    mechanicId = positiveId({
+      value: body.mechanicId,
+      field: 'mechanicId',
+      label: 'Mechanic id',
+      details,
+    });
+  }
+  const reason = optionalAssignmentReason(body.reason, details);
+
+  if (details.length > 0) {
+    completeValidation({ request, section: 'body', value: {}, details, next });
+    return;
+  }
+
+  request.validated = {
+    params: { id },
+    body: { mechanicId, reason },
+  };
+  next();
 };
 
 export const validateWorkOrderId = (request, _response, next) => {

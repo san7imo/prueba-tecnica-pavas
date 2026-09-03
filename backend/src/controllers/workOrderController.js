@@ -44,3 +44,12 @@ export const updateWorkOrderStatus = async (request, response) => {
   );
   response.json({ data: result });
 };
+
+export const updateWorkOrderAssignment = async (request, response) => {
+  const workOrder = await workOrderService.changeAssignment(
+    request.validated.params.id,
+    request.validated.body,
+    request.user,
+  );
+  response.json({ data: serializeWorkOrder(workOrder) });
+};

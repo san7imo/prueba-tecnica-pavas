@@ -1,3 +1,5 @@
+import { Op } from 'sequelize';
+
 import { models } from '../config/databaseContext.js';
 
 const SAFE_ATTRIBUTES = ['id', 'name', 'email', 'role', 'active'];
@@ -16,6 +18,17 @@ export const userRepository = {
     return models.User.findByPk(id, {
       attributes: SAFE_ATTRIBUTES,
       transaction: options.transaction,
+    });
+  },
+
+  findByIdsForUpdate(ids, transaction) {
+    if (ids.length === 0) return [];
+    return models.User.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: SAFE_ATTRIBUTES,
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
   },
 

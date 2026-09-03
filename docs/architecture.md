@@ -2,7 +2,10 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 4 de productización: conserva las fases 1 y 2 y añade las fundaciones de persistencia, la auditoría global y los lifecycles backend completos de clientes y motocicletas.
+Este documento describe la arquitectura implementada hasta HITO 7 de
+productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
+backend completos, una sola orden abierta por motocicleta y asignación
+auditable de responsable.
 
 ## Estilo arquitectónico
 
@@ -10,7 +13,8 @@ PAVAS Moto Workshop usa un **monolito modular por capas**. El dominio del taller
 es cohesivo y requiere transacciones directas sobre una única base relacional.
 Las siete entidades originales se preservan; HITO 1 añadió `AuditEvent` como
 fundación persistente, HITO 2 activó la auditoría, HITO 3 completó clientes y
-HITO 4 completó motocicletas. Una sola API Express permite
+HITO 4 completó motocicletas, HITO 6 protegió la unicidad de la orden abierta y
+HITO 7 activó la asignación. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -86,7 +90,8 @@ Las operaciones con varias escrituras son atómicas:
 - **Lifecycle de clientes:** update, soft delete y restore bloquean el cliente; delete bloquea además sus motos activas en orden canónico. Estado y evento global confirman o revierten juntos. Crear una moto toma primero el lock del cliente para serializarse contra delete.
 - **Lifecycle de motocicletas:** update bloquea la moto; owner change bloquea clientes origen/destino por ID y luego la moto; delete/restore bloquean propietario y moto antes de revalidar lifecycle. Delete también bloquea las órdenes abiertas y toda mutación confirma o revierte junto con su audit.
 - **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea el ítem, recalcula `SUM(count * unit_value)`, persiste el total y agrega `ITEM_ADDED` antes de commit. El mismo lock serializa add/add y add/delete; la auditoría de delete se activa en su hito específico.
-- **Creación de orden:** bloquea propietario y motocicleta para rechazar recursos eliminados; la orden `RECIBIDA`, su history inicial `NULL → RECIBIDA` y `audit_events.CREATED` se confirman o revierten juntos.
+- **Creación de orden:** bloquea propietario, motocicleta y responsable opcional en orden canónico; rechaza recursos eliminados, assignee inválido u otra orden abierta. Orden `RECIBIDA`, history inicial y `CREATED` se confirman o revierten juntos; un generated UNIQUE es la barrera final de una abierta por moto.
+- **Asignación:** bloquea los usuarios anterior/destino por ID y después la orden; revalida status y asignación persistida antes de escribir `ASSIGNED`, `REASSIGNED` o `UNASSIGNED` dentro de la misma transacción.
 - **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente una fila de history y un evento global. Un competidor espera y valida contra el resultado confirmado.
 - **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
@@ -97,9 +102,10 @@ Los historiales se consultan con límite/offset acotado, un join del actor que s
 ## Persistencia y migraciones
 
 MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug
-ejecuta doce migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
+ejecuta trece migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
 migraciones de HITO 1 añaden fundamentos compatibles con filas legacy; la 012
-prevalida y canonicaliza contactos de clientes sin inventar datos. No se usa
+prevalida y canonicaliza contactos de clientes sin inventar datos; la 013
+instala la barrera de orden abierta. No se usa
 `sequelize.sync` como estrategia de esquema.
 
 Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).

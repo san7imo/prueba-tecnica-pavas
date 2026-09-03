@@ -126,6 +126,14 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-BIKE-014 | Sólo ADMIN muta motos y RBAC precede validación | mutation boundary case | PASS |
 | PZ-BIKE-015 | Fallo audit revierte update/owner/delete/restore | forced audit rollback case | PASS |
 | PZ-BIKE-016 | Delete/orden y owner/delete cliente se serializan | concurrency invariant cases | PASS |
+| PZ-ASSIGN-001 | Create acepta MECANICO activo opcional y lo incluye sólo en CREATED | assigned creation case | PASS |
+| PZ-ASSIGN-002 | Usuario inexistente, ADMIN o inactivo no es asignable | invalid assignee matrix | PASS |
+| PZ-ASSIGN-003 | ADMIN asigna, reasigna y devuelve una orden abierta a unassigned | assignment lifecycle cases | PASS |
+| PZ-ASSIGN-004 | Reassign/unassign exigen razón; mismo destino no audita | reason/no-op cases | PASS |
+| PZ-ASSIGN-005 | Orden cerrada rechaza cambios con conflicto estable | closed order case | PASS |
+| PZ-ASSIGN-006 | Lista filtra por responsable y serializa identidad segura/null | filter/serialization case | PASS |
+| PZ-ASSIGN-007 | Mecánico no asigna y fallo audit revierte el dominio | authorization/rollback cases | PASS |
+| PZ-ASSIGN-008 | Dos reassign concurrentes confirman exactamente un evento | concurrent reassignment case | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |

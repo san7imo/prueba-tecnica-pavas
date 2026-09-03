@@ -132,6 +132,8 @@ describe('Work Orders API', () => {
         faultDescription: 'Abnormal transmission noise.',
         status: WORK_ORDER_STATUS.RECEIVED,
         total: '0.00',
+        assignedMechanicId: null,
+        assignedMechanic: null,
         bike: {
           id: bike.id,
           plate: 'ABC123',

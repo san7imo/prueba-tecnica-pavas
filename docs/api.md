@@ -2,7 +2,10 @@
 
 ## Alcance implementado
 
-La API expone las rutas completas de las fases 1 y 2 y los lifecycles backend de clientes y motocicletas hasta HITO 4. Clientes, motocicletas, órdenes y usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son públicos.
+La API expone las rutas completas de las fases 1 y 2 y los hitos de
+productización aprobados hasta HITO 7. Clientes, motocicletas, órdenes y
+usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
+públicos.
 
 ```text
 GET  /api/health
@@ -33,9 +36,10 @@ DELETE /api/bikes/:id
 POST /api/bikes/:id/restore
 
 POST   /api/work-orders
-GET    /api/work-orders?status=&plate=&bikeId=&page=&pageSize=
+GET    /api/work-orders?status=&plate=&bikeId=&assignedMechanicId=&page=&pageSize=
 GET    /api/work-orders/:id
 GET    /api/work-orders/:id/history?page=&pageSize=
+PATCH  /api/work-orders/:id/assignment
 PATCH  /api/work-orders/:id/status
 POST   /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
@@ -395,18 +399,29 @@ Content-Type: application/json
 {
   "bikeId": 1,
   "entryDate": "2026-08-24T15:00:00.000Z",
-  "faultDescription": "Abnormal transmission noise"
+  "faultDescription": "Abnormal transmission noise",
+  "assignedMechanicId": 12
 }
 ```
 
-Roles: `ADMIN`, `MECANICO`. `bikeId`/descripción requeridos. `entryDate` es opcional; si existe debe incluir `Z` u offset y máximo milisegundos; si se omite usa hora de servidor.
+Sólo `ADMIN`. `bikeId`/descripción son requeridos. `entryDate` es opcional; si
+existe debe incluir `Z` u offset y máximo milisegundos; si se omite usa hora de
+servidor. `assignedMechanicId` es opcional; si se envía debe identificar un
+usuario activo con rol `MECANICO`.
 
-El backend exige una motocicleta y propietario activos bajo locks `Client → Bike`, fija `RECIBIDA`/`0.00` y en la misma transacción crea `fromStatus=null`, `toStatus=RECIBIDA`, `note=null`, actor autenticado. Campos internos enviados se ignoran. Éxito 201 con Bike/Client e `items: []`; errores 400, `404 BIKE_NOT_FOUND`, `409 BIKE_INACTIVE` o `409 BIKE_OWNER_INACTIVE`.
+El backend exige una motocicleta y propietario activos, y que no exista otra
+orden abierta para la moto. Usa locks `Client → Bike → User → WorkOrder`, fija
+`RECIBIDA`/`0.00` y crea atómicamente la orden, el history inicial y `CREATED`.
+Una asignación incluida aparece en ese snapshot, sin un evento `ASSIGNED`
+duplicado. Éxito 201 con Bike/Client, responsable seguro e `items: []`.
+Además de errores de validación/not-found/lifecycle, puede responder
+`409 BIKE_HAS_ACTIVE_WORK_ORDER`, `409 ASSIGNEE_MUST_BE_MECHANIC` o
+`409 MECHANIC_INACTIVE`.
 
 ### Listar y filtrar órdenes
 
 ```http
-GET /api/work-orders?status=RECIBIDA&plate=abc%20123&page=1&pageSize=20
+GET /api/work-orders?status=RECIBIDA&assignedMechanicId=12&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
@@ -415,10 +430,13 @@ Queries opcionales:
 - `status`: uno de `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
 - `plate`: búsqueda parcial normalizada;
 - `bikeId`: ID exacto para consultar la historia de una motocicleta;
+- `assignedMechanicId`: ID exacto del mecánico responsable;
 - `page`: entero positivo, default 1;
 - `pageSize`: 1–100, default 20.
 
-Filtros combinan con AND. Cada fila incluye Bike/Client, no items. Orden: `entryDate DESC, id DESC`.
+Filtros combinan con AND. Cada fila incluye Bike/Client y el responsable seguro,
+o `assignedMechanicId: null`/`assignedMechanic: null` cuando está sin asignar;
+no incluye items. Orden: `entryDate DESC, id DESC`.
 
 ```json
 {
@@ -429,6 +447,14 @@ Filtros combinan con AND. Cada fila incluye Bike/Client, no items. Orden: `entry
     "faultDescription": "Abnormal transmission noise",
     "status": "RECIBIDA",
     "total": "0.00",
+    "assignedMechanicId": 12,
+    "assignedMechanic": {
+      "id": 12,
+      "name": "Laura Mecánica",
+      "email": "laura@example.com",
+      "role": "MECANICO",
+      "active": true
+    },
     "bike": {
       "id": 1,
       "plate": "ABC123",
@@ -452,7 +478,32 @@ GET /api/work-orders/:id
 Authorization: Bearer <accessToken>
 ```
 
-Devuelve orden, Bike/Client, total persistido e `items` con `id`, `type`, `description`, `count`, `unitValue`. Errores 400/`404 WORK_ORDER_NOT_FOUND`.
+Devuelve orden, Bike/Client, responsable actual seguro, total persistido e
+`items` con `id`, `type`, `description`, `count`, `unitValue`. Errores
+400/`404 WORK_ORDER_NOT_FOUND`.
+
+### Asignar, reasignar o dejar sin responsable
+
+```http
+PATCH /api/work-orders/:id/assignment
+Authorization: Bearer <accessToken ADMIN>
+Content-Type: application/json
+
+{ "mechanicId": 12, "reason": "Redistribución de carga" }
+```
+
+Sólo `ADMIN`. `mechanicId` acepta un ID positivo o `null`; el destino debe ser
+un `MECANICO` activo y la orden debe estar abierta. `null → mechanic` puede
+omitir `reason`; `mechanic A → mechanic B` y `mechanic → null` exigen una razón
+no vacía de máximo 1000 caracteres. Repetir el mismo responsable se rechaza
+con `400 ASSIGNMENT_UNCHANGED`.
+
+La transacción bloquea los usuarios relevantes por ID ascendente y después la
+orden. Genera exactamente uno de `ASSIGNED`, `REASSIGNED` o `UNASSIGNED`, con
+before/after, IDs anterior/nuevo y razón cuando corresponde. Errores de negocio:
+`404 MECHANIC_NOT_FOUND`, `409 ASSIGNEE_MUST_BE_MECHANIC`,
+`409 MECHANIC_INACTIVE`, `409 WORK_ORDER_CLOSED` y
+`409 CONCURRENT_MODIFICATION_RETRY`.
 
 ### Cambiar estado
 

@@ -112,6 +112,7 @@ export const serializeWorkOrder = (resource) => {
     faultDescription: workOrder.faultDescription,
     status: workOrder.status,
     total: workOrder.total,
+    assignedMechanicId: workOrder.assignedMechanicId ?? null,
   };
 
   if (workOrder.bike) {
@@ -119,6 +120,11 @@ export const serializeWorkOrder = (resource) => {
   }
   if (Array.isArray(workOrder.items)) {
     serialized.items = workOrder.items.map(serializeWorkOrderItem);
+  }
+  if (workOrder.assignedMechanic) {
+    serialized.assignedMechanic = serializeUser(workOrder.assignedMechanic);
+  } else {
+    serialized.assignedMechanic = null;
   }
 
   return serialized;

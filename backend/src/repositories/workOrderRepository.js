@@ -14,6 +14,7 @@ const WORK_ORDER_ATTRIBUTES = [
 ];
 const BIKE_ATTRIBUTES = ['id', 'plate', 'brand', 'model', 'cylinder', 'clientId'];
 const CLIENT_ATTRIBUTES = ['id', 'name', 'phone', 'email'];
+const MECHANIC_ATTRIBUTES = ['id', 'name', 'email', 'role', 'active'];
 const ITEM_ATTRIBUTES = [
   'id',
   'workOrderId',
@@ -35,10 +36,23 @@ const bikeInclude = (plate) => ({
   },
 });
 
+const assignedMechanicInclude = {
+  association: 'assignedMechanic',
+  attributes: MECHANIC_ATTRIBUTES,
+  required: false,
+};
+
 export const workOrderRepository = {
   create(data, transaction) {
     return models.WorkOrder.create(data, {
-      fields: ['bikeId', 'entryDate', 'faultDescription', 'status', 'total'],
+      fields: [
+        'bikeId',
+        'entryDate',
+        'faultDescription',
+        'status',
+        'total',
+        'assignedMechanicId',
+      ],
       transaction,
     });
   },
@@ -49,7 +63,7 @@ export const workOrderRepository = {
 
   findIdentityById(id, transaction) {
     return models.WorkOrder.findByPk(id, {
-      attributes: ['id', 'bikeId'],
+      attributes: ['id', 'bikeId', 'assignedMechanicId'],
       transaction,
     });
   },
@@ -103,11 +117,19 @@ export const workOrderRepository = {
     );
   },
 
+  updateAssignment(workOrder, assignedMechanicId, transaction) {
+    return workOrder.update(
+      { assignedMechanicId },
+      { fields: ['assignedMechanicId'], transaction },
+    );
+  },
+
   findById(id) {
     return models.WorkOrder.findByPk(id, {
       attributes: WORK_ORDER_ATTRIBUTES,
       include: [
         bikeInclude(),
+        assignedMechanicInclude,
         {
           association: 'items',
           attributes: ITEM_ATTRIBUTES,
@@ -117,14 +139,22 @@ export const workOrderRepository = {
     });
   },
 
-  findPaginated({ status, plate, bikeId, page, pageSize }) {
+  findPaginated({
+    status,
+    plate,
+    bikeId,
+    assignedMechanicId,
+    page,
+    pageSize,
+  }) {
     const where = {};
     if (status) where.status = status;
     if (bikeId) where.bikeId = bikeId;
+    if (assignedMechanicId) where.assignedMechanicId = assignedMechanicId;
     return models.WorkOrder.findAndCountAll({
       attributes: WORK_ORDER_ATTRIBUTES,
       where,
-      include: [bikeInclude(plate)],
+      include: [bikeInclude(plate), assignedMechanicInclude],
       distinct: true,
       limit: pageSize,
       offset: (page - 1) * pageSize,

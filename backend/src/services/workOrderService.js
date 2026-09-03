@@ -10,13 +10,17 @@ import {
   AUDIT_TRANSITION_KIND,
 } from '../constants/audit.js';
 import { USER_ROLE } from '../constants/auth.js';
-import { WORK_ORDER_STATUS } from '../constants/workOrder.js';
+import {
+  OPEN_WORK_ORDER_STATUSES,
+  WORK_ORDER_STATUS,
+} from '../constants/workOrder.js';
 import { AuthorizationError } from '../errors/AuthorizationError.js';
 import { BusinessRuleError } from '../errors/BusinessRuleError.js';
 import { ConflictError } from '../errors/ConflictError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { bikeRepository } from '../repositories/bikeRepository.js';
 import { clientRepository } from '../repositories/clientRepository.js';
+import { userRepository } from '../repositories/userRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
 import { workOrderStatusHistoryRepository } from '../repositories/workOrderStatusHistoryRepository.js';
 import { canTransition } from '../utils/workOrderStateMachine.js';
@@ -51,6 +55,64 @@ const concurrentModification = () =>
     code: 'CONCURRENT_MODIFICATION_RETRY',
     message: 'The work order changed concurrently. Reload it and retry.',
   });
+
+const mechanicNotFound = () =>
+  new NotFoundError({
+    code: 'MECHANIC_NOT_FOUND',
+    message: 'Mechanic not found.',
+  });
+
+const mechanicInactive = () =>
+  new ConflictError({
+    code: 'MECHANIC_INACTIVE',
+    message: 'Only an active mechanic can be assigned.',
+  });
+
+const assigneeMustBeMechanic = () =>
+  new ConflictError({
+    code: 'ASSIGNEE_MUST_BE_MECHANIC',
+    message: 'Only a user with the MECANICO role can be assigned.',
+  });
+
+const workOrderClosed = () =>
+  new ConflictError({
+    code: 'WORK_ORDER_CLOSED',
+    message: 'A closed work order cannot be assigned or reassigned.',
+  });
+
+const assignmentReasonRequired = () =>
+  new BusinessRuleError({
+    code: 'ASSIGNMENT_REASON_REQUIRED',
+    message: 'A reason is required to reassign or unassign a work order.',
+  });
+
+const assignmentUnchanged = () =>
+  new BusinessRuleError({
+    code: 'ASSIGNMENT_UNCHANGED',
+    message: 'The work order is already assigned to that mechanic.',
+  });
+
+const plain = (resource) =>
+  typeof resource?.get === 'function' ? resource.get({ plain: true }) : resource;
+
+const detachedPlain = (resource) => structuredClone(plain(resource));
+
+const indexedUsers = (users) =>
+  new Map(users.map((user) => [String(user.id), user]));
+
+const assignmentIds = (...ids) =>
+  [...new Set(ids.filter((id) => id !== null && id !== undefined).map(String))]
+    .sort((left, right) => {
+      const leftId = BigInt(left);
+      const rightId = BigInt(right);
+      return leftId < rightId ? -1 : leftId > rightId ? 1 : 0;
+    });
+
+const assertAssignableMechanic = (mechanic) => {
+  if (!mechanic) throw mechanicNotFound();
+  if (mechanic.role !== USER_ROLE.MECHANIC) throw assigneeMustBeMechanic();
+  if (!mechanic.active) throw mechanicInactive();
+};
 
 const isDatabaseConcurrencyError = (error) =>
   ['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(
@@ -109,6 +171,15 @@ export const workOrderService = {
           });
         }
 
+        let assignedMechanic = null;
+        if (data.assignedMechanicId !== undefined) {
+          [assignedMechanic] = await userRepository.findByIdsForUpdate(
+            [data.assignedMechanicId],
+            transaction,
+          );
+          assertAssignableMechanic(assignedMechanic);
+        }
+
         const openOrders = await workOrderRepository.findOpenByBikeIdForUpdate(
           bike.id,
           transaction,
@@ -121,6 +192,7 @@ export const workOrderService = {
           faultDescription: data.faultDescription.trim(),
           status: WORK_ORDER_STATUS.RECEIVED,
           total: '0.00',
+          assignedMechanicId: assignedMechanic?.id ?? null,
         }, transaction);
         await workOrderStatusHistoryRepository.create({
           workOrderId: workOrder.id,
@@ -158,6 +230,77 @@ export const workOrderService = {
         totalPages: Math.ceil(count / filters.pageSize),
       },
     };
+  },
+
+  async changeAssignment(id, { mechanicId, reason }, actor) {
+    const identity = await workOrderRepository.findIdentityById(id);
+    if (!identity) throw workOrderNotFound();
+
+    try {
+      const workOrderId = await sequelize.transaction(async (transaction) => {
+        const users = indexedUsers(await userRepository.findByIdsForUpdate(
+          assignmentIds(identity.assignedMechanicId, mechanicId),
+          transaction,
+        ));
+        const destinationMechanic = mechanicId === null
+          ? null
+          : users.get(String(mechanicId));
+
+        const workOrder = await workOrderRepository.findByIdForUpdate(
+          id,
+          transaction,
+        );
+        if (!workOrder) throw workOrderNotFound();
+        if (
+          String(workOrder.assignedMechanicId ?? '') !==
+          String(identity.assignedMechanicId ?? '')
+        ) {
+          throw concurrentModification();
+        }
+        if (!OPEN_WORK_ORDER_STATUSES.includes(workOrder.status)) {
+          throw workOrderClosed();
+        }
+        if (destinationMechanic) assertAssignableMechanic(destinationMechanic);
+        if (mechanicId !== null && !destinationMechanic) throw mechanicNotFound();
+
+        const previousMechanicId = workOrder.assignedMechanicId ?? null;
+        if (String(previousMechanicId ?? '') === String(mechanicId ?? '')) {
+          throw assignmentUnchanged();
+        }
+        if (previousMechanicId !== null && reason === null) {
+          throw assignmentReasonRequired();
+        }
+
+        const before = detachedPlain(workOrder);
+        await workOrderRepository.updateAssignment(
+          workOrder,
+          mechanicId,
+          transaction,
+        );
+        const action = previousMechanicId === null
+          ? AUDIT_ACTION.ASSIGNED
+          : mechanicId === null
+            ? AUDIT_ACTION.UNASSIGNED
+            : AUDIT_ACTION.REASSIGNED;
+        await auditService.record({
+          entityType: AUDIT_ENTITY_TYPE.WORK_ORDER,
+          action,
+          actor,
+          before,
+          after: workOrder,
+          metadata: {
+            previousMechanicId,
+            newMechanicId: mechanicId,
+          },
+          reason,
+        }, transaction);
+        return workOrder.id;
+      });
+      return workOrderRepository.findById(workOrderId);
+    } catch (error) {
+      if (error instanceof ForeignKeyConstraintError) throw mechanicNotFound();
+      return translatePersistenceConflict(error);
+    }
   },
 
   async getWorkOrder(id) {

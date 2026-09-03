@@ -145,6 +145,17 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 - delete, último ítem `0.00`;
 - carreras add/add y add/delete con conexiones distintas y `FOR UPDATE`.
 
+### Asignación de órdenes — `workOrderAssignment.integration.test.js`
+
+- creación con responsable opcional y un único evento `CREATED`;
+- rechazo de usuario inexistente, inactivo o con rol distinto de `MECANICO`;
+- asignación, reasignación y unassignment con razones condicionales;
+- orden cerrada y no-op sin cambios ni auditoría;
+- filtro exacto por responsable y representación explícita de unassigned;
+- autorización `ADMIN` antes de validación y allowlists de entrada;
+- rollback completo si falla audit;
+- dos reasignaciones concurrentes producen un único cambio/evento confirmado.
+
 ### Estados — `workOrderStatus.integration.test.js`
 
 - ruta forward completa y cancelación desde cuatro estados;
@@ -171,7 +182,7 @@ La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando 
 ### RBAC/usuarios — `rbac.integration.test.js`
 
 - 401 antes de validación y 403 por rol;
-- `ADMIN` crea clientes/motos; ambos roles leen activos, crean órdenes y agregan ítems;
+- `ADMIN` crea clientes/motos/órdenes; ambos roles leen activos y agregan ítems;
 - sólo `ADMIN` elimina ítems y administra usuarios;
 - registro, email duplicado normalizado y payload seguro;
 - listado, cambio de rol y active con validación/404;

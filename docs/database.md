@@ -199,7 +199,9 @@ pre-check del servicio. La columna es interna: no se acepta ni se serializa.
 
 Las órdenes existentes permanecen sin asignar. El índice
 `ix_work_orders_assignee_status_entry_id` prepara las consultas My Orders y
-Unassigned; la validación de rol/activo se incorpora en HITO 7.
+Unassigned. Desde HITO 7, el servicio sólo permite destinos activos con rol
+`MECANICO`, bloquea usuarios por ID antes de la orden y audita todo cambio de
+responsable.
 
 ## `work_order_items`
 

@@ -6,6 +6,7 @@ import {
   getWorkOrder,
   listWorkOrders,
   listWorkOrderStatusHistory,
+  updateWorkOrderAssignment,
   updateWorkOrderStatus,
 } from '../controllers/workOrderController.js';
 import {
@@ -19,6 +20,7 @@ import {
 } from '../validators/workOrderItemValidators.js';
 import {
   validateCreateWorkOrder,
+  validateWorkOrderAssignment,
   validateWorkOrderHistoryList,
   validateWorkOrderId,
   validateWorkOrderList,
@@ -27,7 +29,12 @@ import {
 
 export const workOrderRouter = Router();
 
-workOrderRouter.post('/', validateCreateWorkOrder, createWorkOrder);
+workOrderRouter.post(
+  '/',
+  authorize(USER_ROLE.ADMIN),
+  validateCreateWorkOrder,
+  createWorkOrder,
+);
 workOrderRouter.get('/', validateWorkOrderList, listWorkOrders);
 workOrderRouter.post('/:id/items', validateCreateWorkOrderItem, createWorkOrderItem);
 workOrderRouter.delete(
@@ -35,6 +42,12 @@ workOrderRouter.delete(
   authorize(USER_ROLE.ADMIN),
   validateDeleteWorkOrderItem,
   deleteWorkOrderItem,
+);
+workOrderRouter.patch(
+  '/:id/assignment',
+  authorize(USER_ROLE.ADMIN),
+  validateWorkOrderAssignment,
+  updateWorkOrderAssignment,
 );
 workOrderRouter.patch(
   '/:id/status',

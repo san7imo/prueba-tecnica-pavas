@@ -120,6 +120,14 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-BIKE-014 | Auditoría falla de forma atómica en todo el lifecycle | HITO 4 | domain + audit transaction | Bike mutation APIs | forced rollback cases | Done |
 | PZ-BIKE-015 | Delete moto y create orden se serializan | HITO 4 | locks compartidos Client→Bike | DELETE Bike / POST Order | concurrency race | Done |
 | PZ-BIKE-016 | Owner change y delete cliente destino se serializan | HITO 4 | clientes por ID→Bike | owner/delete APIs | concurrency race | Done |
+| PZ-ASSIGN-001 | Orden puede crearse con un responsable válido opcional | HITO 7 | lock Client→Bike→User y snapshot CREATED | `POST /api/work-orders` | assigned create/invalid targets | Done |
+| PZ-ASSIGN-002 | Sólo un MECANICO activo es asignable | HITO 7 | validación persistida bajo lock | create/assignment APIs | missing/role/inactive matrix | Done |
+| PZ-ASSIGN-003 | ADMIN asigna, reasigna o devuelve a unassigned | HITO 7 | PATCH dedicado y FK escalar | `PATCH /api/work-orders/:id/assignment` | assignment lifecycle | Done |
+| PZ-ASSIGN-004 | Reassign/unassign exigen razón y no-op se rechaza | HITO 7 | reglas de servicio + validator acotado | assignment API | reason/no-op cases | Done |
+| PZ-ASSIGN-005 | Órdenes cerradas no cambian responsable | HITO 7 | status revalidado bajo lock | assignment API | closed conflict case | Done |
+| PZ-ASSIGN-006 | Lista/detalle exponen responsable seguro y filtran por ID | HITO 7 | include allowlisted + filtro indexado | Work Order GET APIs | filter/serialization cases | Done |
+| PZ-ASSIGN-007 | Cada cambio queda auditado atómicamente | HITO 7 | ASSIGNED/REASSIGNED/UNASSIGNED en transacción | assignment API | snapshots/rollback cases | Done |
+| PZ-ASSIGN-008 | Reasignaciones concurrentes no pierden actualizaciones | HITO 7 | User IDs asc→WorkOrder + revalidación | assignment API | concurrent reassignment | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

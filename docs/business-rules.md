@@ -2,7 +2,8 @@
 
 ## Estado
 
-Este documento es el contrato de dominio implementado para las fases 1 y 2 y los hitos de productización aprobados hasta HITO 4.
+Este documento es el contrato de dominio implementado para las fases 1 y 2 y
+los hitos de productización aprobados hasta HITO 7.
 
 ## Máquina de estados de la orden
 
@@ -48,13 +49,30 @@ Mapa canónico:
 - La orden se bloquea en una transacción y se valida desde el estado leído bajo lock.
 - `note` es opcional, se recorta, admite máximo 1000 caracteres y sólo se persiste para una transición válida.
 
-## Creación de órdenes
+## Creación y unicidad de órdenes abiertas
 
-- Requiere una `Bike` activa con propietario activo; el servicio bloquea `Client → Bike` y la FK es la barrera final.
+- Sólo `ADMIN` crea órdenes.
+- Requiere una `Bike` activa con propietario activo; el servicio bloquea `Client → Bike`.
+- Una motocicleta admite máximo una orden en `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. Lock de moto más `uq_work_orders_open_bike` protegen la invariancia bajo concurrencia.
+- `assignedMechanicId` es opcional; si existe, bloquea `User` después de la moto y exige un `MECANICO` activo.
 - `entryDate` acepta ISO 8601 con zona horaria; si se omite, usa la hora del servidor.
 - Toda orden API inicia en `RECIBIDA`, total `0.00`.
 - `status`, `total`, IDs y timestamps enviados por el cliente se ignoran mediante allowlists.
-- Orden y evento `NULL -> RECIBIDA` son atómicos; el actor es el usuario autenticado y la nota inicial es `null`.
+- Orden, history `NULL -> RECIBIDA` y audit `CREATED` son atómicos; la asignación inicial vive en el snapshot y no duplica un evento `ASSIGNED`.
+
+## Responsable mecánico
+
+- `assigned_mechanic_id` representa cero o un responsable; `null` mantiene la orden visible como no asignada.
+- Sólo `ADMIN` usa `PATCH /work-orders/:id/assignment`.
+- Sólo un usuario activo con rol `MECANICO` puede ser destino.
+- Una orden cerrada rechaza cambios con `409 WORK_ORDER_CLOSED`.
+- Asignación inicial `null → mechanic` no exige razón y audita `ASSIGNED`.
+- Reasignación `mechanic A → mechanic B` exige razón y audita `REASSIGNED`.
+- Unassignment `mechanic → null` exige razón y audita `UNASSIGNED`.
+- La misma asignación se rechaza como no-op y nunca audita.
+- Los usuarios se bloquean por ID ascendente antes de la orden; toda decisión se revalida después de los locks.
+- Las respuestas/listas muestran ID y datos seguros del responsable; `assignedMechanicId` también filtra por responsable exacto.
+- Ownership de lectura/mutación para `MECANICO` y scopes `mine/unassigned` se activan en HITO 9.
 
 ## Historial de estados
 
@@ -69,7 +87,7 @@ Mapa canónico:
 ## Auditoría empresarial global
 
 - `work_order_status_history` conserva la secuencia especializada de estados; no es reemplazado por `audit_events`.
-- Las altas autenticadas de cliente, motocicleta, usuario y orden, el alta de ítem y las transiciones/cancelaciones existentes generan un solo evento empresarial específico.
+- Las altas autenticadas de cliente, motocicleta, usuario y orden, los cambios de asignación, el alta de ítem y las transiciones/cancelaciones existentes generan un solo evento empresarial específico.
 - El evento se escribe en la misma transacción que el dominio. Si falla, toda la mutación revierte; intentos inválidos o sin permiso no auditan.
 - El actor siempre es el usuario autenticado y no se acepta desde el body.
 - `beforeData`, `afterData` y `metadata` tienen allowlists por entidad/acción; IDs, fechas y decimales usan representaciones deterministas.
@@ -135,7 +153,8 @@ La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar
 | Leer clientes/motocicletas eliminados/all | Sí | No |
 | Crear/editar/eliminar/restaurar clientes | Sí | No |
 | Crear/editar/cambiar dueño/eliminar/restaurar motocicletas | Sí | No |
-| Crear órdenes | Sí | Sí |
+| Crear órdenes | Sí | No |
+| Asignar/reasignar/dejar sin responsable | Sí | No |
 | Crear ítems | Sí | Sí |
 | Eliminar ítems | Sí | No |
 | Avanzar a `DIAGNOSTICO` | Sí | Sí |
