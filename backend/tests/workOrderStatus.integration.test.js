@@ -15,6 +15,7 @@ import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
 import { models, sequelize } from '../src/config/databaseContext.js';
 import {
+  OPEN_WORK_ORDER_STATUSES,
   WORK_ORDER_ITEM_TYPE,
   WORK_ORDER_STATUSES,
   WORK_ORDER_STATUS,
@@ -220,6 +221,11 @@ describe('Work Order Status API', () => {
           });
           expect(workOrder.status).toBe(fromStatus);
         }
+
+        await models.WorkOrderStatusHistory.destroy({
+          where: { workOrderId: workOrder.id },
+        });
+        await workOrder.destroy();
       }
     }
   });
@@ -374,6 +380,32 @@ describe('Work Order Status API', () => {
     expect(workOrder.status).toBe(WORK_ORDER_STATUS.CANCELLED);
   });
 
+  it('serializes close against create without ever producing two open orders', async () => {
+    const { bike } = await createBike();
+    const workOrder = await createWorkOrder(bike.id, {
+      status: WORK_ORDER_STATUS.READY,
+    });
+
+    const [closeResponse, createResponse] = await Promise.all([
+      updateStatus(workOrder.id, WORK_ORDER_STATUS.DELIVERED),
+      request(app).post('/api/work-orders').send({
+        bikeId: bike.id,
+        faultDescription: 'A later unrelated fault.',
+      }),
+    ]);
+
+    expect(closeResponse.status).toBe(200);
+    expect([201, 409]).toContain(createResponse.status);
+    const openOrders = await workOrderRepository.findCurrentOpenByBikeId(bike.id);
+    expect(openOrders === null || openOrders.id !== workOrder.id).toBe(true);
+    expect(await models.WorkOrder.count({
+      where: {
+        bikeId: bike.id,
+        status: OPEN_WORK_ORDER_STATUSES,
+      },
+    })).toBeLessThanOrEqual(1);
+  });
+
   it('allows exactly one competing terminal transition after revalidation under lock', async () => {
     const { bike } = await createBike();
     const workOrder = await createWorkOrder(bike.id, {
@@ -417,9 +449,23 @@ describe('Work Order Status API', () => {
       /FROM `work_orders`.*FOR UPDATE/i.test(statement),
     );
     expect(lockingQueries).toHaveLength(2);
+    const bikeLockingQueries = sqlStatements.filter((statement) =>
+      /FROM `bikes`.*FOR UPDATE/i.test(statement),
+    );
+    expect(bikeLockingQueries).toHaveLength(2);
     const transactionIds = lockingQueries
       .map((statement) => /Executing \(([^)]+)\)/.exec(statement)?.[1])
       .filter(Boolean);
     expect(new Set(transactionIds).size).toBe(2);
+    for (const transactionId of transactionIds) {
+      const bikeLockIndex = sqlStatements.findIndex((statement) =>
+        statement.includes(`Executing (${transactionId})`) &&
+        /FROM `bikes`.*FOR UPDATE/i.test(statement));
+      const orderLockIndex = sqlStatements.findIndex((statement) =>
+        statement.includes(`Executing (${transactionId})`) &&
+        /FROM `work_orders`.*FOR UPDATE/i.test(statement));
+      expect(bikeLockIndex).toBeGreaterThanOrEqual(0);
+      expect(orderLockIndex).toBeGreaterThan(bikeLockIndex);
+    }
   });
 });

@@ -1,4 +1,7 @@
-import { ForeignKeyConstraintError } from 'sequelize';
+import {
+  ForeignKeyConstraintError,
+  UniqueConstraintError,
+} from 'sequelize';
 
 import { sequelize } from '../config/databaseContext.js';
 import {
@@ -37,6 +40,40 @@ const invalidStatusTransition = (fromStatus, toStatus) =>
     message: `Cannot transition work order from ${fromStatus} to ${toStatus}.`,
   });
 
+const bikeHasActiveWorkOrder = () =>
+  new ConflictError({
+    code: 'BIKE_HAS_ACTIVE_WORK_ORDER',
+    message: 'Motorcycle already has an open work order.',
+  });
+
+const concurrentModification = () =>
+  new ConflictError({
+    code: 'CONCURRENT_MODIFICATION_RETRY',
+    message: 'The work order changed concurrently. Reload it and retry.',
+  });
+
+const isDatabaseConcurrencyError = (error) =>
+  ['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(
+    error?.original?.code ?? error?.parent?.code,
+  );
+
+const isOpenBikeUniqueConstraint = (error) => {
+  if (!(error instanceof UniqueConstraintError)) return false;
+  const details = [
+    error?.parent?.constraint,
+    error?.parent?.sqlMessage,
+    error?.original?.sqlMessage,
+    ...Object.keys(error.fields ?? {}),
+  ].filter(Boolean).join(' ');
+  return /uq_work_orders_open_bike|open_bike_id/i.test(details);
+};
+
+const translatePersistenceConflict = (error) => {
+  if (isOpenBikeUniqueConstraint(error)) throw bikeHasActiveWorkOrder();
+  if (isDatabaseConcurrencyError(error)) throw concurrentModification();
+  throw error;
+};
+
 export const workOrderService = {
   async createWorkOrder(data, actor) {
     const identity = await bikeRepository.findIdentityById(data.bikeId);
@@ -72,6 +109,12 @@ export const workOrderService = {
           });
         }
 
+        const openOrders = await workOrderRepository.findOpenByBikeIdForUpdate(
+          bike.id,
+          transaction,
+        );
+        if (openOrders.length > 0) throw bikeHasActiveWorkOrder();
+
         const workOrder = await workOrderRepository.create({
           bikeId: data.bikeId,
           entryDate: data.entryDate ?? new Date(),
@@ -100,7 +143,7 @@ export const workOrderService = {
       if (error instanceof ForeignKeyConstraintError) {
         throw bikeNotFound();
       }
-      throw error;
+      return translatePersistenceConflict(error);
     }
   },
 
@@ -146,61 +189,81 @@ export const workOrderService = {
     };
   },
 
-  transitionStatus(id, { toStatus, note }, actor) {
-    return sequelize.transaction(async (transaction) => {
-      const workOrder = await workOrderRepository.findByIdForUpdate(
-        id,
-        transaction,
-      );
-      if (!workOrder) {
-        throw workOrderNotFound();
-      }
+  async transitionStatus(id, { toStatus, note }, actor) {
+    const identity = await workOrderRepository.findIdentityById(id);
+    if (!identity) throw workOrderNotFound();
 
-      if (!canTransition(workOrder.status, toStatus)) {
-        throw invalidStatusTransition(workOrder.status, toStatus);
-      }
+    try {
+      return await sequelize.transaction(async (transaction) => {
+        const closesOrder = [
+          WORK_ORDER_STATUS.DELIVERED,
+          WORK_ORDER_STATUS.CANCELLED,
+        ].includes(toStatus);
+        if (closesOrder) {
+          const bike = await bikeRepository.findByIdForUpdate(
+            identity.bikeId,
+            transaction,
+          );
+          if (!bike) throw workOrderNotFound();
+        }
 
-      if (
-        actor.role === USER_ROLE.MECHANIC &&
-        ![
-          WORK_ORDER_STATUS.DIAGNOSIS,
-          WORK_ORDER_STATUS.IN_PROGRESS,
-          WORK_ORDER_STATUS.READY,
-        ].includes(toStatus)
-      ) {
-        throw new AuthorizationError();
-      }
+        const workOrder = await workOrderRepository.findByIdForUpdate(
+          id,
+          transaction,
+        );
+        if (!workOrder) throw workOrderNotFound();
+        if (String(workOrder.bikeId) !== String(identity.bikeId)) {
+          throw concurrentModification();
+        }
 
-      await workOrderRepository.updateStatus(id, toStatus, transaction);
-      await workOrderStatusHistoryRepository.create({
-        workOrderId: workOrder.id,
-        fromStatus: workOrder.status,
-        toStatus,
-        note,
-        changedByUserId: actor.id,
-      }, transaction);
-      await auditService.record({
-        entityType: AUDIT_ENTITY_TYPE.WORK_ORDER,
-        action: toStatus === WORK_ORDER_STATUS.CANCELLED
-          ? AUDIT_ACTION.CANCELLED
-          : AUDIT_ACTION.STATUS_CHANGED,
-        actor,
-        before: workOrder,
-        after: {
-          id: workOrder.id,
-          bikeId: workOrder.bikeId,
-          entryDate: workOrder.entryDate,
-          faultDescription: workOrder.faultDescription,
-          status: toStatus,
-          total: workOrder.total,
-          assignedMechanicId: workOrder.assignedMechanicId,
-        },
-        metadata: toStatus === WORK_ORDER_STATUS.CANCELLED
-          ? null
-          : { transitionKind: AUDIT_TRANSITION_KIND.FORWARD },
-        reason: note,
-      }, transaction);
-      return { id: workOrder.id, status: toStatus };
-    });
+        if (!canTransition(workOrder.status, toStatus)) {
+          throw invalidStatusTransition(workOrder.status, toStatus);
+        }
+
+        if (
+          actor.role === USER_ROLE.MECHANIC &&
+          ![
+            WORK_ORDER_STATUS.DIAGNOSIS,
+            WORK_ORDER_STATUS.IN_PROGRESS,
+            WORK_ORDER_STATUS.READY,
+          ].includes(toStatus)
+        ) {
+          throw new AuthorizationError();
+        }
+
+        await workOrderRepository.updateStatus(id, toStatus, transaction);
+        await workOrderStatusHistoryRepository.create({
+          workOrderId: workOrder.id,
+          fromStatus: workOrder.status,
+          toStatus,
+          note,
+          changedByUserId: actor.id,
+        }, transaction);
+        await auditService.record({
+          entityType: AUDIT_ENTITY_TYPE.WORK_ORDER,
+          action: toStatus === WORK_ORDER_STATUS.CANCELLED
+            ? AUDIT_ACTION.CANCELLED
+            : AUDIT_ACTION.STATUS_CHANGED,
+          actor,
+          before: workOrder,
+          after: {
+            id: workOrder.id,
+            bikeId: workOrder.bikeId,
+            entryDate: workOrder.entryDate,
+            faultDescription: workOrder.faultDescription,
+            status: toStatus,
+            total: workOrder.total,
+            assignedMechanicId: workOrder.assignedMechanicId,
+          },
+          metadata: toStatus === WORK_ORDER_STATUS.CANCELLED
+            ? null
+            : { transitionKind: AUDIT_TRANSITION_KIND.FORWARD },
+          reason: note,
+        }, transaction);
+        return { id: workOrder.id, status: toStatus };
+      });
+    } catch (error) {
+      return translatePersistenceConflict(error);
+    }
   },
 };

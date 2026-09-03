@@ -430,8 +430,14 @@ describe.sequential('HITO 8 role-based access control', () => {
     expect(deliver.status).toBe(403);
     expect(deliver.body.error.code).toBe('FORBIDDEN');
 
+    const cancellationBike = await models.Bike.create({
+      plate: 'RBS002',
+      brand: 'Suzuki',
+      model: 'GN',
+      clientId: client.id,
+    });
     const cancellable = await models.WorkOrder.create({
-      bikeId: bike.id,
+      bikeId: cancellationBike.id,
       entryDate: new Date(),
       faultDescription: 'Mechanic cancellation boundary.',
     });
@@ -462,8 +468,14 @@ describe.sequential('HITO 8 role-based access control', () => {
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe('INVALID_STATUS_TRANSITION');
 
+    const deliveryBike = await models.Bike.create({
+      plate: 'RBA002',
+      brand: 'Honda',
+      model: 'XR',
+      clientId: client.id,
+    });
     const deliveredOrder = await models.WorkOrder.create({
-      bikeId: bike.id,
+      bikeId: deliveryBike.id,
       entryDate: new Date(),
       faultDescription: 'Admin delivery.',
       status: WORK_ORDER_STATUS.READY,
@@ -474,8 +486,14 @@ describe.sequential('HITO 8 role-based access control', () => {
       .send({ toStatus: WORK_ORDER_STATUS.DELIVERED })
       .expect(200);
 
+    const cancellationBike = await models.Bike.create({
+      plate: 'RBA003',
+      brand: 'Honda',
+      model: 'XR',
+      clientId: client.id,
+    });
     const cancelledOrder = await models.WorkOrder.create({
-      bikeId: bike.id,
+      bikeId: cancellationBike.id,
       entryDate: new Date(),
       faultDescription: 'Admin cancellation.',
     });

@@ -101,7 +101,7 @@ describe.sequential('Persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(12);
+    expect(applied).toHaveLength(13);
     models = initializeModels(sequelize);
   });
 
@@ -120,7 +120,7 @@ describe.sequential('Persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(12);
+    expect(await migrator.executed()).toHaveLength(13);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -309,14 +309,15 @@ describe.sequential('Persistence schema', () => {
     expect(rules.map(({ CONSTRAINT_NAME }) => CONSTRAINT_NAME)).toEqual(
       expectedConstraints,
     );
-    const lifecycleActorConstraints = new Set([
+    const restrictUpdateConstraints = new Set([
       'fk_bikes_deleted_by_user',
       'fk_clients_deleted_by_user',
+      'fk_work_orders_bike',
     ]);
     for (const rule of rules) {
       expect(rule.DELETE_RULE).toBe('RESTRICT');
       expect(rule.UPDATE_RULE).toBe(
-        lifecycleActorConstraints.has(rule.CONSTRAINT_NAME)
+        restrictUpdateConstraints.has(rule.CONSTRAINT_NAME)
           ? 'RESTRICT'
           : 'CASCADE',
       );
@@ -339,6 +340,7 @@ describe.sequential('Persistence schema', () => {
       expect(columns.delete_reason.allowNull).toBe(true);
     }
     expect(orderColumns.assigned_mechanic_id.allowNull).toBe(true);
+    expect(orderColumns.open_bike_id.allowNull).toBe(true);
     expect(itemColumns.created_by_user_id.allowNull).toBe(true);
 
     const indexGroups = await Promise.all(
@@ -355,6 +357,7 @@ describe.sequential('Persistence schema', () => {
         'ix_bikes_client_lifecycle_plate_id',
         'ix_bikes_deleted_by_user',
         'ix_work_orders_assignee_status_entry_id',
+        'uq_work_orders_open_bike',
         'ix_work_order_items_created_by_user',
       ]),
     );
@@ -629,11 +632,11 @@ describe.sequential('Persistence schema', () => {
     });
 
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(12);
+    expect(reverted).toHaveLength(13);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(12);
+    expect(reapplied).toHaveLength(13);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
   }, 30000);
 });

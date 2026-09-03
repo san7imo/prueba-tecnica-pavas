@@ -223,6 +223,70 @@ describe('Work Orders API', () => {
       expect(response.body.data.total).toBe('0.00');
       expect(response.body.data).not.toHaveProperty('createdAt');
     });
+
+    it('rejects a second open order for the same motorcycle with a stable conflict', async () => {
+      const { bike } = await createBike();
+      const first = await request(app)
+        .post('/api/work-orders')
+        .send(validPayload(bike.id));
+      const second = await request(app)
+        .post('/api/work-orders')
+        .send(validPayload(bike.id, { faultDescription: 'A second fault.' }));
+
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(409);
+      expect(second.body.error).toEqual({
+        code: 'BIKE_HAS_ACTIVE_WORK_ORDER',
+        message: 'Motorcycle already has an open work order.',
+      });
+      expect(await models.WorkOrder.count({ where: { bikeId: bike.id } })).toBe(1);
+    });
+
+    it('allows a new order after the previous order is closed', async () => {
+      const { bike } = await createBike();
+      const first = await request(app)
+        .post('/api/work-orders')
+        .send(validPayload(bike.id));
+      const firstId = first.body.data.id;
+
+      for (const toStatus of [
+        WORK_ORDER_STATUS.DIAGNOSIS,
+        WORK_ORDER_STATUS.IN_PROGRESS,
+        WORK_ORDER_STATUS.READY,
+        WORK_ORDER_STATUS.DELIVERED,
+      ]) {
+        await request(app)
+          .patch(`/api/work-orders/${firstId}/status`)
+          .send({ toStatus })
+          .expect(200);
+      }
+
+      const second = await request(app)
+        .post('/api/work-orders')
+        .send(validPayload(bike.id, { faultDescription: 'Unrelated later fault.' }));
+      expect(second.status).toBe(201);
+      expect(second.body.data.id).not.toBe(firstId);
+      expect(await models.WorkOrder.count({ where: { bikeId: bike.id } })).toBe(2);
+    });
+
+    it('serializes concurrent creates so exactly one order commits', async () => {
+      const { bike } = await createBike();
+      const responses = await Promise.all([
+        request(app).post('/api/work-orders').send(
+          validPayload(bike.id, { faultDescription: 'Concurrent request A.' }),
+        ),
+        request(app).post('/api/work-orders').send(
+          validPayload(bike.id, { faultDescription: 'Concurrent request B.' }),
+        ),
+      ]);
+
+      expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+      expect(responses.find(({ status }) => status === 409).body.error.code)
+        .toBe('BIKE_HAS_ACTIVE_WORK_ORDER');
+      expect(await models.WorkOrder.count({ where: { bikeId: bike.id } })).toBe(1);
+      expect(await models.WorkOrderStatusHistory.count()).toBe(1);
+      expect(await models.AuditEvent.count()).toBe(1);
+    });
   });
 
   describe('GET /api/work-orders', () => {
@@ -253,9 +317,11 @@ describe('Work Orders API', () => {
       [WORK_ORDER_STATUS.RECEIVED],
       [WORK_ORDER_STATUS.DIAGNOSIS],
     ])('filters by contractual status %s', async (status) => {
-      const { bike } = await createBike();
-      await createWorkOrder(bike.id, { status: WORK_ORDER_STATUS.RECEIVED });
-      await createWorkOrder(bike.id, { status: WORK_ORDER_STATUS.DIAGNOSIS });
+      const client = await createClient();
+      const { bike: receivedBike } = await createBike({ client, plate: 'REC001' });
+      const { bike: diagnosisBike } = await createBike({ client, plate: 'DIA001' });
+      await createWorkOrder(receivedBike.id, { status: WORK_ORDER_STATUS.RECEIVED });
+      await createWorkOrder(diagnosisBike.id, { status: WORK_ORDER_STATUS.DIAGNOSIS });
 
       const response = await request(app)
         .get('/api/work-orders')
@@ -306,7 +372,7 @@ describe('Work Orders API', () => {
       const { bike: matchingBike } = await createBike({ client, plate: 'ABC123' });
       const { bike: otherBike } = await createBike({ client, plate: 'XYZ987' });
       await createWorkOrder(matchingBike.id, { status: WORK_ORDER_STATUS.DIAGNOSIS });
-      await createWorkOrder(matchingBike.id, { status: WORK_ORDER_STATUS.RECEIVED });
+      await createWorkOrder(matchingBike.id, { status: WORK_ORDER_STATUS.DELIVERED });
       await createWorkOrder(otherBike.id, { status: WORK_ORDER_STATUS.DIAGNOSIS });
 
       const response = await request(app).get('/api/work-orders').query({
@@ -327,6 +393,7 @@ describe('Work Orders API', () => {
       for (let day = 1; day <= 5; day += 1) {
         await createWorkOrder(bike.id, {
           entryDate: new Date(`2026-08-0${day}T15:00:00.000Z`),
+          status: WORK_ORDER_STATUS.DELIVERED,
         });
       }
 
@@ -380,12 +447,15 @@ describe('Work Orders API', () => {
       const { bike } = await createBike();
       const older = await createWorkOrder(bike.id, {
         entryDate: new Date('2026-08-01T15:00:00.000Z'),
+        status: WORK_ORDER_STATUS.DELIVERED,
       });
       const tiedFirst = await createWorkOrder(bike.id, {
         entryDate: new Date('2026-08-02T15:00:00.000Z'),
+        status: WORK_ORDER_STATUS.DELIVERED,
       });
       const tiedSecond = await createWorkOrder(bike.id, {
         entryDate: new Date('2026-08-02T15:00:00.000Z'),
+        status: WORK_ORDER_STATUS.DELIVERED,
       });
 
       const response = await request(app).get('/api/work-orders');
@@ -401,9 +471,9 @@ describe('Work Orders API', () => {
     it('uses one auth plus two count/list queries without N+1 reads', async () => {
       const { bike } = await createBike();
       await Promise.all([
-        createWorkOrder(bike.id),
-        createWorkOrder(bike.id),
-        createWorkOrder(bike.id),
+        createWorkOrder(bike.id, { status: WORK_ORDER_STATUS.DELIVERED }),
+        createWorkOrder(bike.id, { status: WORK_ORDER_STATUS.DELIVERED }),
+        createWorkOrder(bike.id, { status: WORK_ORDER_STATUS.DELIVERED }),
       ]);
       let queryCount = 0;
       const countQuery = () => {

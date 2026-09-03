@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   DEMO_EMAIL_DOMAIN,
   DEMO_EXPECTED_COUNTS,
+  DEMO_EXPECTED_STATUS_DISTRIBUTION,
   DEMO_MECHANIC_PASSWORD,
   seedDemoData,
 } from '../seeders/seedDemoData.js';
@@ -14,7 +15,7 @@ import { models, sequelize } from '../src/config/databaseContext.js';
 import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
 import { USER_ROLE } from '../src/constants/auth.js';
-import { WORK_ORDER_STATUS, WORK_ORDER_STATUSES } from '../src/constants/workOrder.js';
+import { OPEN_WORK_ORDER_STATUSES, WORK_ORDER_STATUS } from '../src/constants/workOrder.js';
 import { canTransition } from '../src/utils/workOrderStateMachine.js';
 
 const ADMIN_CONFIGURATION = Object.freeze({
@@ -95,9 +96,7 @@ describe.sequential('optional demo data seed', () => {
     expect(result).toEqual({
       created: true,
       counts: DEMO_EXPECTED_COUNTS,
-      statusDistribution: Object.fromEntries(
-        WORK_ORDER_STATUSES.map((status) => [status, 16]),
-      ),
+      statusDistribution: DEMO_EXPECTED_STATUS_DISTRIBUTION,
     });
     expect(await models.Client.count()).toBe(DEMO_EXPECTED_COUNTS.clients);
     expect(await models.Bike.count()).toBe(DEMO_EXPECTED_COUNTS.bikes);
@@ -105,6 +104,18 @@ describe.sequential('optional demo data seed', () => {
     expect(await models.WorkOrderItem.count()).toBe(DEMO_EXPECTED_COUNTS.items);
     expect(await models.WorkOrderStatusHistory.count()).toBe(DEMO_EXPECTED_COUNTS.history);
     expect(demoMechanics).toHaveLength(DEMO_EXPECTED_COUNTS.users);
+
+    const openCounts = await models.WorkOrder.findAll({
+      attributes: [
+        'bikeId',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'openCount'],
+      ],
+      where: { status: { [Op.in]: OPEN_WORK_ORDER_STATUSES } },
+      group: ['bikeId'],
+      raw: true,
+    });
+    expect(openCounts).toHaveLength(20);
+    expect(openCounts.every(({ openCount }) => Number(openCount) === 1)).toBe(true);
 
     for (const mechanic of demoMechanics) {
       expect(mechanic.role).toBe(USER_ROLE.MECHANIC);

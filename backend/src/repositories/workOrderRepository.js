@@ -47,6 +47,13 @@ export const workOrderRepository = {
     return models.WorkOrder.findByPk(id, { attributes: ['id'] });
   },
 
+  findIdentityById(id, transaction) {
+    return models.WorkOrder.findByPk(id, {
+      attributes: ['id', 'bikeId'],
+      transaction,
+    });
+  },
+
   findByIdForUpdate(id, transaction) {
     return models.WorkOrder.findByPk(id, {
       attributes: WORK_ORDER_ATTRIBUTES,

@@ -20,7 +20,16 @@ export const DEMO_EXPECTED_COUNTS = Object.freeze({
   bikes: 30,
   workOrders: 96,
   items: 192,
-  history: 296,
+  history: 376,
+});
+
+export const DEMO_EXPECTED_STATUS_DISTRIBUTION = Object.freeze({
+  [WORK_ORDER_STATUS.RECEIVED]: 5,
+  [WORK_ORDER_STATUS.DIAGNOSIS]: 5,
+  [WORK_ORDER_STATUS.IN_PROGRESS]: 5,
+  [WORK_ORDER_STATUS.READY]: 5,
+  [WORK_ORDER_STATUS.DELIVERED]: 38,
+  [WORK_ORDER_STATUS.CANCELLED]: 38,
 });
 
 const DEMO_CREATED_AT = new Date('2026-01-05T13:00:00.000Z');
@@ -170,7 +179,11 @@ const pathForStatus = (status, orderIndex) => {
 
 const buildOrderPlans = () =>
   Array.from({ length: DEMO_EXPECTED_COUNTS.workOrders }, (_, index) => {
-    const status = WORK_ORDER_STATUSES[index % WORK_ORDER_STATUSES.length];
+    const status = index < DEMO_EXPECTED_COUNTS.bikes
+      ? WORK_ORDER_STATUSES[index % WORK_ORDER_STATUSES.length]
+      : index % 2 === 0
+        ? WORK_ORDER_STATUS.DELIVERED
+        : WORK_ORDER_STATUS.CANCELLED;
     const entryDate = addMilliseconds(DEMO_CREATED_AT, index * ORDER_INTERVAL_MS);
     const [laborDescription, laborUnitValue] = LABOR_CATALOG[index % LABOR_CATALOG.length];
     const [partDescription, partUnitValue] = PART_CATALOG[index % PART_CATALOG.length];

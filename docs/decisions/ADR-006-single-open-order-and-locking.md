@@ -26,6 +26,13 @@ Usar defensa en profundidad:
 
 MySQL permite indexar columnas generated stored y admite múltiples `NULL` en un índice UNIQUE, por lo que existe cero/una abierta y N cerradas ([CREATE TABLE](https://dev.mysql.com/doc/refman/8.4/en/create-table.html), [CREATE INDEX](https://dev.mysql.com/doc/refman/8.4/en/create-index.html)). La DDL específica se ejecutará desde una migración mediante `sequelize.query`, mecanismo soportado por Sequelize 6 ([raw queries](https://sequelize.org/docs/v6/core-concepts/raw-queries/)).
 
+MySQL prohíbe una acción referencial `ON UPDATE CASCADE` cuando la columna base
+de la FK participa en una columna generated stored. La migración reemplaza
+reversiblemente `fk_work_orders_bike` por `ON DELETE RESTRICT` /
+`ON UPDATE RESTRICT` antes de crear la barrera. No cambia el comportamiento
+normal del producto porque las PK no se actualizan; el `down` restaura la FK
+original después de eliminar la columna generated.
+
 El orden relevante es:
 
 ```text

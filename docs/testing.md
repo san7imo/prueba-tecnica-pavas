@@ -312,8 +312,8 @@ También se observaron envelopes 401/403/400/404/409/429. Postman se validó com
 ### Mejora opcional — seed demo
 
 - backend: 15/15 suites, 199/199 pruebas;
-- dataset esperado: 3 mecánicos, 20 clientes, 30 motocicletas, 96 órdenes, 192 ítems y 296 eventos;
-- distribución: 16 órdenes por cada estado canónico;
+- dataset esperado: 3 mecánicos, 20 clientes, 30 motocicletas, 96 órdenes, 192 ítems y 376 eventos;
+- distribución compatible con una sola orden abierta por moto: 5 en cada estado abierto y 38 en cada estado terminal;
 - ejecución bloqueada en producción e idempotencia verificada;
 - la matriz crítica de Fases 1 y 2 permanece en 103 casos PASS; esta suite cubre una facilidad opcional de evaluación.
 

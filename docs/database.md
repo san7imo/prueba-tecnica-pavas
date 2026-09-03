@@ -185,11 +185,17 @@ la existencia de una orden abierta afecta la operación.
 | `entry_date` | `DATETIME(3)` | requerida |
 | `fault_description` | `TEXT` | requerida |
 | `status` | `ENUM` | seis estados canónicos, requerida |
+| `open_bike_id` | `BIGINT UNSIGNED` | generated stored; `bike_id` sólo para estados abiertos, `NULL` para cerrados |
 | `total` | `DECIMAL(15,2)` | backend-controlled, default `0.00` |
 | `assigned_mechanic_id` | `BIGINT UNSIGNED` | FK nullable a `users` |
 | timestamps | `DATETIME(3)` | requeridos |
 
-Una motocicleta tiene muchas órdenes; una orden tiene muchos ítems y eventos. La API fija `RECIBIDA`/`0.00`, aunque los defaults de DB actúan como defensa adicional.
+Una motocicleta tiene muchas órdenes históricas, pero como máximo una abierta;
+una orden tiene muchos ítems y eventos. La API fija `RECIBIDA`/`0.00`, aunque
+los defaults de DB actúan como defensa adicional. El índice
+`uq_work_orders_open_bike` sobre `open_bike_id` impone el máximo de una orden
+abierta incluso frente a escrituras concurrentes o callers que omitan el
+pre-check del servicio. La columna es interna: no se acepta ni se serializa.
 
 Las órdenes existentes permanecen sin asignar. El índice
 `ix_work_orders_assignee_status_entry_id` prepara las consultas My Orders y
@@ -297,8 +303,12 @@ repositorio de audit sólo expone create/read; la API no ofrece update/delete.
 Las FKs operativas usan `ON DELETE RESTRICT`. En general usan
 `ON UPDATE CASCADE`; `deleted_by_user_id` usa también `ON UPDATE RESTRICT`
 porque MySQL no admite una acción referencial CASCADE sobre una columna
-participante de un CHECK. Los IDs de usuario no se actualizan en el producto.
-Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
+participante de un CHECK. Desde la migración 013, `fk_work_orders_bike` usa
+`ON UPDATE RESTRICT`: MySQL tampoco permite `CASCADE` cuando la columna base
+`bike_id` participa en la columna generated stored `open_bike_id`. Su `down`
+elimina primero la barrera generada y restaura la FK original con `CASCADE`.
+Los IDs no se actualizan en el producto. Sólo el self-link opcional de
+reemplazo de refresh usa `ON DELETE SET NULL`.
 
 ## Migraciones
 
@@ -315,6 +325,7 @@ Sólo el self-link opcional de reemplazo de refresh usa `ON DELETE SET NULL`.
 202609030010-add-work-order-assignment.js
 202609030011-add-work-order-item-creator.js
 202609030012-normalize-client-contacts.js
+202609030013-enforce-single-open-order.js
 ```
 
 Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; las
@@ -325,6 +336,12 @@ La 012 es data-only: primero inspecciona todas las filas y aborta indicando
 únicamente IDs/campos inválidos. Sólo si el preflight completo pasa actualiza
 teléfono/email en una transacción. Su `down` no inventa la puntuación o casing
 eliminados; retirar y reaplicar el registro de migración es idempotente.
+
+La 013 también ejecuta un preflight antes de modificar el esquema. Si detecta
+más de una orden abierta para una moto, aborta informando `bike_id` y cantidad,
+sin cerrar, cancelar ni eliminar datos. Si pasa, instala la columna generated,
+el índice UNIQUE y la política referencial compatible; su `down` revierte los
+tres cambios en orden seguro.
 
 ## Ambientes de base de datos
 

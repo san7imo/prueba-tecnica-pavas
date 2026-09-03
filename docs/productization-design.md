@@ -136,6 +136,12 @@ open_bike_id BIGINT UNSIGNED
 
 La estrategia es compatible con MySQL 8.4: las columnas generadas stored se pueden indexar y los índices únicos sobre columnas nullable admiten múltiples `NULL` ([manual de CREATE TABLE](https://dev.mysql.com/doc/refman/8.4/en/create-table.html), [manual de CREATE INDEX](https://dev.mysql.com/doc/refman/8.4/en/create-index.html)). Sequelize 6 permite que una migración ejecute SQL fijo mediante `sequelize.query` cuando QueryInterface no expresa una característica específica del dialecto ([Sequelize v6, raw queries](https://sequelize.org/docs/v6/core-concepts/raw-queries/)).
 
+MySQL no permite `ON UPDATE CASCADE` en una FK cuya columna base participa en
+una columna generated stored. Por eso la 013 reemplaza de forma reversible
+`fk_work_orders_bike` por la misma FK con `ON DELETE RESTRICT` y
+`ON UPDATE RESTRICT`; el producto no ofrece cambios de PK y el `down` restaura
+la definición original después de retirar la barrera generated.
+
 La migración usará SQL fijo sin entrada externa y limpieza explícita si falla una DDL posterior, porque MySQL hace autocommit de varias operaciones DDL.
 
 ### 4.4 `work_order_items`
