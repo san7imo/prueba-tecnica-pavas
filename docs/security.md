@@ -54,7 +54,7 @@ Errores esperados exponen código/mensaje estable. Excepciones inesperadas devue
 
 ## Autorización, SQL y auditoría
 
-Todas las rutas de negocio autentican primero. RBAC vive en middleware y, para destinos de estado/lifecycle, en servicio y transacción. Sólo `ADMIN` crea, edita, elimina o restaura clientes; `MECANICO` conserva lectura de clientes activos. Los lifecycle `deleted/all` y el detalle eliminado son administrativos.
+Todas las rutas de negocio autentican primero. RBAC vive en middleware y, para destinos de estado/lifecycle, en servicio y transacción. Sólo `ADMIN` muta clientes o motocicletas; `MECANICO` conserva lectura de maestras activas. Los lifecycle `deleted/all` y los detalles eliminados son administrativos. Autorización se ejecuta antes de validación en PATCH/owner/delete/restore.
 
 Sequelize parametriza entrada. El único literal SQL de producción es una expresión fija y sin input para el total `DECIMAL`. UNIQUE, FKs, CHECK y ENUM agregan defensa. Totales, refresh, creación/auditoría y estado/auditoría son transaccionales con row locks.
 
@@ -64,6 +64,10 @@ Los conflictos de duplicado exponen sólo IDs candidatos y campos coincidentes,
 nunca datos de contacto ajenos. Delete/restore requieren reason; un override de
 contacto exige confirmación booleana y justificación. Los locks Client → Bike
 serializan delete de cliente contra creación de moto sin confiar en el frontend.
+Owner change bloquea clientes origen/destino antes de la motocicleta. Delete de
+moto y create de orden comparten `Client → Bike`; así nunca queda una orden
+nueva sobre una moto eliminada. Placa sigue protegida por UNIQUE global y una
+colisión con un eliminado dirige a restore sin liberar la identidad histórica.
 
 ## Frontend, XSS y almacenamiento
 

@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  20 suites, 239 pruebas
+Backend:  21 suites, 258 pruebas
 Frontend: 10 suites, 46 pruebas
-Matriz:   123 filas PASS
+Matriz:   139 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -120,6 +120,18 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 - rollback de update/delete/restore cuando falla audit;
 - carrera delete cliente/crear moto serializada por lock del cliente.
 
+### Lifecycle de motocicletas — `bikeLifecycle.integration.test.js`
+
+- placa global única y conflicto restore-required para una identidad eliminada;
+- listado paginado por lifecycle/propietario, igualdad exacta y prefijo indexable;
+- detalle con propietario y orden abierta, más historia paginada por `bikeId`;
+- PATCH allowlisted, no-op, colisiones y snapshots before/after desacoplados;
+- owner change dedicado, destino activo, razón y audit anterior/nuevo;
+- soft delete bloqueado por orden abierta y restore condicionado al propietario;
+- mutaciones sólo `ADMIN` y recursos eliminados fuera de flujos operativos;
+- rollback de update/owner/delete/restore cuando falla audit;
+- carreras delete moto/crear orden y owner change/delete cliente serializadas.
+
 ### Órdenes e ítems — `workOrders.integration.test.js`
 
 - orden válida/inválida, fecha explícita/omitida y defaults `RECIBIDA`/`0.00`;
@@ -159,7 +171,7 @@ La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando 
 ### RBAC/usuarios — `rbac.integration.test.js`
 
 - 401 antes de validación y 403 por rol;
-- ambos roles crean/leen recursos y agregan ítems;
+- `ADMIN` crea clientes/motos; ambos roles leen activos, crean órdenes y agregan ítems;
 - sólo `ADMIN` elimina ítems y administra usuarios;
 - registro, email duplicado normalizado y payload seguro;
 - listado, cambio de rol y active con validación/404;

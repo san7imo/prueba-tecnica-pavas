@@ -2,7 +2,7 @@
 
 ## Alcance implementado
 
-La API expone las rutas completas de las fases 1 y 2 y el lifecycle backend de clientes de HITO 3. Clientes, motocicletas, órdenes y usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son públicos.
+La API expone las rutas completas de las fases 1 y 2 y los lifecycles backend de clientes y motocicletas hasta HITO 4. Clientes, motocicletas, órdenes y usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son públicos.
 
 ```text
 GET  /api/health
@@ -25,11 +25,15 @@ DELETE /api/clients/:id
 POST /api/clients/:id/restore
 
 POST /api/bikes
-GET  /api/bikes?plate=
+GET  /api/bikes?plate=&platePrefix=&clientId=&lifecycle=&page=&pageSize=
 GET  /api/bikes/:id
+PATCH /api/bikes/:id
+PATCH /api/bikes/:id/owner
+DELETE /api/bikes/:id
+POST /api/bikes/:id/restore
 
 POST   /api/work-orders
-GET    /api/work-orders?status=&plate=&page=&pageSize=
+GET    /api/work-orders?status=&plate=&bikeId=&page=&pageSize=
 GET    /api/work-orders/:id
 GET    /api/work-orders/:id/history?page=&pageSize=
 PATCH  /api/work-orders/:id/status
@@ -300,18 +304,27 @@ Content-Type: application/json
 }
 ```
 
-Roles actuales: `ADMIN`, `MECANICO`. Placa, marca, modelo y `clientId` positivo requeridos; `cylinder` opcional y string nullable. Normalización `trim → uppercase → remove whitespace`; persiste `ABC123`. Cliente debe existir y estar activo; uno eliminado devuelve `409 CLIENT_INACTIVE`.
+Sólo `ADMIN`. Placa, marca, modelo y `clientId` positivo son requeridos; `cylinder` es opcional y nullable. Normalización `trim → uppercase → remove whitespace`; persiste `ABC123`. El cliente debe existir y estar activo.
 
-Éxito 201 con motocicleta y cliente anidado. Errores: 400, `404 CLIENT_NOT_FOUND`, `409 BIKE_PLATE_ALREADY_EXISTS`.
+Éxito 201 con lifecycle y propietario activo anidado. Errores: 400, `404 CLIENT_NOT_FOUND`, `409 CLIENT_INACTIVE`, `409 BIKE_PLATE_ALREADY_EXISTS` para placa activa y `409 BIKE_RESTORE_REQUIRED` para una placa perteneciente a una moto eliminada. La placa sigue reservada globalmente después del soft delete.
 
 ### Buscar motocicletas
 
 ```http
-GET /api/bikes?plate=abc%20123
+GET /api/bikes?plate=abc%20123&clientId=1&lifecycle=active&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
-`plate` opcional, normalizada igual que al guardar, busca parcialmente. Sin query devuelve todas ordenadas por placa/ID e incluye cliente. No hay otros filtros/paginación.
+Filtros opcionales:
+
+- `plate`: igualdad exacta tras normalización;
+- `platePrefix`: prefijo normalizado indexable;
+- `clientId`: propietario positivo;
+- `lifecycle`: `active` por defecto, `deleted` o `all`;
+- `page`: entero positivo, default 1;
+- `pageSize`: 1–100, default 20.
+
+`plate` y `platePrefix` son mutuamente excluyentes; combinarlos devuelve `400 INVALID_QUERY_FILTERS`. No se realizan búsquedas de placa con wildcard inicial. Ambos roles leen `active`; sólo `ADMIN` puede solicitar `deleted/all`. La respuesta incluye `meta`, lifecycle y propietario anidado.
 
 ### Consultar motocicleta
 
@@ -320,7 +333,55 @@ GET /api/bikes/:id
 Authorization: Bearer <accessToken>
 ```
 
-Devuelve `id`, `plate`, `brand`, `model`, `cylinder`, `clientId`, `client`. Errores 400/`404 BIKE_NOT_FOUND`.
+Ambos roles leen una motocicleta activa; sólo `ADMIN` puede leer una eliminada. Devuelve los campos administrados, lifecycle, propietario y `currentOpenOrder`, que es `null` o un resumen con ID, fecha de entrada, falla, estado y total. Errores 400/403/`404 BIKE_NOT_FOUND`.
+
+El historial completo se obtiene paginado mediante `GET /api/work-orders?bikeId=:id` y conserva órdenes abiertas y cerradas bajo la misma identidad de motocicleta.
+
+### Editar motocicleta
+
+```http
+PATCH /api/bikes/:id
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "plate": "ABC124", "brand": "Honda", "cylinder": null }
+```
+
+Sólo `ADMIN`. Acepta al menos uno de `plate`, `brand`, `model`, `cylinder`; no permite cambiar propietario ni lifecycle por este endpoint. Un no-op no genera auditoría. Una moto eliminada devuelve `409 BIKE_INACTIVE`; las colisiones de placa distinguen recurso activo de eliminado.
+
+### Cambiar propietario
+
+```http
+PATCH /api/bikes/:id/owner
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "clientId": 2, "reason": "Traspaso confirmado por el cliente" }
+```
+
+Sólo `ADMIN`; cliente destino activo y razón no vacía son obligatorios. La operación bloquea clientes por ID y luego la motocicleta, conserva todas las órdenes históricas bajo el mismo `bikeId` y genera `OWNER_CHANGED` con propietario anterior/nuevo. Una moto eliminada devuelve `409 BIKE_INACTIVE`.
+
+### Eliminar y restaurar motocicleta
+
+```http
+DELETE /api/bikes/:id
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "reason": "Retirada temporal del servicio" }
+```
+
+El soft delete sólo lo realiza `ADMIN`, exige razón y nunca elimina órdenes o ítems. Una orden en `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA` bloquea con `409 BIKE_HAS_ACTIVE_WORK_ORDER`. Repetir devuelve `409 BIKE_ALREADY_DELETED`.
+
+```http
+POST /api/bikes/:id/restore
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "reason": "Motocicleta nuevamente operativa" }
+```
+
+Restore limpia los tres campos lifecycle y conserva placa, propietario e historia. Exige propietario activo; de lo contrario devuelve `409 BIKE_OWNER_INACTIVE`. Una moto ya activa devuelve `409 BIKE_NOT_DELETED`. Delete y restore son auditados en la misma transacción.
 
 ## Órdenes de trabajo
 
@@ -340,7 +401,7 @@ Content-Type: application/json
 
 Roles: `ADMIN`, `MECANICO`. `bikeId`/descripción requeridos. `entryDate` es opcional; si existe debe incluir `Z` u offset y máximo milisegundos; si se omite usa hora de servidor.
 
-El backend fija `RECIBIDA`/`0.00` y en la misma transacción crea `fromStatus=null`, `toStatus=RECIBIDA`, `note=null`, actor autenticado. Campos internos enviados se ignoran. Éxito 201 con Bike/Client e `items: []`; errores 400/`404 BIKE_NOT_FOUND`.
+El backend exige una motocicleta y propietario activos bajo locks `Client → Bike`, fija `RECIBIDA`/`0.00` y en la misma transacción crea `fromStatus=null`, `toStatus=RECIBIDA`, `note=null`, actor autenticado. Campos internos enviados se ignoran. Éxito 201 con Bike/Client e `items: []`; errores 400, `404 BIKE_NOT_FOUND`, `409 BIKE_INACTIVE` o `409 BIKE_OWNER_INACTIVE`.
 
 ### Listar y filtrar órdenes
 
@@ -353,6 +414,7 @@ Queries opcionales:
 
 - `status`: uno de `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
 - `plate`: búsqueda parcial normalizada;
+- `bikeId`: ID exacto para consultar la historia de una motocicleta;
 - `page`: entero positivo, default 1;
 - `pageSize`: 1–100, default 20.
 

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Este documento es el contrato de dominio implementado para las fases 1 y 2 y los hitos de productización aprobados hasta HITO 3.
+Este documento es el contrato de dominio implementado para las fases 1 y 2 y los hitos de productización aprobados hasta HITO 4.
 
 ## Máquina de estados de la orden
 
@@ -50,7 +50,7 @@ Mapa canónico:
 
 ## Creación de órdenes
 
-- Requiere una `Bike` existente; la FK es la barrera final.
+- Requiere una `Bike` activa con propietario activo; el servicio bloquea `Client → Bike` y la FK es la barrera final.
 - `entryDate` acepta ISO 8601 con zona horaria; si se omite, usa la hora del servidor.
 - Toda orden API inicia en `RECIBIDA`, total `0.00`.
 - `status`, `total`, IDs y timestamps enviados por el cliente se ignoran mediante allowlists.
@@ -114,16 +114,28 @@ El backend es la autoridad. MySQL calcula con `DECIMAL`, castea a `DECIMAL(15,2)
 
 ## Normalización de placa
 
-La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar o buscar. La unicidad se aplica en servicio y base de datos. No se inventa una regex de formato colombiano.
+La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar o buscar. La unicidad global se aplica en servicio y base de datos incluso después del soft delete. `plate` consulta por igualdad exacta y `platePrefix` por prefijo indexable; son excluyentes y nunca se usa wildcard inicial. No se inventa una regex de formato colombiano.
+
+## Lifecycle de motocicletas
+
+- El listado usa `active` por defecto, paginación 1/20 con máximo 100 y filtros por placa exacta, prefijo y propietario. Sólo `ADMIN` consulta `deleted/all` o detalle eliminado.
+- Sólo `ADMIN` crea, actualiza, cambia propietario, elimina y restaura. Una eliminada es read-only hasta restore.
+- `PATCH /api/bikes/:id` sólo modifica placa, marca, modelo o cilindraje. El propietario cambia exclusivamente por `/owner`, con destino activo y razón obligatoria.
+- Owner change preserva el `bikeId` de todas las órdenes y audita `previousClientId → newClientId` bajo locks `Client(s) → Bike`.
+- Delete lógico exige razón y devuelve `409 BIKE_HAS_ACTIVE_WORK_ORDER` si existe una orden abierta. Nunca elimina órdenes ni ítems.
+- Restore exige razón y dueño activo, conserva placa/propietario/historia y limpia los tres campos lifecycle.
+- El detalle entrega propietario y resumen de orden abierta; `GET /work-orders?bikeId=` pagina toda la historia.
+- Create/update/owner/delete/restore y sus eventos audit son atómicos. Crear orden y eliminar moto comparten locks de propietario/moto para no dejar una orden operativa sobre un recurso eliminado.
 
 ## Matriz RBAC
 
 | Acción | `ADMIN` | `MECANICO` |
 |---|:---:|:---:|
-| Leer clientes activos/motocicletas/órdenes | Sí | Sí |
-| Leer clientes eliminados/all | Sí | No |
+| Leer clientes/motocicletas activos y órdenes | Sí | Sí |
+| Leer clientes/motocicletas eliminados/all | Sí | No |
 | Crear/editar/eliminar/restaurar clientes | Sí | No |
-| Crear motocicletas/órdenes | Sí | Sí |
+| Crear/editar/cambiar dueño/eliminar/restaurar motocicletas | Sí | No |
+| Crear órdenes | Sí | Sí |
 | Crear ítems | Sí | Sí |
 | Eliminar ítems | Sí | No |
 | Avanzar a `DIAGNOSTICO` | Sí | Sí |

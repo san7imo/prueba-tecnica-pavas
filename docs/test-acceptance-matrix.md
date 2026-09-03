@@ -16,6 +16,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `P2-AUDIT-*` | `backend/tests/workOrderHistory.integration.test.js`, `schema.integration.test.js` |
 | `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
 | `PZ-CLIENT-*` | `backend/tests/clientLifecycle.integration.test.js`, `clientContactMigration.integration.test.js` |
+| `PZ-BIKE-*` | `backend/tests/bikeLifecycle.integration.test.js`, `clientsBikes.integration.test.js` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -58,8 +59,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P1-BE-004 | Crear motocicleta, cilindrada opcional y cliente válido | Bike POST matrix | PASS |
 | P1-DATA-003A | Placa exacta/mayúscula/espacios duplicada devuelve 409 | three HTTP duplicate cases | PASS |
 | P1-DATA-003B | UNIQUE físico es barrera final de placa | `schema.integration.test.js`: normalized uniqueness | PASS |
-| P1-BE-005 | Buscar placa parcial/minúscula/espacios/sin match | Bike search matrix | PASS |
-| P1-BE-006 | Detalle Bike incluye Client y 404 | Bike detail matrix | PASS |
+| P1-BE-005 | Buscar placa exacta/prefijo normalizados y sin match | Bike search matrix | PASS |
+| P1-BE-006 | Detalle Bike incluye owner/contexto y 403/404 | Bike detail matrix | PASS |
 | P1-BE-007A | Orden válida inicia RECIBIDA/0.00 y bloquea mass assignment | `workOrders.integration.test.js`: create/defaults | PASS |
 | P1-BE-007B | Bike inválida, faltantes y fechas ambiguas fallan | WorkOrder POST validation matrix | PASS |
 | P1-BE-007C | `entryDate` omitida usa tiempo de servidor acotado | omitted-date case | PASS |
@@ -109,6 +110,22 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-CLIENT-010 | Restore limpia lifecycle, no restaura motos y audita override | restore cases | PASS |
 | PZ-CLIENT-011 | Sólo ADMIN muta clientes y auth/RBAC preceden validación | client mutation boundary | PASS |
 | PZ-CLIENT-012 | Fallo audit revierte lifecycle y carrera con alta de moto es consistente | rollback/concurrency cases | PASS |
+| PZ-BIKE-001 | Create normaliza placa y la reserva globalmente tras soft delete | create/deleted duplicate case | PASS |
+| PZ-BIKE-002 | Listado pagina y filtra por igualdad, prefijo, owner y lifecycle | paginated filter matrix | PASS |
+| PZ-BIKE-003 | Filtros de placa excluyentes y queries acotadas validan | invalid filter/bounds cases | PASS |
+| PZ-BIKE-004 | Detalle muestra owner/orden abierta e historia usa `bikeId` paginado | detail/history context case | PASS |
+| PZ-BIKE-005 | Ambos leen activas; sólo ADMIN lee eliminadas | lifecycle read boundary | PASS |
+| PZ-BIKE-006 | PATCH general usa allowlist y audit before/after exacto | update audit case | PASS |
+| PZ-BIKE-007 | No-op no audita y una eliminada es read-only | no-op/inactive update case | PASS |
+| PZ-BIKE-008 | Update distingue placa ocupada activa de eliminada | plate conflict cases | PASS |
+| PZ-BIKE-009 | Owner change dedicado conserva historia y audita anterior/nuevo | owner audit/history case | PASS |
+| PZ-BIKE-010 | Owner inexistente/inactivo y moto eliminada se rechazan | invalid owner cases | PASS |
+| PZ-BIKE-011 | Orden abierta bloquea soft delete; cerrada preserva historia | delete restriction case | PASS |
+| PZ-BIKE-012 | Restore conserva identidad y exige propietario activo | restore lifecycle cases | PASS |
+| PZ-BIKE-013 | Moto eliminada no admite nuevas órdenes | operational lifecycle case | PASS |
+| PZ-BIKE-014 | Sólo ADMIN muta motos y RBAC precede validación | mutation boundary case | PASS |
+| PZ-BIKE-015 | Fallo audit revierte update/owner/delete/restore | forced audit rollback case | PASS |
+| PZ-BIKE-016 | Delete/orden y owner/delete cliente se serializan | concurrency invariant cases | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |

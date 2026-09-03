@@ -109,7 +109,7 @@ describe.sequential('HITO 8 role-based access control', () => {
     expect(inactive.body.error.code).toBe('INVALID_ACCESS_TOKEN');
   });
 
-  it('restricts client creation to ADMIN while preserving current bike/order roles', async () => {
+  it('restricts client/bike mutation to ADMIN while preserving current order-create roles', async () => {
     const clients = [];
     for (const index of [0, 1]) {
       const clientResponse = await request(app)
@@ -130,12 +130,18 @@ describe.sequential('HITO 8 role-based access control', () => {
       .send({});
     expect(forbiddenClient.status).toBe(403);
 
+    const forbiddenBike = await request(app)
+      .post('/api/bikes')
+      .set(mechanicHeaders())
+      .send({});
+    expect(forbiddenBike.status).toBe(403);
+
     for (const [index, headers] of [adminHeaders(), mechanicHeaders()].entries()) {
       await request(app).get('/api/clients').set(headers).expect(200);
 
       const bikeResponse = await request(app)
         .post('/api/bikes')
-        .set(headers)
+        .set(adminHeaders())
         .send({
           plate: `RB${index}001`,
           brand: 'Honda',

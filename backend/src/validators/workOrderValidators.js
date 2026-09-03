@@ -145,6 +145,15 @@ export const validateWorkOrderList = (request, _response, next) => {
   if (plate !== undefined && plate.length > 20) {
     details.push({ field: 'plate', message: 'Normalized plate must contain at most 20 characters.' });
   }
+  const bikeId =
+    request.query.bikeId === undefined || request.query.bikeId === ''
+      ? undefined
+      : positiveId({
+          value: request.query.bikeId,
+          field: 'bikeId',
+          label: 'Bike id',
+          details,
+        });
 
   const page = paginationInteger({
     value: request.query.page,
@@ -163,7 +172,7 @@ export const validateWorkOrderList = (request, _response, next) => {
   completeValidation({
     request,
     section: 'query',
-    value: { status: rawStatus, plate, page, pageSize },
+    value: { status: rawStatus, plate, bikeId, page, pageSize },
     details,
     next,
   });

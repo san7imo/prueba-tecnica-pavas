@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 
 import { models } from '../config/databaseContext.js';
+import { OPEN_WORK_ORDER_STATUSES } from '../constants/workOrder.js';
 
 const WORK_ORDER_ATTRIBUTES = [
   'id',
@@ -54,6 +55,33 @@ export const workOrderRepository = {
     });
   },
 
+  findCurrentOpenByBikeId(bikeId) {
+    return models.WorkOrder.findOne({
+      attributes: WORK_ORDER_ATTRIBUTES,
+      where: {
+        bikeId,
+        status: { [Op.in]: OPEN_WORK_ORDER_STATUSES },
+      },
+      order: [
+        ['entryDate', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+  },
+
+  findOpenByBikeIdForUpdate(bikeId, transaction) {
+    return models.WorkOrder.findAll({
+      attributes: ['id', 'status'],
+      where: {
+        bikeId,
+        status: { [Op.in]: OPEN_WORK_ORDER_STATUSES },
+      },
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
   updateTotal(id, total, transaction) {
     return models.WorkOrder.update(
       { total },
@@ -82,10 +110,13 @@ export const workOrderRepository = {
     });
   },
 
-  findPaginated({ status, plate, page, pageSize }) {
+  findPaginated({ status, plate, bikeId, page, pageSize }) {
+    const where = {};
+    if (status) where.status = status;
+    if (bikeId) where.bikeId = bikeId;
     return models.WorkOrder.findAndCountAll({
       attributes: WORK_ORDER_ATTRIBUTES,
-      where: status ? { status } : undefined,
+      where,
       include: [bikeInclude(plate)],
       distinct: true,
       limit: pageSize,

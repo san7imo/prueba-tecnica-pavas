@@ -60,6 +60,16 @@ export const clientRepository = {
     });
   },
 
+  findByIdsForUpdate(ids, transaction) {
+    return models.Client.findAll({
+      attributes: CLIENT_ATTRIBUTES,
+      where: { id: { [Op.in]: ids } },
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
   findPaginated({ search, phoneSearch, lifecycle, page, pageSize }) {
     return models.Client.findAndCountAll({
       attributes: CLIENT_ATTRIBUTES,

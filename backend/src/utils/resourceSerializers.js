@@ -56,6 +56,42 @@ export const serializeBike = (resource) => {
   };
 };
 
+export const serializeWorkOrderSummary = (resource) => {
+  const workOrder = plain(resource);
+  if (!workOrder) return null;
+  return {
+    id: workOrder.id,
+    entryDate: new Date(workOrder.entryDate).toISOString(),
+    faultDescription: workOrder.faultDescription,
+    status: workOrder.status,
+    total: workOrder.total,
+  };
+};
+
+export const serializeManagedBike = (resource, options = {}) => {
+  const bike = plain(resource);
+  const deletedAt = bike.deletedAt ?? null;
+  const serialized = {
+    id: bike.id,
+    plate: bike.plate,
+    brand: bike.brand,
+    model: bike.model,
+    cylinder: bike.cylinder,
+    clientId: bike.clientId,
+    client: bike.client ? serializeManagedClient(bike.client) : undefined,
+    lifecycle: deletedAt === null ? 'active' : 'deleted',
+    deletedAt: deletedAt === null ? null : new Date(deletedAt).toISOString(),
+    deletedByUserId: bike.deletedByUserId ?? null,
+    deleteReason: bike.deleteReason ?? null,
+  };
+  if (Object.prototype.hasOwnProperty.call(options, 'currentOpenOrder')) {
+    serialized.currentOpenOrder = serializeWorkOrderSummary(
+      options.currentOpenOrder,
+    );
+  }
+  return serialized;
+};
+
 export const serializeWorkOrderItem = (resource) => {
   const item = plain(resource);
   return {

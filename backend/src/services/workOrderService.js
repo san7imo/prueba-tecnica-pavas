@@ -10,8 +10,10 @@ import { USER_ROLE } from '../constants/auth.js';
 import { WORK_ORDER_STATUS } from '../constants/workOrder.js';
 import { AuthorizationError } from '../errors/AuthorizationError.js';
 import { BusinessRuleError } from '../errors/BusinessRuleError.js';
+import { ConflictError } from '../errors/ConflictError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { bikeRepository } from '../repositories/bikeRepository.js';
+import { clientRepository } from '../repositories/clientRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
 import { workOrderStatusHistoryRepository } from '../repositories/workOrderStatusHistoryRepository.js';
 import { canTransition } from '../utils/workOrderStateMachine.js';
@@ -37,10 +39,37 @@ const invalidStatusTransition = (fromStatus, toStatus) =>
 
 export const workOrderService = {
   async createWorkOrder(data, actor) {
+    const identity = await bikeRepository.findIdentityById(data.bikeId);
+    if (!identity) throw bikeNotFound();
+
     try {
       const workOrderId = await sequelize.transaction(async (transaction) => {
-        if (!(await bikeRepository.existsById(data.bikeId, transaction))) {
-          throw bikeNotFound();
+        const owner = await clientRepository.findByIdForUpdate(
+          identity.clientId,
+          transaction,
+        );
+        const bike = await bikeRepository.findByIdForUpdate(
+          data.bikeId,
+          transaction,
+        );
+        if (!bike) throw bikeNotFound();
+        if (String(bike.clientId) !== String(identity.clientId)) {
+          throw new ConflictError({
+            code: 'CONCURRENT_MODIFICATION_RETRY',
+            message: 'The motorcycle changed concurrently. Reload it and retry.',
+          });
+        }
+        if (bike.deletedAt !== null) {
+          throw new ConflictError({
+            code: 'BIKE_INACTIVE',
+            message: 'Deleted motorcycles cannot receive new work orders.',
+          });
+        }
+        if (!owner || owner.deletedAt !== null) {
+          throw new ConflictError({
+            code: 'BIKE_OWNER_INACTIVE',
+            message: 'The motorcycle owner must be active.',
+          });
         }
 
         const workOrder = await workOrderRepository.create({

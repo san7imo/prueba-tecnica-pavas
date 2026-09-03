@@ -41,6 +41,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - auditoría atómica de altas autenticadas, alta de ítems y cambios de estado existentes;
 - consulta paginada/filtrada del audit global, exclusiva para `ADMIN`.
 - lifecycle backend completo de clientes: edición, paginación, duplicados, soft delete y restore auditados.
+- lifecycle backend completo de motocicletas: búsqueda exacta/prefijo, propietario, edición, soft delete/restore, contexto de órdenes y auditoría.
 
 ## Stack tecnológico
 

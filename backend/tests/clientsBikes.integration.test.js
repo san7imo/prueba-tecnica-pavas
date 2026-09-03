@@ -71,6 +71,15 @@ const activeClientShape = (client) => ({
   deleteReason: null,
 });
 
+const activeBikeShape = (bike) => ({
+  ...bike,
+  client: activeClientShape(bike.client),
+  lifecycle: 'active',
+  deletedAt: null,
+  deletedByUserId: null,
+  deleteReason: null,
+});
+
 beforeAll(async () => {
   assertSafeTestDatabase({
     nodeEnv: env.nodeEnv,
@@ -281,7 +290,11 @@ describe('Bikes API', () => {
         model: 'FZ 2.0',
         cylinder: '149',
         clientId: client.id,
-        client: clientCore(client),
+        client: activeClientShape(client),
+        lifecycle: 'active',
+        deletedAt: null,
+        deletedByUserId: null,
+        deleteReason: null,
       });
       expect(response.body.data.id).not.toBe(999999);
     });
@@ -359,15 +372,22 @@ describe('Bikes API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(2);
+      expect(response.body.meta).toEqual({
+        page: 1,
+        pageSize: 20,
+        totalItems: 2,
+        totalPages: 1,
+      });
       expect(response.body.data.every(({ client }) => client.name === 'Juan Perez')).toBe(true);
     });
 
     it.each([
-      ['normalized partial plate', 'ABC', 'ABC123'],
-      ['lowercase plate', 'xyz', 'XYZ987'],
-      ['spaced plate', ' a b c 1 2 3 ', 'ABC123'],
-    ])('searches by %s', async (_case, plate, expectedPlate) => {
-      const response = await request(app).get('/api/bikes').query({ plate });
+      ['exact normalized plate', { plate: 'ABC123' }, 'ABC123'],
+      ['lowercase exact plate', { plate: 'xyz987' }, 'XYZ987'],
+      ['normalized prefix', { platePrefix: 'abc' }, 'ABC123'],
+      ['spaced exact plate', { plate: ' a b c 1 2 3 ' }, 'ABC123'],
+    ])('searches by %s', async (_case, query, expectedPlate) => {
+      const response = await request(app).get('/api/bikes').query(query);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
@@ -380,7 +400,10 @@ describe('Bikes API', () => {
         .query({ plate: 'NOPE' });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ data: [] });
+      expect(response.body).toEqual({
+        data: [],
+        meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+      });
     });
   });
 
@@ -391,8 +414,11 @@ describe('Bikes API', () => {
       const response = await request(app).get(`/api/bikes/${bike.id}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toEqual(bike);
-      expect(response.body.data.client).toEqual(clientCore(client));
+      expect(response.body.data).toEqual({
+        ...activeBikeShape(bike),
+        currentOpenOrder: null,
+      });
+      expect(response.body.data.client).toEqual(activeClientShape(client));
     });
 
     it('returns 404 for a missing bike', async () => {

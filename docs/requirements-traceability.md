@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 95 requisitos: 89 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -30,8 +30,8 @@ La tabla contiene 95 requisitos: 89 `Done` y 6 `Foundation`. No existen filas `P
 | P1-BE-002 | Buscar clientes | 1 | consulta parcial parametrizada | `GET /api/clients?search=` | búsqueda/empty | Done |
 | P1-BE-003 | Detalle cliente | 1 | service/repository | `GET /api/clients/:id` | 200/404/ID | Done |
 | P1-BE-004 | Crear motocicleta | 1 | módulo Bike + relación/conflicto | `POST /api/bikes` | create/FK/duplicate | Done |
-| P1-BE-005 | Buscar por placa | 1 | búsqueda parcial normalizada | `GET /api/bikes?plate=` | search matrix | Done |
-| P1-BE-006 | Detalle motocicleta | 1 | include Client | `GET /api/bikes/:id` | 200/404/ID | Done |
+| P1-BE-005 | Buscar por placa | 1 evolucionado en HITO 4 | igualdad/prefijo normalizados e indexables | `GET /api/bikes?plate=&platePrefix=` | search matrix | Done |
+| P1-BE-006 | Detalle motocicleta | 1 evolucionado en HITO 4 | owner + current open order | `GET /api/bikes/:id` | 200/403/404/context | Done |
 | P1-BE-007 | Crear orden sólo con Bike válida, inicial RECIBIDA | 1 | WorkOrder service/defaults | `POST /api/work-orders` | create/default/FK | Done |
 | P1-BE-008 | Listar/filtrar órdenes | 1 | eager query y filtros | `GET /api/work-orders` | status/plate/N+1 | Done |
 | P1-BE-009 | Paginar órdenes con metadata | 1 | `findAndCountAll`, máximo 100 | orders list | page/meta/order | Done |
@@ -104,6 +104,22 @@ La tabla contiene 95 requisitos: 89 `Done` y 6 `Foundation`. No existen filas `P
 | PZ-CLIENT-010 | Restore limpia lifecycle sin restaurar motocicletas | HITO 3 | transacción y auditoría `RESTORED` | `POST /api/clients/:id/restore` | restore/override/rollback | Done |
 | PZ-CLIENT-011 | Sólo ADMIN puede mutar maestras de clientes | HITO 3 | RBAC previo a validación | Client mutation APIs | auth boundary cases | Done |
 | PZ-CLIENT-012 | Alta de moto y borrado de cliente serializan el propietario | HITO 3 | lock canónico sobre Client | POST Bike / DELETE Client | concurrency invariant | Done |
+| PZ-BIKE-001 | Placa permanece única entre motos activas/eliminadas | HITO 4 | UNIQUE global + conflicto contextual | POST/PATCH Bike | plate lifecycle cases | Done |
+| PZ-BIKE-002 | Lista paginada filtra exacto/prefijo/owner/lifecycle | HITO 4 | índices existentes + repository acotado | `GET /api/bikes` | filter/pagination matrix | Done |
+| PZ-BIKE-003 | Filtros de placa son excluyentes y sin wildcard inicial | HITO 4 | validator + igualdad/prefijo | `GET /api/bikes` | invalid/exact/prefix cases | Done |
+| PZ-BIKE-004 | Detalle incluye propietario y orden abierta | HITO 4 | consulta summary sin ítems | `GET /api/bikes/:id` | detail context case | Done |
+| PZ-BIKE-005 | Historia de la motocicleta se pagina por identidad | HITO 4 | filtro exacto `bikeId` | `GET /api/work-orders` | history pagination case | Done |
+| PZ-BIKE-006 | Activas son legibles por ambos; eliminadas sólo ADMIN | HITO 4 | autorización contextual backend | GET Bike APIs | lifecycle RBAC cases | Done |
+| PZ-BIKE-007 | PATCH general es allowlisted, bloqueado y auditable | HITO 4 | transacción + snapshot desacoplado | `PATCH /api/bikes/:id` | update/no-op/rollback | Done |
+| PZ-BIKE-008 | Owner change separado exige destino activo y razón | HITO 4 | locks Client(s)→Bike | `PATCH /api/bikes/:id/owner` | owner validation/audit | Done |
+| PZ-BIKE-009 | Owner change conserva órdenes bajo el mismo bikeId | HITO 4 | actualización sólo de `client_id` | owner API | historical identity case | Done |
+| PZ-BIKE-010 | Soft delete preserva historia y bloquea orden abierta | HITO 4 | lock Client→Bike→WorkOrder, sin cascade | `DELETE /api/bikes/:id` | delete restriction case | Done |
+| PZ-BIKE-011 | Restore conserva placa/owner y exige owner activo | HITO 4 | lifecycle transaction | `POST /api/bikes/:id/restore` | restore cases | Done |
+| PZ-BIKE-012 | Moto eliminada no recibe nuevas órdenes | HITO 4 | revalidación Client→Bike | `POST /api/work-orders` | inactive bike case | Done |
+| PZ-BIKE-013 | Sólo ADMIN muta motocicletas | HITO 4 | RBAC antes de validación | Bike mutation APIs | auth boundary case | Done |
+| PZ-BIKE-014 | Auditoría falla de forma atómica en todo el lifecycle | HITO 4 | domain + audit transaction | Bike mutation APIs | forced rollback cases | Done |
+| PZ-BIKE-015 | Delete moto y create orden se serializan | HITO 4 | locks compartidos Client→Bike | DELETE Bike / POST Order | concurrency race | Done |
+| PZ-BIKE-016 | Owner change y delete cliente destino se serializan | HITO 4 | clientes por ID→Bike | owner/delete APIs | concurrency race | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

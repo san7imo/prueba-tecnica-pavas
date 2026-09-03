@@ -6,7 +6,8 @@ El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
 fundaciones de persistencia de productización: lifecycle de clientes/motos,
 `audit_events`, responsable de orden y actor de ítem. Doce migraciones son la
 fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
-forma segura sus contactos; las demás capacidades se activan por hito.
+forma segura sus contactos; HITO 4 activa el lifecycle y ownership de motos
+y las demás capacidades se activan por hito.
 
 ## Convenciones
 
@@ -168,7 +169,12 @@ Setter, service y validador recortan, convierten a mayúsculas y eliminan whites
 
 `chk_bikes_delete_state` aplica la misma coherencia lifecycle. Los índices
 `ix_bikes_lifecycle_plate_id` y `ix_bikes_client_lifecycle_plate_id` soportan
-la maestra por placa y la relación paginada por propietario.
+las vistas paginadas active/deleted/all, la búsqueda por prefijo de placa y la
+relación por propietario. `uq_bikes_plate` permanece global: borrar lógicamente
+no libera la placa. El cambio de propietario sólo actualiza `client_id`, por lo
+que todas las órdenes conservan la misma identidad `bike_id`. Delete/restore no
+eliminan relaciones y se validan bajo locks `Client → Bike → WorkOrder` cuando
+la existencia de una orden abierta afecta la operación.
 
 ## `work_orders`
 
