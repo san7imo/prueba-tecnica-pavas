@@ -1,3 +1,4 @@
+import { initializeAuditEvent } from './AuditEvent.js';
 import { initializeBike } from './Bike.js';
 import { initializeClient } from './Client.js';
 import { initializeWorkOrder } from './WorkOrder.js';
@@ -14,6 +15,7 @@ export const initializeModels = (sequelize) => {
   const WorkOrderStatusHistory = initializeWorkOrderStatusHistory(sequelize);
   const User = initializeUser(sequelize);
   const RefreshToken = initializeRefreshToken(sequelize);
+  const AuditEvent = initializeAuditEvent(sequelize);
 
   Client.hasMany(Bike, {
     as: 'bikes',
@@ -28,6 +30,48 @@ export const initializeModels = (sequelize) => {
     onUpdate: 'CASCADE',
   });
 
+  User.hasMany(Client, {
+    as: 'deletedClients',
+    foreignKey: {
+      name: 'deletedByUserId',
+      field: 'deleted_by_user_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'RESTRICT',
+  });
+  Client.belongsTo(User, {
+    as: 'deletedBy',
+    foreignKey: {
+      name: 'deletedByUserId',
+      field: 'deleted_by_user_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'RESTRICT',
+  });
+
+  User.hasMany(Bike, {
+    as: 'deletedBikes',
+    foreignKey: {
+      name: 'deletedByUserId',
+      field: 'deleted_by_user_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'RESTRICT',
+  });
+  Bike.belongsTo(User, {
+    as: 'deletedBy',
+    foreignKey: {
+      name: 'deletedByUserId',
+      field: 'deleted_by_user_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'RESTRICT',
+  });
+
   Bike.hasMany(WorkOrder, {
     as: 'workOrders',
     foreignKey: { name: 'bikeId', field: 'bike_id', allowNull: false },
@@ -37,6 +81,27 @@ export const initializeModels = (sequelize) => {
   WorkOrder.belongsTo(Bike, {
     as: 'bike',
     foreignKey: { name: 'bikeId', field: 'bike_id', allowNull: false },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
+  User.hasMany(WorkOrder, {
+    as: 'assignedWorkOrders',
+    foreignKey: {
+      name: 'assignedMechanicId',
+      field: 'assigned_mechanic_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  WorkOrder.belongsTo(User, {
+    as: 'assignedMechanic',
+    foreignKey: {
+      name: 'assignedMechanicId',
+      field: 'assigned_mechanic_id',
+      allowNull: true,
+    },
     onDelete: 'RESTRICT',
     onUpdate: 'CASCADE',
   });
@@ -57,6 +122,27 @@ export const initializeModels = (sequelize) => {
       name: 'workOrderId',
       field: 'work_order_id',
       allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
+  User.hasMany(WorkOrderItem, {
+    as: 'createdWorkOrderItems',
+    foreignKey: {
+      name: 'createdByUserId',
+      field: 'created_by_user_id',
+      allowNull: true,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  WorkOrderItem.belongsTo(User, {
+    as: 'createdBy',
+    foreignKey: {
+      name: 'createdByUserId',
+      field: 'created_by_user_id',
+      allowNull: true,
     },
     onDelete: 'RESTRICT',
     onUpdate: 'CASCADE',
@@ -122,6 +208,27 @@ export const initializeModels = (sequelize) => {
     onUpdate: 'CASCADE',
   });
 
+  User.hasMany(AuditEvent, {
+    as: 'auditEvents',
+    foreignKey: {
+      name: 'actorUserId',
+      field: 'actor_user_id',
+      allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  AuditEvent.belongsTo(User, {
+    as: 'actor',
+    foreignKey: {
+      name: 'actorUserId',
+      field: 'actor_user_id',
+      allowNull: false,
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
   return {
     Client,
     Bike,
@@ -130,5 +237,6 @@ export const initializeModels = (sequelize) => {
     WorkOrderStatusHistory,
     User,
     RefreshToken,
+    AuditEvent,
   };
 };

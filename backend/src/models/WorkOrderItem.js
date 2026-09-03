@@ -72,6 +72,11 @@ export const initializeWorkOrderItem = (sequelize) =>
         field: 'unit_value',
         validate: { nonNegative },
       },
+      createdByUserId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'created_by_user_id',
+      },
     },
     {
       sequelize,

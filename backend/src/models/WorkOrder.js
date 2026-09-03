@@ -41,6 +41,11 @@ export const initializeWorkOrder = (sequelize) =>
         allowNull: false,
         defaultValue: '0.00',
       },
+      assignedMechanicId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'assigned_mechanic_id',
+      },
     },
     {
       sequelize,
@@ -50,4 +55,3 @@ export const initializeWorkOrder = (sequelize) =>
       underscored: true,
     },
   );
-

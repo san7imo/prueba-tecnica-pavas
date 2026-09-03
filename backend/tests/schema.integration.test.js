@@ -23,6 +23,7 @@ const DOMAIN_TABLES = [
   'work_order_status_history',
   'users',
   'refresh_tokens',
+  'audit_events',
 ];
 
 let sequelize;
@@ -39,6 +40,7 @@ const cleanDomainData = async () => {
     return;
   }
 
+  await models.AuditEvent.destroy({ where: {}, force: true });
   await models.WorkOrderStatusHistory.destroy({ where: {}, force: true });
   await models.WorkOrderItem.destroy({ where: {}, force: true });
   await models.WorkOrder.destroy({ where: {}, force: true });
@@ -99,7 +101,7 @@ describe.sequential('Persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(7);
+    expect(applied).toHaveLength(11);
     models = initializeModels(sequelize);
   });
 
@@ -118,7 +120,7 @@ describe.sequential('Persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(7);
+    expect(await migrator.executed()).toHaveLength(11);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -143,6 +145,18 @@ describe.sequential('Persistence schema', () => {
     expect(models.User.associations.refreshTokens.target).toBe(models.RefreshToken);
     expect(models.RefreshToken.associations.user.target).toBe(models.User);
     expect(models.RefreshToken.associations.replacement.target).toBe(models.RefreshToken);
+    expect(models.Client.associations.deletedBy.target).toBe(models.User);
+    expect(models.Bike.associations.deletedBy.target).toBe(models.User);
+    expect(models.WorkOrder.associations.assignedMechanic.target).toBe(models.User);
+    expect(models.WorkOrderItem.associations.createdBy.target).toBe(models.User);
+    expect(models.AuditEvent.associations.actor.target).toBe(models.User);
+    expect(models.User.associations.deletedClients.target).toBe(models.Client);
+    expect(models.User.associations.deletedBikes.target).toBe(models.Bike);
+    expect(models.User.associations.assignedWorkOrders.target).toBe(models.WorkOrder);
+    expect(models.User.associations.createdWorkOrderItems.target).toBe(
+      models.WorkOrderItem,
+    );
+    expect(models.User.associations.auditEvents.target).toBe(models.AuditEvent);
 
     const { client, workOrder } = await createWorkOrder();
     await models.WorkOrderItem.create({
@@ -260,31 +274,185 @@ describe.sequential('Persistence schema', () => {
   });
 
   it('uses RESTRICT deletes and CASCADE key updates on domain and audit FKs', async () => {
+    const expectedConstraints = [
+      'fk_audit_events_actor',
+      'fk_bikes_client',
+      'fk_bikes_deleted_by_user',
+      'fk_clients_deleted_by_user',
+      'fk_work_order_items_created_by_user',
+      'fk_work_order_items_order',
+      'fk_work_order_status_history_order',
+      'fk_work_order_status_history_user',
+      'fk_work_orders_assigned_mechanic',
+      'fk_work_orders_bike',
+    ];
     const [rules] = await sequelize.query(
       `SELECT CONSTRAINT_NAME, DELETE_RULE, UPDATE_RULE
        FROM information_schema.REFERENTIAL_CONSTRAINTS
        WHERE CONSTRAINT_SCHEMA = :schema
          AND CONSTRAINT_NAME IN (
+           'fk_audit_events_actor',
            'fk_bikes_client',
+           'fk_bikes_deleted_by_user',
+           'fk_clients_deleted_by_user',
+           'fk_work_order_items_created_by_user',
            'fk_work_orders_bike',
            'fk_work_order_items_order',
            'fk_work_order_status_history_order',
-           'fk_work_order_status_history_user'
+           'fk_work_order_status_history_user',
+           'fk_work_orders_assigned_mechanic'
          )
        ORDER BY CONSTRAINT_NAME`,
       { replacements: { schema: env.database.name } },
     );
 
-    expect(rules).toHaveLength(5);
-    expect(rules).toEqual(
+    expect(rules.map(({ CONSTRAINT_NAME }) => CONSTRAINT_NAME)).toEqual(
+      expectedConstraints,
+    );
+    const lifecycleActorConstraints = new Set([
+      'fk_bikes_deleted_by_user',
+      'fk_clients_deleted_by_user',
+    ]);
+    for (const rule of rules) {
+      expect(rule.DELETE_RULE).toBe('RESTRICT');
+      expect(rule.UPDATE_RULE).toBe(
+        lifecycleActorConstraints.has(rule.CONSTRAINT_NAME)
+          ? 'RESTRICT'
+          : 'CASCADE',
+      );
+    }
+  });
+
+  it('defines nullable productization columns and their operational indexes', async () => {
+    const queryInterface = sequelize.getQueryInterface();
+    const [clientColumns, bikeColumns, orderColumns, itemColumns] =
+      await Promise.all([
+        queryInterface.describeTable('clients'),
+        queryInterface.describeTable('bikes'),
+        queryInterface.describeTable('work_orders'),
+        queryInterface.describeTable('work_order_items'),
+      ]);
+
+    for (const columns of [clientColumns, bikeColumns]) {
+      expect(columns.deleted_at.allowNull).toBe(true);
+      expect(columns.deleted_by_user_id.allowNull).toBe(true);
+      expect(columns.delete_reason.allowNull).toBe(true);
+    }
+    expect(orderColumns.assigned_mechanic_id.allowNull).toBe(true);
+    expect(itemColumns.created_by_user_id.allowNull).toBe(true);
+
+    const indexGroups = await Promise.all(
+      ['clients', 'bikes', 'work_orders', 'work_order_items'].map((table) =>
+        queryInterface.showIndex(table),
+      ),
+    );
+    const indexNames = indexGroups.flat().map(({ name }) => name);
+    expect(indexNames).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
-        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
-        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
-        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
-        expect.objectContaining({ DELETE_RULE: 'RESTRICT', UPDATE_RULE: 'CASCADE' }),
+        'ix_clients_lifecycle_name_id',
+        'ix_clients_deleted_by_user',
+        'ix_bikes_lifecycle_plate_id',
+        'ix_bikes_client_lifecycle_plate_id',
+        'ix_bikes_deleted_by_user',
+        'ix_work_orders_assignee_status_entry_id',
+        'ix_work_order_items_created_by_user',
       ]),
     );
+  });
+
+  it('enforces complete lifecycle metadata through MySQL CHECK constraints', async () => {
+    const actor = await models.User.create({
+      name: 'Lifecycle actor',
+      email: 'lifecycle.actor@example.test',
+      passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-123456789',
+      role: 'ADMIN',
+    });
+    const client = await createClient();
+
+    client.deletedAt = new Date('2026-09-03T12:00:00.000Z');
+    await expect(client.save({ validate: false })).rejects.toBeInstanceOf(
+      DatabaseError,
+    );
+
+    await client.reload();
+    client.set({
+      deletedAt: new Date('2026-09-03T12:00:00.000Z'),
+      deletedByUserId: actor.id,
+      deleteReason: 'Registro duplicado de demostración',
+    });
+    await expect(client.save({ validate: false })).resolves.toMatchObject({
+      deletedByUserId: actor.id,
+      deleteReason: 'Registro duplicado de demostración',
+    });
+
+    const [checks] = await sequelize.query(
+      `SELECT CONSTRAINT_NAME
+       FROM information_schema.TABLE_CONSTRAINTS
+       WHERE CONSTRAINT_SCHEMA = :schema
+         AND CONSTRAINT_TYPE = 'CHECK'
+         AND CONSTRAINT_NAME IN (
+           'chk_clients_delete_state',
+           'chk_bikes_delete_state'
+         )
+       ORDER BY CONSTRAINT_NAME`,
+      { replacements: { schema: env.database.name } },
+    );
+    expect(checks.map(({ CONSTRAINT_NAME }) => CONSTRAINT_NAME)).toEqual([
+      'chk_bikes_delete_state',
+      'chk_clients_delete_state',
+    ]);
+  });
+
+  it('defines audit_events as created-at-only JSON persistence with deterministic indexes', async () => {
+    const columns = await sequelize.getQueryInterface().describeTable('audit_events');
+    expect(Object.keys(columns).sort()).toEqual([
+      'action',
+      'actor_user_id',
+      'after_data',
+      'before_data',
+      'created_at',
+      'entity_id',
+      'entity_type',
+      'id',
+      'metadata',
+      'reason',
+    ]);
+    expect(columns.actor_user_id.allowNull).toBe(false);
+    expect(columns).not.toHaveProperty('updated_at');
+
+    const actor = await models.User.create({
+      name: 'Business audit actor',
+      email: 'business.audit.actor@example.test',
+      passwordHash: '$2b$10$test-only-not-a-real-password-hash-value-123456789',
+      role: 'ADMIN',
+    });
+    const event = await models.AuditEvent.create({
+      entityType: 'CLIENT',
+      entityId: '42',
+      action: 'CREATED',
+      actorUserId: actor.id,
+      beforeData: null,
+      afterData: { id: '42', name: 'Cliente auditado' },
+      metadata: { source: 'schema-test' },
+      reason: null,
+    });
+    const loaded = await models.AuditEvent.findByPk(event.id, {
+      include: { association: 'actor' },
+    });
+    expect(loaded.afterData).toEqual({ id: '42', name: 'Cliente auditado' });
+    expect(loaded.actor.id).toBe(actor.id);
+
+    const indexes = await sequelize.getQueryInterface().showIndex('audit_events');
+    expect(indexes.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        'ix_audit_events_created_id',
+        'ix_audit_events_entity_created_id',
+        'ix_audit_events_actor_created_id',
+        'ix_audit_events_action_created_id',
+      ]),
+    );
+    await expect(models.User.destroy({ where: { id: actor.id } }))
+      .rejects.toBeInstanceOf(ForeignKeyConstraintError);
   });
 
   it('defines the immutable audit columns and deterministic composite index physically', async () => {
@@ -461,11 +629,11 @@ describe.sequential('Persistence schema', () => {
     });
 
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(7);
+    expect(reverted).toHaveLength(11);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(7);
+    expect(reapplied).toHaveLength(11);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
   }, 30000);
 });
