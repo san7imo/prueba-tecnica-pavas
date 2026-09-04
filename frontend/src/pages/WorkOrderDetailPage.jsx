@@ -10,7 +10,10 @@ import { ItemForm } from '../features/workOrders/components/ItemForm.jsx';
 import { HistoryTimeline } from '../features/workOrders/components/HistoryTimeline.jsx';
 import { ItemsTable } from '../features/workOrders/components/ItemsTable.jsx';
 import { StatusActions } from '../features/workOrders/components/StatusActions.jsx';
-import { WORK_ORDER_STATUS_LABELS } from '../constants/workOrders.js';
+import {
+  isWorkOrderRegression,
+  WORK_ORDER_STATUS_LABELS,
+} from '../constants/workOrders.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { getApiError, getApiErrorMessage } from '../utils/apiError.js';
 import { formatCurrency, formatDateTime } from '../utils/formatters.js';
@@ -96,10 +99,17 @@ export const WorkOrderDetailPage = () => {
   };
 
   const transitionStatus = async (target, note) => {
-    const needsConfirmation = target === 'CANCELADA' || target === 'ENTREGADA';
+    const regression = isWorkOrderRegression(order.status, target);
+    if (regression && !note.trim()) {
+      setStatusError('Debes indicar el motivo para volver a una etapa anterior.');
+      return;
+    }
+    const needsConfirmation = regression || target === 'CANCELADA' || target === 'ENTREGADA';
     if (needsConfirmation) {
-      const action = target === 'CANCELADA' ? 'cancelar' : 'marcar como entregada';
-      if (!window.confirm(`¿Confirmas que deseas ${action} esta orden?`)) return;
+      const message = regression
+        ? `¿Confirmas devolver la orden de ${WORK_ORDER_STATUS_LABELS[order.status]} a ${WORK_ORDER_STATUS_LABELS[target]}? El motivo quedará registrado.`
+        : `¿Confirmas que deseas ${target === 'CANCELADA' ? 'cancelar' : 'marcar como entregada'} esta orden?`;
+      if (!window.confirm(message)) return;
     }
     setStatusLoading(target);
     setStatusError('');

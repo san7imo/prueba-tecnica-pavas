@@ -107,7 +107,8 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: /eliminar kit de arrastre/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /entregar orden/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/tu rol no permite/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /volver a diagnóstico/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /volver a reparación/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /agregar ítem/i })).toBeInTheDocument();
   });
 
@@ -121,6 +122,64 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: /entregar orden/i })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Mauro Mecánico/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/nuevo responsable/i)).not.toBeInTheDocument();
+  });
+
+  it('requires a reason and confirmation before a controlled regression', async () => {
+    workOrdersApi.getById.mockResolvedValue({
+      ...orderFixture,
+      status: 'EN_PROCESO',
+    });
+    workOrdersApi.updateStatus.mockResolvedValue({ id: 7, status: 'DIAGNOSTICO' });
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    renderPage();
+    await screen.findByRole('heading', { name: /orden #7/i });
+
+    const regression = screen.getByRole('button', { name: /volver a diagnóstico/i });
+    expect(regression).toBeDisabled();
+    expect(screen.getByText(/obligatorio para retrocesos/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/nota \/ motivo/i), {
+      target: { value: '  Se encontró una falla adicional  ' },
+    });
+    expect(regression).toBeEnabled();
+
+    fireEvent.click(regression);
+    expect(workOrdersApi.updateStatus).not.toHaveBeenCalled();
+    fireEvent.click(regression);
+
+    await waitFor(() => expect(workOrdersApi.updateStatus).toHaveBeenCalledWith(
+      '7',
+      'DIAGNOSTICO',
+      '  Se encontró una falla adicional  ',
+    ));
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringMatching(/de En proceso a Diagnóstico.*motivo quedará registrado/i),
+    );
+  });
+
+  it('offers both controlled returns from LISTA to the assigned mechanic', async () => {
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'LISTA' });
+    workOrdersApi.updateStatus.mockResolvedValue({ id: 7, status: 'EN_PROCESO' });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage(mechanicUser);
+    await screen.findByRole('heading', { name: /orden #7/i });
+
+    const toDiagnosis = screen.getByRole('button', { name: /volver a diagnóstico/i });
+    const toRepair = screen.getByRole('button', { name: /volver a reparación/i });
+    expect(toDiagnosis).toBeDisabled();
+    expect(toRepair).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/nota \/ motivo/i), {
+      target: { value: 'La prueba final falló.' },
+    });
+    expect(toDiagnosis).toBeEnabled();
+    expect(toRepair).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /entregar orden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
+    fireEvent.click(toRepair);
+    await waitFor(() => expect(workOrdersApi.updateStatus).toHaveBeenCalledWith(
+      '7',
+      'EN_PROCESO',
+      'La prueba final falló.',
+    ));
   });
 
   it('allows ADMIN to assign an unassigned order without a reason', async () => {

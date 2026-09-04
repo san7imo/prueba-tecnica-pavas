@@ -8,7 +8,9 @@ Aprobado — 2026-09-03.
 
 Los roles actuales son globales: no existe responsable por orden y un mecánico puede operar trabajo ajeno. La máquina de estados sólo avanza, aunque durante reparación pueden aparecer fallas adicionales, una prueba final puede fallar y una moto entregada puede regresar por garantía.
 
-ADR-003 continúa describiendo el runtime actual. Esta decisión lo extiende cuando HITO 7, HITO 9, HITO 10 y HITO 11 sean implementados.
+ADR-003 describe la máquina original. La asignación (HITO 7), el ownership
+(HITO 9) y las regresiones genéricas (HITO 10) ya materializan esta decisión;
+la reapertura dedicada permanece para HITO 11.
 
 ## Decisión
 

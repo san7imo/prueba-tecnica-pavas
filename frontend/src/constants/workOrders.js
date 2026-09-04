@@ -24,14 +24,30 @@ export const WORK_ORDER_TRANSITION_ACTION_LABELS = {
   CANCELADA: 'Cancelar orden',
 };
 
+export const WORK_ORDER_REGRESSION_ACTION_LABELS = {
+  'EN_PROCESO:DIAGNOSTICO': 'Volver a diagnóstico',
+  'LISTA:DIAGNOSTICO': 'Volver a diagnóstico',
+  'LISTA:EN_PROCESO': 'Volver a reparación',
+};
+
 export const WORK_ORDER_TRANSITIONS = {
   RECIBIDA: ['DIAGNOSTICO', 'CANCELADA'],
   DIAGNOSTICO: ['EN_PROCESO', 'CANCELADA'],
-  EN_PROCESO: ['LISTA', 'CANCELADA'],
-  LISTA: ['ENTREGADA', 'CANCELADA'],
+  EN_PROCESO: ['DIAGNOSTICO', 'LISTA', 'CANCELADA'],
+  LISTA: ['DIAGNOSTICO', 'EN_PROCESO', 'ENTREGADA', 'CANCELADA'],
   ENTREGADA: [],
   CANCELADA: [],
 };
+
+export const isWorkOrderRegression = (fromStatus, toStatus) =>
+  Object.prototype.hasOwnProperty.call(
+    WORK_ORDER_REGRESSION_ACTION_LABELS,
+    `${fromStatus}:${toStatus}`,
+  );
+
+export const getWorkOrderTransitionActionLabel = (fromStatus, toStatus) =>
+  WORK_ORDER_REGRESSION_ACTION_LABELS[`${fromStatus}:${toStatus}`] ??
+  WORK_ORDER_TRANSITION_ACTION_LABELS[toStatus];
 
 export const WORK_ORDER_ITEM_TYPES = [
   { value: 'MANO_OBRA', label: 'Mano de obra' },

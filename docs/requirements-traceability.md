@@ -146,6 +146,15 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-OWN-008 | Frontend MECANICO ofrece Mis órdenes sin controles de asignación | HITO 9 | navegación/consulta role-aware | `/orders`, `/orders/:id` | mechanic UI cases | Done |
 | PZ-OWN-009 | Frontend ADMIN ofrece colas Todas/Sin asignar y responsable visible | HITO 9 | scope switch + columna responsable | `/orders` | admin scope UI cases | Done |
 | PZ-OWN-010 | ADMIN gestiona asignación con razón, confirmación y recuperación | HITO 9 | `AssignmentPanel` + API dedicada | `/orders/:id` | assign/reassign/unassign/error/closed cases | Done |
+| PZ-STATE-001 | Sólo las tres regresiones genéricas aprobadas amplían el grafo | HITO 10 | matriz explícita por estado | status API | complete 6×6 matrix | Done |
+| PZ-STATE-002 | Toda regresión exige motivo no vacío | HITO 10 | clasificación y validación bajo WorkOrder lock | status API | missing/blank reason cases | Done |
+| PZ-STATE-003 | ADMIN y MECANICO asignado ejecutan las tres regresiones | HITO 10 | RBAC + ownership contextual | status API | role/regression matrix | Done |
+| PZ-STATE-004 | History conserva from/to, actor y motivo de regresión | HITO 10 | ledger inmutable en la transacción | status/history APIs | regression history cases | Done |
+| PZ-STATE-005 | Audit distingue regresión con razón y metadata allowlisted | HITO 10 | `STATUS_CHANGED` + `transitionKind=REGRESSION` | audit read API | regression audit cases | Done |
+| PZ-STATE-006 | Fallo audit revierte estado e history de la regresión | HITO 10 | transacción única | status API | forced audit rollback case | Done |
+| PZ-STATE-007 | Retrocesos arbitrarios, terminales y reopen genérico siguen prohibidos | HITO 10 | grafo cerrado; sin arista ENTREGADA | status API | forbidden transition matrix | Done |
+| PZ-STATE-008 | UI muestra los tres retornos con etiquetas inequívocas según rol | HITO 10 | matriz frontend alineada | `/orders/:id` | regression control cases | Done |
+| PZ-STATE-009 | UI bloquea sin motivo y confirma antes de enviar una regresión | HITO 10 | validación/confirmación defensiva | `/orders/:id` | reason/confirmation case | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

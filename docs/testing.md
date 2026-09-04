@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  24 suites, 281 pruebas
-Frontend: 12 suites, 71 pruebas
-Matriz:   165 filas PASS
+Backend:  24 suites, 293 pruebas
+Frontend: 12 suites, 73 pruebas
+Matriz:   174 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -168,8 +168,10 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 ### Estados — `workOrderStatus.integration.test.js`
 
 - ruta forward completa y cancelación desde cuatro estados;
-- matriz 6×6, mismo estado, terminales y target desconocido;
-- nota normalizada, rollback y conservación del total;
+- matriz 6×6 con las tres regresiones explícitas, mismo estado, terminales y target desconocido;
+- regresiones disponibles para `ADMIN` y `MECANICO` asignado;
+- motivo normalizado obligatorio, history y audit `REGRESSION` exactos;
+- rollback conjunto de estado/history cuando falla audit y conservación del total;
 - carreras `RECIBIDA → DIAGNOSTICO/CANCELADA` y `LISTA → ENTREGADA/CANCELADA`;
 - evidencia SQL de transacciones y locks independientes.
 
@@ -265,6 +267,14 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - el detalle muestra el responsable al mecánico sin exponer controles administrativos;
 - `ADMIN` asigna sin razón desde unassigned y exige razón/confirmación para reasignar o desasignar;
 - carga y retry del catálogo, doble submit y órdenes cerradas se manejan explícitamente.
+
+### Retrocesos controlados — `WorkOrderDetailPage.test.jsx`
+
+- `EN_PROCESO` ofrece volver a diagnóstico y `LISTA` ofrece diagnóstico o reparación;
+- `MECANICO` conserva los retornos sobre su detalle sin recibir entrega/cancelación;
+- los botones de regresión permanecen deshabilitados mientras el motivo esté vacío;
+- una regresión exige confirmación y envía target/motivo al API sólo al aceptar;
+- las etiquetas distinguen regresar de avanzar y el backend sigue siendo autoritativo.
 
 ### Accesibilidad y polish
 

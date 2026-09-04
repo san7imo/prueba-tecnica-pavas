@@ -15,12 +15,17 @@ import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
 import { models, sequelize } from '../src/config/databaseContext.js';
 import {
+  AUDIT_ACTION,
+  AUDIT_TRANSITION_KIND,
+} from '../src/constants/audit.js';
+import {
   OPEN_WORK_ORDER_STATUSES,
   WORK_ORDER_ITEM_TYPE,
   WORK_ORDER_STATUSES,
   WORK_ORDER_STATUS,
 } from '../src/constants/workOrder.js';
 import { workOrderRepository } from '../src/repositories/workOrderRepository.js';
+import { auditService } from '../src/services/auditService.js';
 import { USER_ROLE } from '../src/constants/auth.js';
 import {
   createAuthenticatedRequest,
@@ -28,8 +33,23 @@ import {
 } from './helpers/authenticatedRequest.js';
 
 let migrator;
+let admin;
+let mechanic;
 let adminAccessToken;
+let mechanicAccessToken;
 const request = createAuthenticatedRequest(() => adminAccessToken);
+const mechanicRequest = createAuthenticatedRequest(() => mechanicAccessToken);
+
+const REGRESSION_TRANSITIONS = Object.freeze([
+  [WORK_ORDER_STATUS.IN_PROGRESS, WORK_ORDER_STATUS.DIAGNOSIS],
+  [WORK_ORDER_STATUS.READY, WORK_ORDER_STATUS.DIAGNOSIS],
+  [WORK_ORDER_STATUS.READY, WORK_ORDER_STATUS.IN_PROGRESS],
+]);
+
+const isExpectedRegression = (fromStatus, toStatus) =>
+  REGRESSION_TRANSITIONS.some(
+    ([from, to]) => from === fromStatus && to === toStatus,
+  );
 
 const EXPECTED_TRANSITIONS = Object.freeze({
   [WORK_ORDER_STATUS.RECEIVED]: [
@@ -41,10 +61,13 @@ const EXPECTED_TRANSITIONS = Object.freeze({
     WORK_ORDER_STATUS.CANCELLED,
   ],
   [WORK_ORDER_STATUS.IN_PROGRESS]: [
+    WORK_ORDER_STATUS.DIAGNOSIS,
     WORK_ORDER_STATUS.READY,
     WORK_ORDER_STATUS.CANCELLED,
   ],
   [WORK_ORDER_STATUS.READY]: [
+    WORK_ORDER_STATUS.DIAGNOSIS,
+    WORK_ORDER_STATUS.IN_PROGRESS,
     WORK_ORDER_STATUS.DELIVERED,
     WORK_ORDER_STATUS.CANCELLED,
   ],
@@ -107,10 +130,15 @@ beforeAll(async () => {
   migrator = createMigrator(sequelize);
   await migrator.down({ to: 0 });
   await migrator.up();
-  ({ accessToken: adminAccessToken } = await createTestIdentity({
+  ({ user: admin, accessToken: adminAccessToken } = await createTestIdentity({
     name: 'Status Admin',
     email: 'status-admin@example.test',
     role: USER_ROLE.ADMIN,
+  }));
+  ({ user: mechanic, accessToken: mechanicAccessToken } = await createTestIdentity({
+    name: 'Status Mechanic',
+    email: 'status-mechanic@example.test',
+    role: USER_ROLE.MECHANIC,
   }));
 });
 
@@ -205,7 +233,13 @@ describe('Work Order Status API', () => {
     for (const fromStatus of WORK_ORDER_STATUSES) {
       for (const toStatus of WORK_ORDER_STATUSES) {
         const workOrder = await createWorkOrder(bike.id, { status: fromStatus });
-        const response = await updateStatus(workOrder.id, toStatus);
+        const response = await updateStatus(
+          workOrder.id,
+          toStatus,
+          isExpectedRegression(fromStatus, toStatus)
+            ? 'Controlled regression reason.'
+            : undefined,
+        );
         const isAllowed = EXPECTED_TRANSITIONS[fromStatus].includes(toStatus);
 
         await workOrder.reload();
@@ -230,8 +264,107 @@ describe('Work Order Status API', () => {
     }
   });
 
+  it.each(REGRESSION_TRANSITIONS)(
+    'persists and audits controlled regression %s -> %s with its normalized reason',
+    async (fromStatus, toStatus) => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id, { status: fromStatus });
+
+      const response = await updateStatus(
+        workOrder.id,
+        toStatus,
+        '  Fallo detectado durante la verificación.  ',
+      );
+
+      expect(response.status).toBe(200);
+      expect((await workOrder.reload()).status).toBe(toStatus);
+      const history = await models.WorkOrderStatusHistory.findAll({
+        where: { workOrderId: workOrder.id },
+      });
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        fromStatus,
+        toStatus,
+        note: 'Fallo detectado durante la verificación.',
+        changedByUserId: admin.id,
+      });
+      const events = await models.AuditEvent.findAll({
+        where: { entityId: workOrder.id, action: AUDIT_ACTION.STATUS_CHANGED },
+      });
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        reason: 'Fallo detectado durante la verificación.',
+        metadata: { transitionKind: AUDIT_TRANSITION_KIND.REGRESSION },
+      });
+      expect(events[0].beforeData.status).toBe(fromStatus);
+      expect(events[0].afterData.status).toBe(toStatus);
+    },
+  );
+
+  it.each(REGRESSION_TRANSITIONS)(
+    'allows assigned MECANICO to execute controlled regression %s -> %s',
+    async (fromStatus, toStatus) => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id, {
+        status: fromStatus,
+        assignedMechanicId: mechanic.id,
+      });
+
+      const response = await mechanicRequest(app)
+        .patch(`/api/work-orders/${workOrder.id}/status`)
+        .send({
+          toStatus,
+          note: 'Nueva falla encontrada por el responsable.',
+        });
+
+      expect(response.status).toBe(200);
+      expect((await workOrder.reload()).status).toBe(toStatus);
+      expect(await models.WorkOrderStatusHistory.count({
+        where: { workOrderId: workOrder.id, changedByUserId: mechanic.id },
+      })).toBe(1);
+    },
+  );
+
+  it.each(REGRESSION_TRANSITIONS)(
+    'rejects controlled regression %s -> %s without a reason',
+    async (fromStatus, toStatus) => {
+      const { bike } = await createBike();
+      const workOrder = await createWorkOrder(bike.id, { status: fromStatus });
+
+      const response = await updateStatus(workOrder.id, toStatus);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('STATUS_REGRESSION_REASON_REQUIRED');
+      expect((await workOrder.reload()).status).toBe(fromStatus);
+      expect(await models.WorkOrderStatusHistory.count({
+        where: { workOrderId: workOrder.id },
+      })).toBe(0);
+      expect(await models.AuditEvent.count({
+        where: { entityId: workOrder.id },
+      })).toBe(0);
+    },
+  );
+
+  it('treats a whitespace-only regression note as a missing reason', async () => {
+    const { bike } = await createBike();
+    const workOrder = await createWorkOrder(bike.id, {
+      status: WORK_ORDER_STATUS.READY,
+    });
+
+    const response = await updateStatus(
+      workOrder.id,
+      WORK_ORDER_STATUS.DIAGNOSIS,
+      '   ',
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('STATUS_REGRESSION_REASON_REQUIRED');
+    expect((await workOrder.reload()).status).toBe(WORK_ORDER_STATUS.READY);
+  });
+
   it.each([
     [WORK_ORDER_STATUS.DELIVERED, WORK_ORDER_STATUS.CANCELLED],
+    [WORK_ORDER_STATUS.DELIVERED, WORK_ORDER_STATUS.DIAGNOSIS],
     [WORK_ORDER_STATUS.CANCELLED, WORK_ORDER_STATUS.RECEIVED],
   ])('keeps terminal state %s immutable against %s', async (fromStatus, toStatus) => {
     const { bike } = await createBike();
@@ -357,6 +490,31 @@ describe('Work Order Status API', () => {
     expect(JSON.stringify(response.body)).not.toContain('simulated');
     await workOrder.reload();
     expect(workOrder.status).toBe(WORK_ORDER_STATUS.RECEIVED);
+  });
+
+  it('rolls back a regression and its history when business audit fails', async () => {
+    const { bike } = await createBike();
+    const workOrder = await createWorkOrder(bike.id, {
+      status: WORK_ORDER_STATUS.IN_PROGRESS,
+    });
+    vi.spyOn(auditService, 'record').mockRejectedValueOnce(
+      new Error('simulated regression audit failure'),
+    );
+
+    const response = await updateStatus(
+      workOrder.id,
+      WORK_ORDER_STATUS.DIAGNOSIS,
+      'La reparación reveló otra falla.',
+    );
+
+    expect(response.status).toBe(500);
+    expect((await workOrder.reload()).status).toBe(WORK_ORDER_STATUS.IN_PROGRESS);
+    expect(await models.WorkOrderStatusHistory.count({
+      where: { workOrderId: workOrder.id },
+    })).toBe(0);
+    expect(await models.AuditEvent.count({
+      where: { entityId: workOrder.id },
+    })).toBe(0);
   });
 
   it('serializes a concurrently valid diagnosis/cancellation sequence', async () => {

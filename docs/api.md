@@ -3,7 +3,7 @@
 ## Alcance implementado
 
 La API expone las rutas completas de las fases 1 y 2 y los hitos de
-productización aprobados hasta HITO 9. Clientes, motocicletas, órdenes y
+productización aprobados hasta HITO 10. Clientes, motocicletas, órdenes y
 usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
 públicos.
 
@@ -526,14 +526,14 @@ Content-Type: application/json
 { "toStatus": "DIAGNOSTICO", "note": "Initial diagnosis completed" }
 ```
 
-`toStatus` requerido. `note` acepta string/null, se recorta y limita a 1000. El cambio y un único evento se ejecutan en transacción con `FOR UPDATE`.
+`toStatus` requerido. `note` acepta string/null, se recorta y limita a 1000. El cambio, history y audit se ejecutan en una transacción con `FOR UPDATE`.
 
 | Actual | Destinos |
 |---|---|
 | `RECIBIDA` | `DIAGNOSTICO`, `CANCELADA` |
 | `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
-| `EN_PROCESO` | `LISTA`, `CANCELADA` |
-| `LISTA` | `ENTREGADA`, `CANCELADA` |
+| `EN_PROCESO` | `DIAGNOSTICO` (regresión), `LISTA`, `CANCELADA` |
+| `LISTA` | `DIAGNOSTICO` (regresión), `EN_PROCESO` (regresión), `ENTREGADA`, `CANCELADA` |
 | `ENTREGADA` | ninguno |
 | `CANCELADA` | ninguno |
 
@@ -542,6 +542,12 @@ Content-Type: application/json
 usuario. La propiedad se relee después del `FOR UPDATE`. Una arista inválida
 para todos es 400; una válida pero prohibida o una orden ajena/sin asignar es
 403.
+
+Las tres regresiones exigen `note` no vacío; sin él responden
+`400 STATUS_REGRESSION_REASON_REQUIRED`. Una regresión válida persiste la nota
+en history y crea `STATUS_CHANGED` con `metadata.transitionKind=REGRESSION` y
+la misma razón. `ENTREGADA → DIAGNOSTICO` continúa rechazado aquí: la
+reapertura de garantía tendrá un endpoint dedicado en su hito.
 
 ```json
 { "data": { "id": 10, "status": "DIAGNOSTICO" } }
@@ -557,6 +563,7 @@ para todos es 400; una válida pero prohibida o una orden ajena/sin asignar es
 ```
 
 Errores: `400 VALIDATION_ERROR`, `400 INVALID_STATUS_TRANSITION`,
+`400 STATUS_REGRESSION_REASON_REQUIRED`,
 `403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`, `404 WORK_ORDER_NOT_FOUND`, 500 seguro.
 
 ### Consultar historial

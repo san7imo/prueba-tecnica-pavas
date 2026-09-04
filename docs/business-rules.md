@@ -3,7 +3,7 @@
 ## Estado
 
 Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-los hitos de productización aprobados hasta HITO 9.
+los hitos de productización aprobados hasta HITO 10.
 
 ## Máquina de estados de la orden
 
@@ -14,6 +14,9 @@ stateDiagram-v2
     DIAGNOSTICO --> EN_PROCESO
     EN_PROCESO --> LISTA
     LISTA --> ENTREGADA
+    EN_PROCESO --> DIAGNOSTICO: motivo obligatorio
+    LISTA --> DIAGNOSTICO: motivo obligatorio
+    LISTA --> EN_PROCESO: motivo obligatorio
     RECIBIDA --> CANCELADA
     DIAGNOSTICO --> CANCELADA
     EN_PROCESO --> CANCELADA
@@ -26,8 +29,8 @@ Mapa canónico:
 {
   RECIBIDA: ['DIAGNOSTICO', 'CANCELADA'],
   DIAGNOSTICO: ['EN_PROCESO', 'CANCELADA'],
-  EN_PROCESO: ['LISTA', 'CANCELADA'],
-  LISTA: ['ENTREGADA', 'CANCELADA'],
+  EN_PROCESO: ['DIAGNOSTICO', 'LISTA', 'CANCELADA'],
+  LISTA: ['DIAGNOSTICO', 'EN_PROCESO', 'ENTREGADA', 'CANCELADA'],
   ENTREGADA: [],
   CANCELADA: [],
 }
@@ -37,17 +40,21 @@ Mapa canónico:
 |---|---|
 | `RECIBIDA` | `DIAGNOSTICO`, `CANCELADA` |
 | `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
-| `EN_PROCESO` | `LISTA`, `CANCELADA` |
-| `LISTA` | `ENTREGADA`, `CANCELADA` |
+| `EN_PROCESO` | `DIAGNOSTICO` (regresión), `LISTA`, `CANCELADA` |
+| `LISTA` | `DIAGNOSTICO` (regresión), `EN_PROCESO` (regresión), `ENTREGADA`, `CANCELADA` |
 | `ENTREGADA` | ninguno |
 | `CANCELADA` | ninguno |
 
-- `ENTREGADA` y `CANCELADA` son terminales.
-- El rollback de `ENTREGADA` para `ADMIN` era opcional y se excluye deliberadamente.
+- `ENTREGADA` y `CANCELADA` son terminales para el status PATCH. La futura reapertura de garantía usa una operación dedicada y no forma parte de este hito.
 - Un destino desconocido falla en validación; una arista conocida pero inválida devuelve HTTP 400 con `INVALID_STATUS_TRANSITION`.
 - Solicitar el mismo estado se rechaza y nunca crea historial.
 - La orden se bloquea en una transacción y se valida desde el estado leído bajo lock.
-- `note` es opcional, se recorta, admite máximo 1000 caracteres y sólo se persiste para una transición válida.
+- `note` se recorta y admite máximo 1000 caracteres. Es opcional para avances y obligatorio para toda regresión; ausente o vacío devuelve `400 STATUS_REGRESSION_REASON_REQUIRED` sin mutar ni auditar.
+- `EN_PROCESO → DIAGNOSTICO` representa una falla adicional o mal comprendida descubierta durante la reparación.
+- `LISTA → DIAGNOSTICO` representa síntomas de prueba final que requieren diagnosticar nuevamente.
+- `LISTA → EN_PROCESO` representa una prueba fallida cuyo trabajo correctivo ya es conocido.
+- Una regresión válida crea history con la nota y audit `STATUS_CHANGED` con `transitionKind: REGRESSION` y la misma razón, atómicamente.
+- Permanecen prohibidos los retornos a `RECIBIDA`, cualquier salida de `CANCELADA` y `ENTREGADA → DIAGNOSTICO` mediante el status PATCH.
 
 ## Creación y unicidad de órdenes abiertas
 

@@ -21,6 +21,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-NEW-*` | `frontend/tests/NewWorkOrderPage.test.jsx`, `App.test.jsx` |
 | `PZ-OWN-001` a `PZ-OWN-007` | `backend/tests/workOrderOwnership.integration.test.js` |
 | `PZ-OWN-008` a `PZ-OWN-010` | `frontend/tests/WorkOrdersPage.test.jsx`, `WorkOrderDetailPage.test.jsx`, `App.test.jsx` |
+| `PZ-STATE-001` a `PZ-STATE-007` | `backend/tests/workOrderStatus.integration.test.js` |
+| `PZ-STATE-008` a `PZ-STATE-009` | `frontend/tests/WorkOrderDetailPage.test.jsx` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -84,7 +86,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P1-BE-014 | Add/add y add/delete concurrentes preservan SUM/total | concurrency cases | PASS |
 | P1-STATE-001 | Workflow forward completo persiste y conserva total | `workOrderStatus.integration.test.js`: full path | PASS |
 | P1-STATE-002 | Cancelación desde cuatro estados no terminales | parameterized cancellation cases | PASS |
-| P1-STATE-003 | Matriz 6×6 rechaza saltos, retroceso, igual y terminal | transition matrix | PASS |
+| P1-STATE-003 | Matriz 6×6 permite sólo avances/regresiones aprobados y rechaza el resto | transition matrix | PASS |
 | P1-STATE-004 | Mismo estado da error estable; target desconocido valida | casos mismo/desconocido | PASS |
 | P1-STATE-005 | Transiciones competidoras se serializan sin lost update | concurrency race cases | PASS |
 | P2-AUDIT-003 | Cambio/cancelación válida guarda actor/from/to/fecha/nota una vez | caso de contenido del historial | PASS |
@@ -145,6 +147,13 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-OWN-005 | Estado propio avanza; ajeno/sin asignar queda intacto | locked transition ownership cases | PASS |
 | PZ-OWN-006 | Ítem propio se crea; ajeno/sin asignar no altera ítems/total/audit | locked item ownership cases | PASS |
 | PZ-OWN-007 | Reasignación revoca al anterior y habilita inmediatamente al nuevo | post-reassignment access case | PASS |
+| PZ-STATE-001 | El grafo admite exactamente las tres regresiones aprobadas | complete 6×6 matrix | PASS |
+| PZ-STATE-002 | Las tres regresiones rechazan motivo ausente o vacío sin efectos | missing/blank reason cases | PASS |
+| PZ-STATE-003 | ADMIN y MECANICO asignado ejecutan cada regresión | role/regression matrix | PASS |
+| PZ-STATE-004 | History registra from/to, actor y motivo normalizado | regression history cases | PASS |
+| PZ-STATE-005 | Audit registra STATUS_CHANGED, razón y transitionKind REGRESSION | regression audit cases | PASS |
+| PZ-STATE-006 | Fallo audit revierte estado e history | forced regression audit failure | PASS |
+| PZ-STATE-007 | Retrocesos arbitrarios, terminales y ENTREGADA por PATCH fallan | forbidden transition matrix | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |
@@ -194,6 +203,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-OWN-008 | MECANICO navega a Mis órdenes con scope mine y sin gestión de responsable | list/navigation/detail mechanic cases | PASS |
 | PZ-OWN-009 | ADMIN alterna Todas/Sin asignar y ve responsable explícito | admin scope/list cases | PASS |
 | PZ-OWN-010 | ADMIN asigna, reasigna y desasigna con razón/confirmación y estados UX | assignment panel cases | PASS |
+| PZ-STATE-008 | Detalle ofrece los tres retornos con etiquetas y acciones por rol | regression control cases | PASS |
+| PZ-STATE-009 | Regresión permanece bloqueada sin motivo y exige confirmación | reason/confirmation case | PASS |
 
 ## Evidencia no funcional y documental
 

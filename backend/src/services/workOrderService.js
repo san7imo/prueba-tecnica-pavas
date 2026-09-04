@@ -24,7 +24,10 @@ import { clientRepository } from '../repositories/clientRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
 import { workOrderStatusHistoryRepository } from '../repositories/workOrderStatusHistoryRepository.js';
-import { canTransition } from '../utils/workOrderStateMachine.js';
+import {
+  canTransition,
+  isRegressionTransition,
+} from '../utils/workOrderStateMachine.js';
 import { auditService } from './auditService.js';
 
 const bikeNotFound = () =>
@@ -43,6 +46,12 @@ const invalidStatusTransition = (fromStatus, toStatus) =>
   new BusinessRuleError({
     code: 'INVALID_STATUS_TRANSITION',
     message: `Cannot transition work order from ${fromStatus} to ${toStatus}.`,
+  });
+
+const statusRegressionReasonRequired = () =>
+  new BusinessRuleError({
+    code: 'STATUS_REGRESSION_REASON_REQUIRED',
+    message: 'A non-empty reason is required for a backward status transition.',
   });
 
 const bikeHasActiveWorkOrder = () =>
@@ -422,6 +431,13 @@ export const workOrderService = {
           throw invalidStatusTransition(workOrder.status, toStatus);
         }
 
+        const transitionKind = isRegressionTransition(
+          workOrder.status,
+          toStatus,
+        )
+          ? AUDIT_TRANSITION_KIND.REGRESSION
+          : AUDIT_TRANSITION_KIND.FORWARD;
+
         if (
           actor.role === USER_ROLE.MECHANIC &&
           ![
@@ -431,6 +447,12 @@ export const workOrderService = {
           ].includes(toStatus)
         ) {
           throw new AuthorizationError();
+        }
+        if (
+          transitionKind === AUDIT_TRANSITION_KIND.REGRESSION &&
+          note === null
+        ) {
+          throw statusRegressionReasonRequired();
         }
 
         await workOrderRepository.updateStatus(id, toStatus, transaction);
@@ -459,7 +481,7 @@ export const workOrderService = {
           },
           metadata: toStatus === WORK_ORDER_STATUS.CANCELLED
             ? null
-            : { transitionKind: AUDIT_TRANSITION_KIND.FORWARD },
+            : { transitionKind },
           reason: note,
         }, transaction);
         return { id: workOrder.id, status: toStatus };

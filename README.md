@@ -48,6 +48,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - nueva orden guiada por reutilización: cliente existente → motocicleta activa del cliente → falla → responsable opcional.
 - ownership operativo: cada `MECANICO` sólo consulta y muta sus órdenes asignadas;
 - vista **Mis órdenes** para mecánicos y colas **Todas/Sin asignar** con gestión de responsable para `ADMIN`.
+- retrocesos controlados y auditados cuando la reparación revela otra falla o una prueba final falla.
 
 ## Stack tecnológico
 
@@ -298,6 +299,11 @@ RECIBIDA → DIAGNOSTICO → EN_PROCESO → LISTA → ENTREGADA
 
 `CANCELADA` es válida desde `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. `ENTREGADA` y `CANCELADA` son terminales. Las transiciones inválidas o al mismo estado devuelven HTTP 400 y no generan historial.
 
+Con un motivo obligatorio, `EN_PROCESO` puede volver a `DIAGNOSTICO` y
+`LISTA` puede volver a `DIAGNOSTICO` o `EN_PROCESO`. Esos retornos quedan en el
+historial y en la auditoría como `REGRESSION`; no habilitan ningún retroceso a
+`RECIBIDA` ni la reapertura de una orden entregada.
+
 - `ADMIN`: acceso completo a las acciones implementadas.
 - `MECANICO`: lectura, creación de ítems y avance a `DIAGNOSTICO`,
   `EN_PROCESO` y `LISTA` únicamente sobre órdenes propias asignadas; sin
@@ -326,9 +332,9 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        24 suites, 281 pruebas
-Frontend:       12 suites, 71 pruebas
-Matriz crítica: 165 casos/filas PASS
+Backend:        24 suites, 293 pruebas
+Frontend:       12 suites, 73 pruebas
+Matriz crítica: 174 casos/filas PASS
 Migraciones:    13 ejecutadas, 0 pendientes
 ```
 
