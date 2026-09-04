@@ -74,7 +74,20 @@ export const validateUserRole = (request, _response, next) => {
   const body = asObject(request.body);
   const details = [];
   const role = validateRoleValue(body.role, details);
-  completeValidation({ request, section: 'body', value: { role }, details, next });
+  const reason = requiredString({
+    value: body.reason,
+    field: 'reason',
+    label: 'Reason',
+    maxLength: 1000,
+    details,
+  });
+  completeValidation({
+    request,
+    section: 'body',
+    value: { role, reason },
+    details,
+    next,
+  });
 };
 
 export const validateUserActive = (request, _response, next) => {
@@ -86,5 +99,18 @@ export const validateUserActive = (request, _response, next) => {
   } else {
     active = body.active;
   }
-  completeValidation({ request, section: 'body', value: { active }, details, next });
+  const reason = requiredString({
+    value: body.reason,
+    field: 'reason',
+    label: 'Reason',
+    maxLength: 1000,
+    details,
+  });
+  completeValidation({
+    request,
+    section: 'body',
+    value: { active, reason },
+    details,
+    next,
+  });
 };

@@ -255,6 +255,9 @@ p { color: var(--ink-700); line-height: 1.55; }
 .users-panel .button { min-height: 2.2rem; padding: 0.45rem 0.65rem; }
 .user-role-editor { display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem; }
 .user-role-editor select { min-width: 8rem; }
+.user-lifecycle-reason { min-width: 15rem; margin-top: 0.55rem; }
+.user-lifecycle-reason label { font-size: 0.68rem; }
+.user-lifecycle-reason input { min-height: 2.2rem; padding: 0.4rem 0.5rem; font-size: 0.75rem; }
 .user-state { display: inline-flex; padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
 .user-state--active { color: var(--success); background: var(--success-soft); }
 .user-state--inactive { color: var(--danger); background: var(--danger-soft); }

@@ -316,26 +316,26 @@ describe.sequential('HITO 8 role-based access control', () => {
     const forbiddenBeforeIdValidation = await request(app)
       .patch('/api/users/not-an-id/role')
       .set(mechanicHeaders())
-      .send({ role: USER_ROLE.ADMIN });
+      .send({ role: USER_ROLE.ADMIN, reason: 'Forbidden role change.' });
     expect(forbiddenBeforeIdValidation.status).toBe(403);
 
     const changed = await request(app)
       .patch(`/api/users/${mechanic.id}/role`)
       .set(adminHeaders())
-      .send({ role: USER_ROLE.ADMIN });
+      .send({ role: USER_ROLE.ADMIN, reason: 'Promotion for operations.' });
     expect(changed.status).toBe(200);
     expect(changed.body.data.role).toBe(USER_ROLE.ADMIN);
 
     const invalid = await request(app)
       .patch(`/api/users/${mechanic.id}/role`)
       .set(adminHeaders())
-      .send({ role: 'USER' });
+      .send({ role: 'USER', reason: 'Invalid role test.' });
     expect(invalid.status).toBe(400);
 
     const missing = await request(app)
       .patch('/api/users/999999/role')
       .set(adminHeaders())
-      .send({ role: USER_ROLE.ADMIN });
+      .send({ role: USER_ROLE.ADMIN, reason: 'Missing user test.' });
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe('USER_NOT_FOUND');
 
@@ -345,31 +345,31 @@ describe.sequential('HITO 8 role-based access control', () => {
     const deactivated = await request(app)
       .patch(`/api/users/${mechanic.id}/active`)
       .set(adminHeaders())
-      .send({ active: false });
+      .send({ active: false, reason: 'Temporary leave.' });
     expect(deactivated.status).toBe(200);
     expect(deactivated.body.data.active).toBe(false);
 
     const reactivated = await request(app)
       .patch(`/api/users/${mechanic.id}/active`)
       .set(adminHeaders())
-      .send({ active: true });
+      .send({ active: true, reason: 'Return to workshop.' });
     expect(reactivated.status).toBe(200);
     expect(reactivated.body.data.active).toBe(true);
 
     await request(app)
       .patch(`/api/users/${mechanic.id}/active`)
       .set(adminHeaders())
-      .send({ active: 'false' })
+      .send({ active: 'false', reason: 'Invalid active test.' })
       .expect(400);
     await request(app)
       .patch('/api/users/999999/active')
       .set(adminHeaders())
-      .send({ active: false })
+      .send({ active: false, reason: 'Missing user test.' })
       .expect(404);
     await request(app)
       .patch(`/api/users/${admin.id}/active`)
       .set(mechanicHeaders())
-      .send({ active: false })
+      .send({ active: false, reason: 'Forbidden deactivation.' })
       .expect(403);
   });
 
@@ -381,7 +381,7 @@ describe.sequential('HITO 8 role-based access control', () => {
     await request(app)
       .patch(`/api/users/${mechanic.id}/active`)
       .set(adminHeaders())
-      .send({ active: false })
+      .send({ active: false, reason: 'Security test.' })
       .expect(200);
 
     const rejected = await request(app)
@@ -395,7 +395,7 @@ describe.sequential('HITO 8 role-based access control', () => {
     await request(app)
       .patch(`/api/users/${mechanic.id}/role`)
       .set(adminHeaders())
-      .send({ role: USER_ROLE.ADMIN })
+      .send({ role: USER_ROLE.ADMIN, reason: 'Security test.' })
       .expect(200);
 
     const rejected = await request(app)

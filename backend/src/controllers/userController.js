@@ -17,7 +17,8 @@ export const listUsers = async (_request, response) => {
 export const changeUserRole = async (request, response) => {
   const user = await userService.changeRole(
     request.validated.params.id,
-    request.validated.body.role,
+    request.validated.body,
+    request.user,
   );
   response.json({ data: serializeManagedUser(user) });
 };
@@ -25,7 +26,8 @@ export const changeUserRole = async (request, response) => {
 export const changeUserActive = async (request, response) => {
   const user = await userService.changeActive(
     request.validated.params.id,
-    request.validated.body.active,
+    request.validated.body,
+    request.user,
   );
   response.json({ data: serializeManagedUser(user) });
 };

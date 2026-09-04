@@ -43,12 +43,20 @@ describe('UsersPage', () => {
 
     fireEvent.change(screen.getByRole('combobox', { name: /rol de mauro/i }), { target: { value: 'ADMIN' } });
     expect(usersApi.changeRole).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Promoción a responsable' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar rol de mauro/i }));
-    await waitFor(() => expect(usersApi.changeRole).toHaveBeenCalledWith(2, 'ADMIN'));
+    await waitFor(() => expect(usersApi.changeRole).toHaveBeenCalledWith(2, {
+      role: 'ADMIN',
+      reason: 'Promoción a responsable',
+    }));
+    fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Salida temporal' } });
     fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
 
     expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/desactivar a mauro/i));
-    await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, false));
+    await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, {
+      active: false,
+      reason: 'Salida temporal',
+    }));
   });
 
   it('exposes the user table as a keyboard-focusable labeled region', async () => {
@@ -102,10 +110,34 @@ describe('UsersPage', () => {
     renderWithAuth(<UsersPage />);
     await screen.findByText('Mauro Mecánico');
 
+    fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Regreso al taller' } });
     fireEvent.click(screen.getByRole('button', { name: /activar a mauro/i }));
 
-    await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, true));
+    await waitFor(() => expect(usersApi.changeActive).toHaveBeenCalledWith(2, {
+      active: true,
+      reason: 'Regreso al taller',
+    }));
     expect(await screen.findByText(/mauro mecánico fue activado/i)).toBeInTheDocument();
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('requires a reason and translates lifecycle conflicts into actionable feedback', async () => {
+    usersApi.changeActive.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { error: { code: 'MECHANIC_HAS_OPEN_ORDERS', message: 'Backend message.' } },
+      },
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderWithAuth(<UsersPage />);
+    await screen.findByText('Mauro Mecánico');
+
+    fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
+    expect(usersApi.changeActive).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/escribe el motivo/i);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Fin de turno' } });
+    fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
+    expect(await screen.findByText(/reasigna primero las órdenes abiertas/i)).toBeInTheDocument();
   });
 });

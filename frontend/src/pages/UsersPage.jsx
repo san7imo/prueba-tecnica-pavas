@@ -11,6 +11,20 @@ import { formatDateTime } from '../utils/formatters.js';
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'MECANICO' };
 
+const lifecycleErrorMessage = (error, fallback) => {
+  const apiError = getApiError(error, fallback);
+  if (apiError.code === 'LAST_ACTIVE_ADMIN_REQUIRED') {
+    return 'Debe permanecer al menos un administrador activo.';
+  }
+  if (apiError.code === 'MECHANIC_HAS_OPEN_ORDERS') {
+    return 'Reasigna primero las órdenes abiertas de este mecánico.';
+  }
+  if (apiError.code === 'CONCURRENT_MODIFICATION_RETRY') {
+    return 'El usuario cambió al mismo tiempo. Recarga la lista e intenta de nuevo.';
+  }
+  return apiError.message;
+};
+
 export const UsersPage = () => {
   const { user: currentUser, logout } = useAuth();
   const [users, setUsers] = useState([]);
@@ -22,6 +36,7 @@ export const UsersPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   const [roleDrafts, setRoleDrafts] = useState({});
+  const [reasonDrafts, setReasonDrafts] = useState({});
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -71,6 +86,11 @@ export const UsersPage = () => {
 
   const updateRole = async (managedUser, role) => {
     if (role === managedUser.role || updatingId) return;
+    const reason = reasonDrafts[managedUser.id]?.trim();
+    if (!reason) {
+      setFormError(`Escribe el motivo para cambiar el rol de ${managedUser.name}.`);
+      return;
+    }
     if (managedUser.id === currentUser.id && role !== 'ADMIN'
       && !window.confirm('Al cambiar tu propio rol perderás acceso a esta pantalla. ¿Continuar?')) return;
 
@@ -78,17 +98,18 @@ export const UsersPage = () => {
     setNotice('');
     setFormError('');
     try {
-      const updated = await usersApi.changeRole(managedUser.id, role);
+      const updated = await usersApi.changeRole(managedUser.id, { role, reason });
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setRoleDrafts((current) => {
         const next = { ...current };
         delete next[updated.id];
         return next;
       });
+      setReasonDrafts((current) => ({ ...current, [updated.id]: '' }));
       setNotice(`Rol de ${updated.name} actualizado.`);
       if (updated.id === currentUser.id) await refreshAccessSession();
     } catch (error) {
-      setFormError(getApiErrorMessage(error, 'No fue posible actualizar el rol.'));
+      setFormError(lifecycleErrorMessage(error, 'No fue posible actualizar el rol.'));
     } finally {
       setUpdatingId(null);
     }
@@ -96,21 +117,30 @@ export const UsersPage = () => {
 
   const toggleActive = async (managedUser) => {
     const nextActive = !managedUser.active;
+    const reason = reasonDrafts[managedUser.id]?.trim();
+    if (!reason) {
+      setFormError(`Escribe el motivo para ${nextActive ? 'activar' : 'desactivar'} a ${managedUser.name}.`);
+      return;
+    }
     if (!nextActive && !window.confirm(`¿Desactivar a ${managedUser.name}? No podrá iniciar ni renovar sesión.`)) return;
 
     setUpdatingId(managedUser.id);
     setNotice('');
     setFormError('');
     try {
-      const updated = await usersApi.changeActive(managedUser.id, nextActive);
+      const updated = await usersApi.changeActive(managedUser.id, {
+        active: nextActive,
+        reason,
+      });
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setReasonDrafts((current) => ({ ...current, [updated.id]: '' }));
       if (updated.id === currentUser.id && !updated.active) {
         await logout();
         return;
       }
       setNotice(`${updated.name} fue ${updated.active ? 'activado' : 'desactivado'}.`);
     } catch (error) {
-      setFormError(getApiErrorMessage(error, 'No fue posible actualizar el usuario.'));
+      setFormError(lifecycleErrorMessage(error, 'No fue posible actualizar el usuario.'));
     } finally {
       setUpdatingId(null);
     }
@@ -145,7 +175,7 @@ export const UsersPage = () => {
 
         <section className="panel users-panel" aria-labelledby="user-list-title">
           <div className="section-heading section-heading--compact users-panel__heading">
-            <div><h2 id="user-list-title">Equipo</h2><p>{users.length} {users.length === 1 ? 'usuario' : 'usuarios'}</p></div>
+            <div><h2 id="user-list-title">Equipo</h2><p>{users.length} {users.length === 1 ? 'usuario' : 'usuarios'}. Todo cambio de rol o acceso requiere motivo.</p></div>
           </div>
           {loading ? <LoadingState message="Cargando usuarios…" /> : null}
           {!loading && loadError ? <ErrorState message={loadError.message} onRetry={loadUsers} /> : null}
@@ -180,6 +210,17 @@ export const UsersPage = () => {
                           >
                             {updatingId === managedUser.id ? 'Guardando…' : 'Guardar'}
                           </button>
+                        </div>
+                        <div className="field user-lifecycle-reason">
+                          <label htmlFor={`user-reason-${managedUser.id}`}>Motivo del cambio de {managedUser.name}</label>
+                          <input
+                            id={`user-reason-${managedUser.id}`}
+                            value={reasonDrafts[managedUser.id] ?? ''}
+                            onChange={(event) => setReasonDrafts((current) => ({ ...current, [managedUser.id]: event.target.value }))}
+                            placeholder="Obligatorio para rol o acceso"
+                            maxLength="1000"
+                            disabled={updatingId !== null}
+                          />
                         </div>
                       </td>
                       <td data-label="Estado"><span className={`user-state ${managedUser.active ? 'user-state--active' : 'user-state--inactive'}`}>{managedUser.active ? 'Activo' : 'Inactivo'}</span></td>

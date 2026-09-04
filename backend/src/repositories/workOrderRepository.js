@@ -100,6 +100,19 @@ export const workOrderRepository = {
     });
   },
 
+  findOpenByAssignedMechanicIdForUpdate(assignedMechanicId, transaction) {
+    return models.WorkOrder.findAll({
+      attributes: ['id', 'status'],
+      where: {
+        assignedMechanicId,
+        status: { [Op.in]: OPEN_WORK_ORDER_STATUSES },
+      },
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
   updateTotal(id, total, transaction) {
     return models.WorkOrder.update(
       { total },

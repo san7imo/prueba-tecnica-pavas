@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 
 import { models } from '../config/databaseContext.js';
+import { USER_ROLE } from '../constants/auth.js';
 
 const SAFE_ATTRIBUTES = ['id', 'name', 'email', 'role', 'active'];
 const MANAGED_ATTRIBUTES = [...SAFE_ATTRIBUTES, 'createdAt', 'updatedAt'];
@@ -25,6 +26,24 @@ export const userRepository = {
     if (ids.length === 0) return [];
     return models.User.findAll({
       where: { id: { [Op.in]: ids } },
+      attributes: SAFE_ATTRIBUTES,
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  },
+
+  findLifecycleLockSet(id, includeActiveAdmins, transaction) {
+    const where = includeActiveAdmins
+      ? {
+          [Op.or]: [
+            { id },
+            { role: USER_ROLE.ADMIN, active: true },
+          ],
+        }
+      : { id };
+    return models.User.findAll({
+      where,
       attributes: SAFE_ATTRIBUTES,
       order: [['id', 'ASC']],
       transaction,
@@ -65,11 +84,11 @@ export const userRepository = {
     });
   },
 
-  updateRole(id, role) {
-    return models.User.update({ role }, { where: { id }, fields: ['role'] });
+  updateRole(user, role, transaction) {
+    return user.update({ role }, { fields: ['role'], transaction });
   },
 
-  updateActive(id, active) {
-    return models.User.update({ active }, { where: { id }, fields: ['active'] });
+  updateActive(user, active, transaction) {
+    return user.update({ active }, { fields: ['active'], transaction });
   },
 };

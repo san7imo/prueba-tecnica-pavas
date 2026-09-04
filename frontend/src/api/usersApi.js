@@ -11,13 +11,13 @@ export const usersApi = {
     return response.data.data;
   },
 
-  async changeRole(id, role) {
-    const response = await httpClient.patch(`/users/${id}/role`, { role });
+  async changeRole(id, payload) {
+    const response = await httpClient.patch(`/users/${id}/role`, payload);
     return response.data.data;
   },
 
-  async changeActive(id, active) {
-    const response = await httpClient.patch(`/users/${id}/active`, { active });
+  async changeActive(id, payload) {
+    const response = await httpClient.patch(`/users/${id}/active`, payload);
     return response.data.data;
   },
 };
