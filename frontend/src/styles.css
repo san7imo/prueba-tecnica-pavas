@@ -223,6 +223,9 @@ p { color: var(--ink-700); line-height: 1.55; }
 .inline-alert, .notice { padding: 0.75rem 0.85rem; border: 1px solid #c9d8e7; border-radius: var(--radius-sm); color: #315b85; background: #f0f6fb; font-size: 0.8rem; }
 .inline-alert { margin: 1rem 0 0; }
 .inline-alert--error { border-color: #e4bcbc; color: #873737; background: var(--danger-soft); }
+.actionable-alert, .actionable-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.actionable-alert .text-link { flex: 0 0 auto; color: inherit; }
+.actionable-summary .text-button { flex: 0 0 auto; }
 .notice { margin: -0.5rem 0 1rem; border-color: #bcdacb; color: var(--success); background: var(--success-soft); }
 
 .total-card { min-width: 15rem; padding: 1rem 1.2rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; text-align: right; box-shadow: var(--shadow); }
@@ -233,6 +236,7 @@ p { color: var(--ink-700); line-height: 1.55; }
 .detail-main > .panel, .detail-aside > .panel { padding: 1.2rem; }
 .fault-description { margin: 0; color: var(--ink-900); white-space: pre-wrap; }
 .resource-card h2 { font-size: 1.05rem; }
+.resource-card h2 .plate--large { margin-bottom: 0; }
 .card-label { margin-bottom: 0.35rem; color: var(--ink-500); font-size: 0.68rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
 .resource-card dl { display: grid; gap: 0.75rem; margin: 0; }
 .resource-card dl div { padding-top: 0.7rem; border-top: 1px solid #e8ebf0; }
@@ -400,6 +404,7 @@ p { color: var(--ink-700); line-height: 1.55; }
   .data-table--items .item-summary { max-width: 65%; text-align: right; }
   .user-role-editor { flex-wrap: wrap; }
   .duplicate-conflict li, .order-summary { align-items: flex-start; flex-direction: column; }
+  .actionable-alert, .actionable-summary { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 430px) {
   .nav-link { font-size: 0.78rem; }

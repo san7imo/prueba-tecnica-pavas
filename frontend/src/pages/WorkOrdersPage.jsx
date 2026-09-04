@@ -20,12 +20,19 @@ const positivePage = (value) => {
   return Number.isSafeInteger(parsed) ? parsed : 1;
 };
 
+const positiveId = (value) => {
+  if (!/^[1-9]\d*$/.test(value ?? '')) return '';
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : '';
+};
+
 export const WorkOrdersPage = () => {
   const { user } = useAuth();
   const isAdmin = user.role === 'ADMIN';
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = searchParams.get('scope');
   const requestedStatus = searchParams.get('status');
+  const requestedAssignee = positiveId(searchParams.get('assignedMechanicId'));
   const initialFilters = {
     status: WORK_ORDER_STATUSES.includes(requestedStatus) ? requestedStatus : '',
     plate: searchParams.get('plate') ?? '',
@@ -36,21 +43,34 @@ export const WorkOrdersPage = () => {
   const [draft, setDraft] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
   const [page, setPage] = useState(positivePage(searchParams.get('page')));
+  const [assignedMechanicId, setAssignedMechanicId] = useState(
+    isAdmin ? requestedAssignee : '',
+  );
   const filters = useMemo(
-    () => ({ ...applied, scope, page, pageSize: 20 }),
-    [applied, page, scope],
+    () => ({
+      ...applied,
+      scope,
+      ...(assignedMechanicId ? { assignedMechanicId } : {}),
+      page,
+      pageSize: 20,
+    }),
+    [applied, assignedMechanicId, page, scope],
   );
   const { orders, meta, loading, error, retry } = useWorkOrders(filters);
 
   const updateLocation = ({
     nextScope = scope,
     nextFilters = applied,
+    nextAssignedMechanicId = assignedMechanicId,
     nextPage = page,
   } = {}) => {
     const next = new URLSearchParams();
     next.set('scope', nextScope);
     if (nextFilters.status) next.set('status', nextFilters.status);
     if (nextFilters.plate) next.set('plate', nextFilters.plate);
+    if (isAdmin && nextAssignedMechanicId) {
+      next.set('assignedMechanicId', String(nextAssignedMechanicId));
+    }
     if (nextPage > 1) next.set('page', String(nextPage));
     setSearchParams(next, { replace: true });
   };
@@ -66,16 +86,24 @@ export const WorkOrdersPage = () => {
   const clearFilters = () => {
     setDraft(EMPTY_FILTERS);
     setApplied(EMPTY_FILTERS);
+    setAssignedMechanicId('');
     setPage(1);
-    updateLocation({ nextFilters: EMPTY_FILTERS, nextPage: 1 });
+    updateLocation({
+      nextFilters: EMPTY_FILTERS,
+      nextAssignedMechanicId: '',
+      nextPage: 1,
+    });
   };
 
-  const hasFilters = Boolean(applied.status || applied.plate);
+  const hasFilters = Boolean(
+    applied.status || applied.plate || assignedMechanicId,
+  );
 
   const changeScope = (nextScope) => {
     setScope(nextScope);
+    setAssignedMechanicId('');
     setPage(1);
-    updateLocation({ nextScope, nextPage: 1 });
+    updateLocation({ nextScope, nextAssignedMechanicId: '', nextPage: 1 });
   };
 
   const changePage = (nextPage) => {
@@ -104,6 +132,15 @@ export const WorkOrdersPage = () => {
           <button className="button button--secondary" type="button" aria-pressed={scope === 'unassigned'} onClick={() => changeScope('unassigned')} disabled={loading}>Sin asignar</button>
         </div>
       ) : <p className="scope-summary" role="status">Vista personal: sólo órdenes asignadas a {user.name}.</p>}
+
+      {isAdmin && assignedMechanicId ? (
+        <p className="scope-summary actionable-summary" role="status">
+          <span>Mostrando las órdenes del mecánico seleccionado desde Usuarios.</span>
+          <button className="text-button" type="button" onClick={clearFilters}>
+            Mostrar todas las órdenes
+          </button>
+        </p>
+      ) : null}
 
       <div className="panel filters-panel">
         <OrderFilters

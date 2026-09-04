@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { usersApi } from '../api/usersApi.js';
 import { EmptyState } from '../components/ui/EmptyState.jsx';
@@ -11,8 +12,7 @@ import { formatDateTime } from '../utils/formatters.js';
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'MECANICO' };
 
-const lifecycleErrorMessage = (error, fallback) => {
-  const apiError = getApiError(error, fallback);
+const lifecycleErrorMessage = (apiError) => {
   if (apiError.code === 'LAST_ACTIVE_ADMIN_REQUIRED') {
     return 'Debe permanecer al menos un administrador activo.';
   }
@@ -32,6 +32,7 @@ export const UsersPage = () => {
   const [loadError, setLoadError] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [blockedMechanicId, setBlockedMechanicId] = useState(null);
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
@@ -59,6 +60,7 @@ export const UsersPage = () => {
   const createUser = async (event) => {
     event.preventDefault();
     if (submitting) return;
+    setBlockedMechanicId(null);
     if (!form.name.trim() || !form.email.trim() || form.password.length < 8) {
       setFormError('Completa nombre y correo; la contraseña debe tener al menos 8 caracteres.');
       return;
@@ -86,6 +88,7 @@ export const UsersPage = () => {
 
   const updateRole = async (managedUser, role) => {
     if (role === managedUser.role || updatingId) return;
+    setBlockedMechanicId(null);
     const reason = reasonDrafts[managedUser.id]?.trim();
     if (!reason) {
       setFormError(`Escribe el motivo para cambiar el rol de ${managedUser.name}.`);
@@ -97,6 +100,7 @@ export const UsersPage = () => {
     setUpdatingId(managedUser.id);
     setNotice('');
     setFormError('');
+    setBlockedMechanicId(null);
     try {
       const updated = await usersApi.changeRole(managedUser.id, { role, reason });
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
@@ -109,13 +113,18 @@ export const UsersPage = () => {
       setNotice(`Rol de ${updated.name} actualizado.`);
       if (updated.id === currentUser.id) await refreshAccessSession();
     } catch (error) {
-      setFormError(lifecycleErrorMessage(error, 'No fue posible actualizar el rol.'));
+      const apiError = getApiError(error, 'No fue posible actualizar el rol.');
+      setFormError(lifecycleErrorMessage(apiError));
+      if (apiError.code === 'MECHANIC_HAS_OPEN_ORDERS') {
+        setBlockedMechanicId(managedUser.id);
+      }
     } finally {
       setUpdatingId(null);
     }
   };
 
   const toggleActive = async (managedUser) => {
+    setBlockedMechanicId(null);
     const nextActive = !managedUser.active;
     const reason = reasonDrafts[managedUser.id]?.trim();
     if (!reason) {
@@ -127,6 +136,7 @@ export const UsersPage = () => {
     setUpdatingId(managedUser.id);
     setNotice('');
     setFormError('');
+    setBlockedMechanicId(null);
     try {
       const updated = await usersApi.changeActive(managedUser.id, {
         active: nextActive,
@@ -140,7 +150,11 @@ export const UsersPage = () => {
       }
       setNotice(`${updated.name} fue ${updated.active ? 'activado' : 'desactivado'}.`);
     } catch (error) {
-      setFormError(lifecycleErrorMessage(error, 'No fue posible actualizar el usuario.'));
+      const apiError = getApiError(error, 'No fue posible actualizar el usuario.');
+      setFormError(lifecycleErrorMessage(apiError));
+      if (apiError.code === 'MECHANIC_HAS_OPEN_ORDERS') {
+        setBlockedMechanicId(managedUser.id);
+      }
     } finally {
       setUpdatingId(null);
     }
@@ -157,7 +171,19 @@ export const UsersPage = () => {
       </div>
 
       {notice ? <p className="notice" role="status">{notice}</p> : null}
-      {formError ? <p className="inline-alert inline-alert--error" role="alert">{formError}</p> : null}
+      {formError ? (
+        <div className="inline-alert inline-alert--error actionable-alert" role="alert">
+          <span>{formError}</span>
+          {blockedMechanicId ? (
+            <Link
+              className="text-link"
+              to={`/orders?scope=all&assignedMechanicId=${blockedMechanicId}`}
+            >
+              Ver y reasignar sus órdenes
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="users-layout">
         <section className="panel user-form-panel" aria-labelledby="create-user-title">

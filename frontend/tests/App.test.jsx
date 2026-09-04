@@ -56,6 +56,20 @@ describe('App routing and session gates', () => {
     expect(screen.getByRole('link', { name: /^clientes$/i })).toHaveAttribute('href', '/clients');
     expect(screen.getByRole('link', { name: /^motocicletas$/i })).toHaveAttribute('href', '/bikes');
     expect(await screen.findByText(/aún no hay órdenes/i)).toBeInTheDocument();
+    expect(document.getElementById('main-content')).toHaveFocus();
+  });
+
+  it('moves keyboard focus to main content after client-side navigation', async () => {
+    render(<MemoryRouter initialEntries={['/orders']}><App /></MemoryRouter>);
+    await screen.findByText(/aún no hay órdenes/i);
+
+    const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
+    dashboardLink.focus();
+    fireEvent.click(dashboardLink);
+
+    expect(await screen.findByRole('heading', { name: /dashboard/i }))
+      .toBeInTheDocument();
+    await waitFor(() => expect(document.getElementById('main-content')).toHaveFocus());
   });
 
   it('uses the operational dashboard as the authenticated home route', async () => {
@@ -86,6 +100,48 @@ describe('App routing and session gates', () => {
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /auditoría/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /nueva orden/i })).not.toBeInTheDocument();
+  });
+
+  it('returns to the complete requested route after authentication', async () => {
+    authApi.refresh.mockRejectedValue({ response: { status: 401 } });
+    authApi.login.mockResolvedValue(sessionFor(mechanicUser));
+    render(
+      <MemoryRouter initialEntries={['/orders?scope=mine&status=DIAGNOSTICO#queue']}>
+        <App />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: /iniciar sesión/i });
+
+    fireEvent.change(screen.getByLabelText(/correo/i), {
+      target: { value: 'mauro@pavas.test' },
+    });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), {
+      target: { value: 'secret123' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+
+    expect(await screen.findByRole('heading', { name: /mis órdenes/i }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText('Estado')).toHaveValue('DIAGNOSTICO');
+  });
+
+  it('prevents duplicate logout submissions while the request is pending', async () => {
+    let resolveLogout;
+    authApi.logout.mockReturnValue(new Promise((resolve) => {
+      resolveLogout = resolve;
+    }));
+    render(<MemoryRouter initialEntries={['/orders']}><App /></MemoryRouter>);
+    await screen.findByText(/aún no hay órdenes/i);
+
+    const logout = screen.getByRole('button', { name: /cerrar sesión/i });
+    fireEvent.click(logout);
+    fireEvent.click(logout);
+
+    expect(authApi.logout).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /cerrando sesión/i })).toBeDisabled();
+    resolveLogout({ loggedOut: true });
+    expect(await screen.findByRole('heading', { name: /iniciar sesión/i }))
+      .toBeInTheDocument();
   });
 
   it('never exposes backend credential-discovery details on login failure', async () => {

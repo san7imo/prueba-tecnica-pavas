@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth.js';
 
@@ -7,6 +8,25 @@ const navClassName = ({ isActive }) =>
 
 export const AppShell = () => {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+  const logoutPending = useRef(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    document.getElementById('main-content')?.focus();
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    if (logoutPending.current) return;
+    logoutPending.current = true;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      logoutPending.current = false;
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -36,7 +56,14 @@ export const AppShell = () => {
       <div className="sidebar-session">
         <p className="sidebar__phase">Sesión actual</p>
         <span><strong>{user.name}</strong><small>{user.role === 'ADMIN' ? 'Administrador' : 'Mecánico'}</small></span>
-        <button className="button sidebar-session__logout" type="button" onClick={logout}>Cerrar sesión</button>
+        <button
+          className="button sidebar-session__logout"
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+        >
+          {loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+        </button>
       </div>
     </aside>
 

@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usersApi } from '../src/api/usersApi.js';
@@ -12,6 +13,15 @@ vi.mock('../src/api/usersApi.js', () => ({
 const managedAdmin = { ...adminUser, createdAt: '2026-08-20T12:00:00.000Z', updatedAt: '2026-08-20T12:00:00.000Z' };
 const managedMechanic = { ...mechanicUser, createdAt: '2026-08-21T12:00:00.000Z', updatedAt: '2026-08-21T12:00:00.000Z' };
 
+function renderUsersPage(options) {
+  return renderWithAuth(
+    <MemoryRouter>
+      <UsersPage />
+    </MemoryRouter>,
+    options,
+  );
+}
+
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,7 +31,7 @@ describe('UsersPage', () => {
   it('lists users and creates a user without exposing delete operations', async () => {
     const created = { id: 3, name: 'Nora Técnica', email: 'nora@pavas.test', role: 'MECANICO', active: true, createdAt: '2026-08-24T12:00:00.000Z', updatedAt: '2026-08-24T12:00:00.000Z' };
     usersApi.create.mockResolvedValue(created);
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
 
     expect(await screen.findByText('Mauro Mecánico')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument();
@@ -38,7 +48,7 @@ describe('UsersPage', () => {
     usersApi.changeRole.mockResolvedValue({ ...managedMechanic, role: 'ADMIN' });
     usersApi.changeActive.mockResolvedValue({ ...managedMechanic, active: false });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderWithAuth(<UsersPage />, { auth: authValue(adminUser) });
+    renderUsersPage({ auth: authValue(adminUser) });
     await screen.findByText('Mauro Mecánico');
 
     fireEvent.change(screen.getByRole('combobox', { name: /rol de mauro/i }), { target: { value: 'ADMIN' } });
@@ -60,7 +70,7 @@ describe('UsersPage', () => {
   });
 
   it('exposes the user table as a keyboard-focusable labeled region', async () => {
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
 
     await screen.findByText('Mauro Mecánico');
     expect(screen.getByRole('region', { name: /tabla de usuarios/i })).toHaveAttribute('tabindex', '0');
@@ -70,7 +80,7 @@ describe('UsersPage', () => {
     usersApi.list
       .mockRejectedValueOnce({ response: { data: { error: { message: 'Usuarios temporalmente no disponibles.' } } } })
       .mockResolvedValueOnce([]);
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
 
     expect(screen.getByText(/cargando usuarios/i)).toBeInTheDocument();
     expect(await screen.findByText('Usuarios temporalmente no disponibles.')).toBeInTheDocument();
@@ -85,7 +95,7 @@ describe('UsersPage', () => {
     usersApi.create.mockReturnValue(new Promise((_resolve, reject) => {
       rejectCreation = reject;
     }));
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
     await screen.findByText('Mauro Mecánico');
 
     fireEvent.change(screen.getByRole('textbox', { name: /^nombre$/i }), { target: { value: 'Nora Técnica' } });
@@ -107,7 +117,7 @@ describe('UsersPage', () => {
     usersApi.list.mockResolvedValue([managedAdmin, inactiveMechanic]);
     usersApi.changeActive.mockResolvedValue({ ...inactiveMechanic, active: true });
     const confirm = vi.spyOn(window, 'confirm');
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
     await screen.findByText('Mauro Mecánico');
 
     fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Regreso al taller' } });
@@ -129,7 +139,7 @@ describe('UsersPage', () => {
       },
     });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderWithAuth(<UsersPage />);
+    renderUsersPage();
     await screen.findByText('Mauro Mecánico');
 
     fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
@@ -139,5 +149,7 @@ describe('UsersPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /motivo del cambio de mauro/i }), { target: { value: 'Fin de turno' } });
     fireEvent.click(screen.getByRole('button', { name: /desactivar a mauro/i }));
     expect(await screen.findByText(/reasigna primero las órdenes abiertas/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver y reasignar sus órdenes/i }))
+      .toHaveAttribute('href', '/orders?scope=all&assignedMechanicId=2');
   });
 });

@@ -26,8 +26,11 @@ export const LoginPage = () => {
     setError('');
     try {
       await login({ email: form.email.trim(), password: form.password });
-      const destination = location.state?.from?.pathname;
-      navigate(destination && destination !== '/login' ? destination : '/dashboard', { replace: true });
+      const from = location.state?.from;
+      const destination = from?.pathname && from.pathname !== '/login'
+        ? `${from.pathname}${from.search ?? ''}${from.hash ?? ''}`
+        : '/dashboard';
+      navigate(destination, { replace: true });
     } catch (requestError) {
       const apiError = getApiError(requestError, 'No fue posible iniciar sesión. Intenta nuevamente.');
       setError(apiError.status === 401 ? 'Correo o contraseña inválidos.' : apiError.message);

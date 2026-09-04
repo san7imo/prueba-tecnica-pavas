@@ -20,6 +20,7 @@ export const BikeFormPage = () => {
   const [selectedOwner, setSelectedOwner] = useState(null);
   const [ownerReason, setOwnerReason] = useState('');
   const [loading, setLoading] = useState(editing || Boolean(searchParams.get('clientId')));
+  const [loadVersion, setLoadVersion] = useState(0);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [ownerSaving, setOwnerSaving] = useState(false);
@@ -54,7 +55,13 @@ export const BikeFormPage = () => {
     };
     load();
     return () => { active = false; };
-  }, [editing, id, searchParams]);
+  }, [editing, id, loadVersion, searchParams]);
+
+  const retryLoad = () => {
+    setLoadError('');
+    setLoading(true);
+    setLoadVersion((current) => current + 1);
+  };
 
   const change = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -84,7 +91,7 @@ export const BikeFormPage = () => {
   };
 
   if (loading) return <LoadingState message="Cargando formulario…" />;
-  if (loadError) return <ErrorState message={loadError} />;
+  if (loadError) return <ErrorState message={loadError} onRetry={retryLoad} />;
 
   return (
     <section aria-labelledby="bike-form-title">

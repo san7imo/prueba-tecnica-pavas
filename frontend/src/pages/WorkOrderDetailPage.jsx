@@ -214,7 +214,11 @@ export const WorkOrderDetailPage = () => {
         <aside className="detail-aside" aria-label="Información relacionada">
           <section className="panel resource-card" aria-labelledby="bike-info-title">
             <p className="card-label">Moto</p>
-            <h2 id="bike-info-title" className="plate plate--large">{order.bike.plate}</h2>
+            <h2 id="bike-info-title">
+              <Link className="text-link plate plate--large" to={`/bikes/${order.bike.id}`}>
+                {order.bike.plate}
+              </Link>
+            </h2>
             <dl>
               <div><dt>Marca y modelo</dt><dd>{order.bike.brand} {order.bike.model}</dd></div>
               <div><dt>Cilindraje</dt><dd>{order.bike.cylinder || 'No registrado'}</dd></div>
@@ -222,7 +226,11 @@ export const WorkOrderDetailPage = () => {
           </section>
           <section className="panel resource-card" aria-labelledby="client-info-title">
             <p className="card-label">Cliente</p>
-            <h2 id="client-info-title">{order.bike.client.name}</h2>
+            <h2 id="client-info-title">
+              <Link className="text-link text-link--heading" to={`/clients/${order.bike.client.id}`}>
+                {order.bike.client.name}
+              </Link>
+            </h2>
             <dl>
               <div><dt>Teléfono</dt><dd>{order.bike.client.phone}</dd></div>
               <div><dt>Correo</dt><dd>{order.bike.client.email || 'No registrado'}</dd></div>

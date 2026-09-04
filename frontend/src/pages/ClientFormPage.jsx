@@ -16,6 +16,7 @@ export const ClientFormPage = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(editing);
+  const [loadVersion, setLoadVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [error, setError] = useState(null);
@@ -34,7 +35,13 @@ export const ClientFormPage = () => {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [editing, id]);
+  }, [editing, id, loadVersion]);
+
+  const retryLoad = () => {
+    setLoadError('');
+    setLoading(true);
+    setLoadVersion((current) => current + 1);
+  };
 
   const loadCandidates = async (candidateIds = []) => {
     const settled = await Promise.allSettled(candidateIds.map((candidateId) => clientsApi.getById(candidateId)));
@@ -66,7 +73,7 @@ export const ClientFormPage = () => {
   };
 
   if (loading) return <LoadingState message="Cargando cliente…" />;
-  if (loadError) return <ErrorState message={loadError} />;
+  if (loadError) return <ErrorState message={loadError} onRetry={retryLoad} />;
 
   const canOverride = error?.code === 'CLIENT_DUPLICATE_RISK';
   const hasDuplicateConflict = DUPLICATE_CODES.has(error?.code);

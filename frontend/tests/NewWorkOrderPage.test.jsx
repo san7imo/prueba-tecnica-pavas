@@ -171,6 +171,42 @@ describe('NewWorkOrderPage reuse-first flow', () => {
     expect(await screen.findByText(/motocicleta: ABC123/i)).toBeInTheDocument();
   });
 
+  it('routes a plate conflict to the existing motorcycle recovery view', async () => {
+    bikesApi.list.mockResolvedValue({ data: [], meta: {} });
+    bikesApi.create.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          error: {
+            code: 'BIKE_RESTORE_REQUIRED',
+            message: 'La placa pertenece a una motocicleta eliminada.',
+          },
+        },
+      },
+    });
+    renderPage();
+
+    await searchAndSelectClient();
+    fireEvent.click(await screen.findByRole('button', { name: /registrar motocicleta/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^placa/i }), {
+      target: { value: 'abc 123' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: /^marca/i }), {
+      target: { value: 'Yamaha' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: /^modelo/i }), {
+      target: { value: 'FZ 2.0' },
+    });
+    fireEvent.click(screen.getByRole('button', {
+      name: /guardar y seleccionar motocicleta/i,
+    }));
+
+    expect((await screen.findAllByText(/placa pertenece a una motocicleta eliminada/i)).length)
+      .toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /buscar y revisar la motocicleta existente/i }))
+      .toHaveAttribute('href', '/bikes?platePrefix=abc%20123&lifecycle=all');
+  });
+
   it('offers reuse of an active duplicate before allowing a justified override', async () => {
     clientsApi.create
       .mockRejectedValueOnce({

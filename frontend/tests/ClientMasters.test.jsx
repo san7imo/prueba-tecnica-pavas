@@ -95,4 +95,23 @@ describe('Client master screens', () => {
     fireEvent.click(screen.getByRole('button', { name: /^confirmar$/i }));
     await waitFor(() => expect(clientsApi.restore).toHaveBeenCalledWith('1', { reason: 'Cliente regresa al taller.' }));
   });
+
+  it('retries a failed client edit load without abandoning the operation', async () => {
+    clientsApi.getById
+      .mockRejectedValueOnce({ response: { status: 503 } })
+      .mockResolvedValueOnce(client);
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/clients/1/edit']}>
+        <Routes><Route path="/clients/:id/edit" element={<ClientFormPage />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/no fue posible cargar el cliente/i))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+
+    expect(await screen.findByRole('heading', { name: /editar cliente/i }))
+      .toBeInTheDocument();
+    expect(clientsApi.getById).toHaveBeenCalledTimes(2);
+  });
 });

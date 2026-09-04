@@ -22,8 +22,7 @@ export const ClientSelector = ({
     setError('');
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const submit = async () => {
     if (loading) return;
     setLoading(true);
     setError('');
@@ -45,10 +44,10 @@ export const ClientSelector = ({
       {selected ? <div className="selected-client" role="status"><span><strong>{selected.name}</strong><small>{selected.phone}{selected.email ? ` · ${selected.email}` : ''}</small></span><button className="text-button" type="button" onClick={() => onSelect(null)} disabled={disabled}>Cambiar</button></div> : null}
       {!selected ? (
         <>
-          <form className="lookup-form" onSubmit={submit}>
-            <div className="field"><label htmlFor="owner-search">Buscar cliente activo</label><input id="owner-search" value={search} onChange={changeSearch} placeholder="Nombre, teléfono o correo" maxLength="254" disabled={disabled || loading} /></div>
-            <button className="button button--secondary" type="submit" disabled={disabled || loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
-          </form>
+          <div className="lookup-form" role="search">
+            <div className="field"><label htmlFor="owner-search">Buscar cliente activo</label><input id="owner-search" value={search} onChange={changeSearch} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } }} placeholder="Nombre, teléfono o correo" maxLength="254" disabled={disabled || loading} /></div>
+            <button className="button button--secondary" type="button" onClick={submit} disabled={disabled || loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
+          </div>
           {error ? <p className="inline-alert inline-alert--error" role="alert">{error}</p> : null}
           {searched && !loading && !error && results.length === 0 ? <div className="empty-lookup"><p className="inline-alert" role="status">No se encontraron clientes activos. Revisa la búsqueda antes de registrar uno nuevo.</p>{emptyAction}</div> : null}
           {results.length ? <div className="selection-list" aria-label="Clientes encontrados">{results.map((client) => <button key={client.id} className="selection-card selection-card--client" type="button" onClick={() => onSelect(client)} disabled={disabled}><span><strong>{client.name}</strong><small>{client.phone}{client.email ? ` · ${client.email}` : ''}</small></span><span className="selection-card__action">Seleccionar</span></button>)}</div> : null}

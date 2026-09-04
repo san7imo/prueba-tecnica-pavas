@@ -58,6 +58,10 @@ describe('WorkOrderDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: /orden #7/i })).toBeInTheDocument();
     expect(screen.getByText('Ana Torres')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ABC123' }))
+      .toHaveAttribute('href', '/bikes/2');
+    expect(screen.getByRole('link', { name: 'Ana Torres' }))
+      .toHaveAttribute('href', '/clients/1');
     expect(screen.getByText('Ruido anormal en la transmisión')).toBeInTheDocument();
     expect(screen.getAllByText(/130\.000,00/).length).toBeGreaterThan(0);
     expect(screen.getByText(/100\.000,00/)).toBeInTheDocument();

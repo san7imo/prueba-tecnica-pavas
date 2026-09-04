@@ -113,6 +113,27 @@ describe('WorkOrdersPage', () => {
     expect(screen.getByLabelText('Estado')).toHaveValue('DIAGNOSTICO');
   });
 
+  it('opens the user-lifecycle recovery view scoped to the blocking mechanic', async () => {
+    workOrdersApi.list.mockResolvedValue(emptyResult);
+    renderPage(undefined, '/orders?scope=all&assignedMechanicId=2');
+
+    await waitFor(() => expect(workOrdersApi.list).toHaveBeenCalledWith({
+      status: '',
+      plate: '',
+      scope: 'all',
+      assignedMechanicId: 2,
+      page: 1,
+      pageSize: 20,
+    }));
+    expect(screen.getByText(/mecánico seleccionado desde Usuarios/i))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /mostrar todas las órdenes/i }));
+    await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
+      status: '', plate: '', scope: 'all', page: 1, pageSize: 20,
+    }));
+  });
+
   it('shows MECANICO only the personal mine view without creation controls', async () => {
     workOrdersApi.list.mockResolvedValue(emptyResult);
     renderPage(mechanicUser);

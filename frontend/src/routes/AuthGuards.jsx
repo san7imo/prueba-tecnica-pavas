@@ -16,8 +16,15 @@ export const ProtectedRoute = () => {
 
 export const AnonymousOnlyRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) return <LoadingState message="Restaurando sesión…" />;
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  if (!isAuthenticated) return <Outlet />;
+
+  const from = location.state?.from;
+  const destination = from?.pathname && from.pathname !== '/login'
+    ? `${from.pathname}${from.search ?? ''}${from.hash ?? ''}`
+    : '/dashboard';
+  return <Navigate to={destination} replace />;
 };
 
 export const RoleRoute = ({ role }) => {

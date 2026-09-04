@@ -42,6 +42,23 @@ describe('Motorcycle master screens', () => {
     expect(screen.queryByLabelText(/estado del registro/i)).not.toBeInTheDocument();
   });
 
+  it('opens a plate-conflict recovery link with server-backed URL filters', async () => {
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/bikes?platePrefix=abc%20123&lifecycle=all']}>
+        <BikesPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(bikesApi.list).toHaveBeenCalledWith({
+      platePrefix: 'abc 123',
+      lifecycle: 'all',
+      page: 1,
+      pageSize: 20,
+    }));
+    expect(screen.getByLabelText(/inicio de placa/i)).toHaveValue('abc 123');
+    expect(screen.getByLabelText(/estado del registro/i)).toHaveValue('all');
+  });
+
   it('creates a motorcycle by selecting an existing owner by name', async () => {
     bikesApi.create.mockResolvedValue(bike);
     renderWithAuth(<MemoryRouter initialEntries={['/bikes/new']}><Routes><Route path="/bikes/new" element={<BikeFormPage />} /><Route path="/bikes/:id" element={<h1>Moto guardada</h1>} /></Routes></MemoryRouter>);
@@ -49,7 +66,7 @@ describe('Motorcycle master screens', () => {
     fireEvent.change(screen.getByLabelText(/marca/i), { target: { value: 'Yamaha' } });
     fireEvent.change(screen.getByLabelText(/modelo/i), { target: { value: 'FZ 2.0' } });
     fireEvent.change(screen.getByLabelText(/buscar cliente activo/i), { target: { value: 'Ana' } });
-    fireEvent.click(screen.getByRole('button', { name: /^buscar$/i }));
+    fireEvent.keyDown(screen.getByLabelText(/buscar cliente activo/i), { key: 'Enter' });
     fireEvent.click(await screen.findByRole('button', { name: /ana torres/i }));
     fireEvent.click(screen.getByRole('button', { name: /guardar motocicleta/i }));
     await waitFor(() => expect(bikesApi.create).toHaveBeenCalledWith({ plate: 'abc 123', brand: 'Yamaha', model: 'FZ 2.0', cylinder: null, clientId: 1 }));
@@ -85,6 +102,25 @@ describe('Motorcycle master screens', () => {
     fireEvent.click(screen.getByRole('button', { name: /cambiar propietario/i }));
     await waitFor(() => expect(bikesApi.changeOwner).toHaveBeenCalledWith('2', { clientId: 9, reason: 'Venta confirmada por el cliente.' }));
     expect(await screen.findByRole('heading', { name: /propietario guardado/i })).toBeInTheDocument();
+  });
+
+  it('retries a failed motorcycle edit load without leaving the form route', async () => {
+    bikesApi.getById
+      .mockRejectedValueOnce({ response: { status: 503 } })
+      .mockResolvedValueOnce(bike);
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/bikes/2/edit']}>
+        <Routes><Route path="/bikes/:id/edit" element={<BikeFormPage />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/no fue posible preparar el formulario/i))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+
+    expect(await screen.findByRole('heading', { name: /editar motocicleta/i }))
+      .toBeInTheDocument();
+    expect(bikesApi.getById).toHaveBeenCalledTimes(2);
   });
 
   it('restores a deleted motorcycle with a required reason', async () => {

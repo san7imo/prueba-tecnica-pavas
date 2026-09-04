@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import { DuplicateConflict } from '../../../components/ui/DuplicateConflict.jsx';
 
 export const QuickRegistration = ({
@@ -68,6 +70,10 @@ export const QuickRegistration = ({
     );
   }
 
+  const plateConflict = ['BIKE_PLATE_ALREADY_EXISTS', 'BIKE_RESTORE_REQUIRED']
+    .includes(bikeError?.code);
+  const plateLookup = bikeForm.plate.trim();
+
   return (
     <div className="quick-registration" aria-labelledby="quick-bike-title">
       <div className="section-heading">
@@ -93,7 +99,19 @@ export const QuickRegistration = ({
           <label htmlFor="quick-bike-cylinder">Cilindraje <span>(opcional)</span></label>
           <input id="quick-bike-cylinder" name="cylinder" value={bikeForm.cylinder} onChange={onBikeChange} maxLength="50" disabled={bikeLoading} />
         </div>
-        {bikeError ? <p className="inline-alert inline-alert--error field--span-2" role="alert">{bikeError.message}</p> : null}
+        {bikeError ? (
+          <div className="inline-alert inline-alert--error field--span-2" role="alert">
+            <p>{bikeError.message}</p>
+            {plateConflict && plateLookup ? (
+              <Link
+                className="text-link"
+                to={`/bikes?platePrefix=${encodeURIComponent(plateLookup)}&lifecycle=all`}
+              >
+                Buscar y revisar la motocicleta existente
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
         <div className="form-actions field--span-2">
           <button className="button button--ghost" type="button" onClick={onCancel} disabled={bikeLoading}>Cancelar</button>
           <button className="button button--secondary" type="submit" disabled={bikeLoading}>{bikeLoading ? 'Guardando motocicleta…' : 'Guardar y seleccionar motocicleta'}</button>
