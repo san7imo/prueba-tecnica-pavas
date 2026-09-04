@@ -17,6 +17,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
 | `PZ-CLIENT-*` | `backend/tests/clientLifecycle.integration.test.js`, `clientContactMigration.integration.test.js` |
 | `PZ-BIKE-*` | `backend/tests/bikeLifecycle.integration.test.js`, `clientsBikes.integration.test.js` |
+| `PZ-NEW-*` | `frontend/tests/NewWorkOrderPage.test.jsx`, `App.test.jsx` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -172,6 +173,14 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P1-FE-008 | Add/delete confirma y refresca total autoritativo | item interaction case | PASS |
 | P1-FE-009 | Multiplicación/formato evita float monetario | `formatters.test.js` | PASS |
 | P1-UX-003 | Requeridos, tablas enfocables y acciones accesibles por rol | App/list/detail/users assertions | PASS |
+| PZ-NEW-001 | MECANICO no accede a `/orders/new`; ADMIN conserva el flujo | route guard case | PASS |
+| PZ-NEW-002 | Cliente existente se selecciona antes de consultar sus motos | existing-client flow | PASS |
+| PZ-NEW-003 | Se listan y eligen motos activas pertenecientes al cliente | owned-bike selection case | PASS |
+| PZ-NEW-004 | Alta subordinada maneja vacío, reutilización, override y restore | quick-registration duplicate cases | PASS |
+| PZ-NEW-005 | Orden abierta conocida bloquea y enlaza a su detalle | active-order preflight case | PASS |
+| PZ-NEW-006 | Conflicto tardío de orden abierta no duplica el request | race conflict/double-submit case | PASS |
+| PZ-NEW-007 | Responsable activo opcional y unassigned producen payload correcto | mechanic/unassigned cases | PASS |
+| PZ-NEW-008 | Fallo/retry de catálogo y mecánico desactualizado son recuperables | mechanics recovery cases | PASS |
 
 ## Evidencia no funcional y documental
 

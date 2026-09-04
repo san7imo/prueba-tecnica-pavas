@@ -8,8 +8,8 @@ Inventario verificado:
 
 ```text
 Backend:  21 suites, 258 pruebas
-Frontend: 10 suites, 46 pruebas
-Matriz:   139 filas PASS
+Frontend: 12 suites, 64 pruebas
+Matriz:   155 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -235,6 +235,18 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - controles `ADMIN`/`MECANICO`;
 - nota de transición y refetch;
 - timeline con actor/from/to/note/evento inicial/paginación/errores.
+
+### Nueva orden productizada — `NewWorkOrderPage.test.jsx`
+
+- acceso exclusivo de `ADMIN` también en la guarda de ruta;
+- búsqueda y selección de cliente activo antes de consultar sus motocicletas;
+- alta subordinada de cliente/motocicleta sólo después de una búsqueda vacía;
+- reutilización de coincidencia activa, override justificado y restauración para eliminados;
+- selección restringida a motocicletas activas del cliente;
+- bloqueo y enlace a la orden abierta detectada antes de enviar;
+- conflicto `BIKE_HAS_ACTIVE_WORK_ORDER` tardío tratado sin duplicar el submit;
+- responsable inicial limitado visualmente a mecánicos activos u opción unassigned;
+- catálogo de mecánicos recuperable y rechazo autoritativo de una selección desactualizada.
 
 ### Accesibilidad y polish
 

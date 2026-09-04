@@ -105,6 +105,16 @@ describe('App routing and session gates', () => {
     expect(screen.queryByRole('heading', { name: /nuevo cliente/i })).not.toBeInTheDocument();
   });
 
+  it('redirects a mechanic away from the new work-order flow', async () => {
+    authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
+    render(<MemoryRouter initialEntries={['/orders/new']}><App /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /nueva orden de trabajo/i }))
+      .not.toBeInTheDocument();
+  });
+
   it('allows an administrator into user management', async () => {
     render(<MemoryRouter initialEntries={['/admin/users']}><App /></MemoryRouter>);
 

@@ -128,6 +128,14 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-ASSIGN-006 | Lista/detalle exponen responsable seguro y filtran por ID | HITO 7 | include allowlisted + filtro indexado | Work Order GET APIs | filter/serialization cases | Done |
 | PZ-ASSIGN-007 | Cada cambio queda auditado atómicamente | HITO 7 | ASSIGNED/REASSIGNED/UNASSIGNED en transacción | assignment API | snapshots/rollback cases | Done |
 | PZ-ASSIGN-008 | Reasignaciones concurrentes no pierden actualizaciones | HITO 7 | User IDs asc→WorkOrder + revalidación | assignment API | concurrent reassignment | Done |
+| PZ-NEW-001 | Sólo ADMIN accede al alta de orden | HITO 8 | `RoleRoute` + RBAC backend existente | `/orders/new`, POST Work Order | route guard + backend authorization | Done |
+| PZ-NEW-002 | El flujo selecciona primero un cliente activo existente | HITO 8 | `ClientSelector` + orquestación local | `/orders/new` | existing-client flow | Done |
+| PZ-NEW-003 | Sólo se ofrecen motocicletas activas del cliente elegido | HITO 8 | listado por `clientId/lifecycle` + detail recheck | `/orders/new` | owned-bike selection | Done |
+| PZ-NEW-004 | Altas de maestras son ramas subordinadas con política de duplicados | HITO 8 | `QuickRegistration` + `DuplicateConflict` | `/orders/new` | empty/reuse/override/restore cases | Done |
+| PZ-NEW-005 | Cliente o moto eliminados no entran al flujo operacional | HITO 8 | filtrado defensivo + backend autoritativo | `/orders/new` | lifecycle conflict cases | Done |
+| PZ-NEW-006 | Orden abierta bloquea antes del alta y un conflicto tardío se presenta claramente | HITO 8 | detail precheck + manejo `BIKE_HAS_ACTIVE_WORK_ORDER` | `/orders/new` | preflight/race conflict cases | Done |
+| PZ-NEW-007 | Responsable inicial es MECANICO activo opcional o unassigned explícito | HITO 8 | catálogo filtrado + validación backend HITO 7 | `/orders/new` | assigned/unassigned/stale cases | Done |
+| PZ-NEW-008 | Cargas, retry, validación y doble submit están controlados por paso | HITO 8 | estados locales y locks con refs | `/orders/new` | loading/error/retry/double-submit cases | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

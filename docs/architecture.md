@@ -2,10 +2,10 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 7 de
+Este documento describe la arquitectura implementada hasta HITO 8 de
 productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
 backend completos, una sola orden abierta por motocicleta y asignación
-auditable de responsable.
+auditable de responsable, más un alta de orden orientada a reutilizar maestras.
 
 ## Estilo arquitectónico
 
@@ -14,7 +14,8 @@ es cohesivo y requiere transacciones directas sobre una única base relacional.
 Las siete entidades originales se preservan; HITO 1 añadió `AuditEvent` como
 fundación persistente, HITO 2 activó la auditoría, HITO 3 completó clientes y
 HITO 4 completó motocicletas, HITO 6 protegió la unicidad de la orden abierta y
-HITO 7 activó la asignación. Una sola API Express permite
+HITO 7 activó la asignación y HITO 8 conectó esas capacidades en el flujo
+frontend cliente → motocicleta → orden. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -141,6 +142,14 @@ src/
 ```
 
 Los datos de servidor viven cerca de la pantalla que los consume. `AuthContext` se limita a sesión; los formularios usan estado local; Redux no es necesario.
+
+`/orders/new` es una ruta exclusiva para `ADMIN`. La página busca y selecciona
+primero un cliente activo, carga únicamente sus motocicletas activas y confirma
+el detalle de la elegida antes de habilitar el alta. Crear cliente o motocicleta
+es una rama subordinada al resultado vacío; los conflictos de duplicado ofrecen
+reutilización o restauración según el lifecycle. La asignación inicial es
+opcional y el catálogo visual de mecánicos activos no sustituye la validación
+autoritativa del backend.
 
 React Router implementa guardas protegidas, anónimas y de `ADMIN`. Axios separa el cliente de negocio del cliente auth para evitar recursión. Un coordinador en memoria deduplica refresh concurrentes y limita cada 401 a un reintento.
 

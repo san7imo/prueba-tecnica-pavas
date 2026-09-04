@@ -42,6 +42,10 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - consulta paginada/filtrada del audit global, exclusiva para `ADMIN`.
 - lifecycle backend completo de clientes: edición, paginación, duplicados, soft delete y restore auditados.
 - lifecycle backend completo de motocicletas: búsqueda exacta/prefijo, propietario, edición, soft delete/restore, contexto de órdenes y auditoría.
+- maestras frontend completas de clientes y motocicletas para `ADMIN`;
+- una sola orden abierta por motocicleta, protegida también ante concurrencia;
+- asignación o reasignación auditable de un único `MECANICO` activo;
+- nueva orden guiada por reutilización: cliente existente → motocicleta activa del cliente → falla → responsable opcional.
 
 ## Stack tecnológico
 
@@ -318,10 +322,10 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        15 suites, 199 pruebas
-Frontend:       10 suites, 46 pruebas
-Matriz crítica: 103 casos/filas PASS
-Migraciones:    7 ejecutadas, 0 pendientes
+Backend:        21 suites, 258 pruebas
+Frontend:       12 suites, 64 pruebas
+Matriz crítica: 155 casos/filas PASS
+Migraciones:    13 ejecutadas, 0 pendientes
 ```
 
 Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs/test-acceptance-matrix.md).
