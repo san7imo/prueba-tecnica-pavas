@@ -9,7 +9,8 @@ fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
 forma segura sus contactos; HITO 4 activa el lifecycle y ownership de motos
 y las demás capacidades se activan por hito. La reapertura de HITO 11 no agrega
 columnas: sus repeticiones se reconstruyen desde `work_order_status_history` y
-`audit_events`, evitando un campo mutable de “última reapertura”.
+`audit_events`, evitando un campo mutable de “última reapertura”. HITO 12 activa
+la columna de creador ya migrada; tampoco requiere una migración nueva.
 
 ## Convenciones
 
@@ -220,9 +221,10 @@ responsable.
 
 `DECIMAL(15,2)` admite hasta 13 dígitos enteros y dos decimales. La cantidad permite repuestos discretos y horas fraccionarias sin float binario.
 
-`created_by_user_id` permanece nullable hasta activar la atribución obligatoria
-en HITO 12. `ix_work_order_items_created_by_user` satisface la FK de forma
-explícita.
+Desde HITO 12, toda alta API fija `created_by_user_id` desde el usuario
+autenticado. La nulabilidad preserva filas legacy anteriores a la atribución; no
+permite que una petición nueva omita o suplante al actor. El índice
+`ix_work_order_items_created_by_user` satisface la FK de forma explícita.
 
 ## Consistencia de ítems y total
 
@@ -232,7 +234,11 @@ Cada mutación bloquea la fila de `work_orders` dentro de una transacción. El t
 CAST(COALESCE(SUM(`count` * `unit_value`), 0) AS DECIMAL(15,2))
 ```
 
-`COALESCE` define una orden vacía como `0.00`; mysql2/Sequelize devuelve el decimal como string. El backend no lo convierte a `Number`. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
+`COALESCE` define una orden vacía como `0.00`; mysql2/Sequelize devuelve el
+decimal como string. El backend no lo convierte a `Number`. Sólo órdenes
+abiertas admiten add/delete. Cada mutación confirma actor, audit y total en la
+misma transacción; delete bloquea `WorkOrder → WorkOrderItem`. Consulte
+[ADR-004](decisions/ADR-004-server-side-order-total.md).
 
 ## `users`
 

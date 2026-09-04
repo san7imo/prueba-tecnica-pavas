@@ -26,6 +26,7 @@ import {
 } from './helpers/authenticatedRequest.js';
 
 let migrator;
+let admin;
 let adminAccessToken;
 const request = createAuthenticatedRequest(() => adminAccessToken);
 
@@ -94,7 +95,7 @@ beforeAll(async () => {
   migrator = createMigrator(sequelize);
   await migrator.down({ to: 0 });
   await migrator.up();
-  ({ accessToken: adminAccessToken } = await createTestIdentity({
+  ({ user: admin, accessToken: adminAccessToken } = await createTestIdentity({
     name: 'Work Orders Admin',
     email: 'work-orders-admin@example.test',
     role: USER_ROLE.ADMIN,
@@ -527,6 +528,8 @@ describe('Work Orders API', () => {
             description: 'Diagnosis',
             count: '1.00',
             unitValue: '50000.00',
+            createdByUserId: admin.id,
+            createdBy: { id: admin.id, name: 'Work Orders Admin' },
           },
         ],
       });
@@ -579,6 +582,8 @@ describe('Work Orders API', () => {
           description: 'Workshop diagnosis',
           count: '2.00',
           unitValue: '50000.00',
+          createdByUserId: admin.id,
+          createdBy: { id: admin.id, name: 'Work Orders Admin' },
         },
         workOrderTotal: '100000.00',
       });
@@ -717,11 +722,13 @@ describe('Work Orders API', () => {
           workOrderId: 999999,
           workOrderTotal: '999999.00',
           createdAt: '2000-01-01T00:00:00.000Z',
+          createdByUserId: 999999,
         });
 
       expect(response.status).toBe(201);
       expect(response.body.data.item.id).not.toBe(700);
       expect(response.body.data.item).not.toHaveProperty('workOrderId');
+      expect(response.body.data.item.createdByUserId).toBe(admin.id);
       expect(response.body.data.workOrderTotal).toBe('50000.00');
       expect(
         await models.WorkOrderItem.count({ where: { workOrderId: workOrder.id } }),

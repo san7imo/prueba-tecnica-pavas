@@ -61,6 +61,8 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.getByText('Ruido anormal en la transmisión')).toBeInTheDocument();
     expect(screen.getAllByText(/130\.000,00/).length).toBeGreaterThan(0);
     expect(screen.getByText(/100\.000,00/)).toBeInTheDocument();
+    expect(screen.getByText(/registrado por Mauro Mecánico/i)).toBeInTheDocument();
+    expect(screen.getByText(/registrado por Admin PAVAS/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /iniciar diagnóstico/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancelar orden/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /marcar como lista/i })).not.toBeInTheDocument();
@@ -87,6 +89,34 @@ describe('WorkOrderDetailPage', () => {
     await waitFor(() => expect(workOrdersApi.deleteItem).toHaveBeenCalledWith(9));
     expect(await screen.findByText(/ítem eliminado y total actualizado/i)).toBeInTheDocument();
     expect(workOrdersApi.getById).toHaveBeenCalledTimes(3);
+  });
+
+  it('surfaces a stale closed-order conflict from an item mutation', async () => {
+    workOrdersApi.addItem.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          error: {
+            code: 'WORK_ORDER_CLOSED',
+            message: 'La orden ya fue cerrada y sus ítems están protegidos.',
+          },
+        },
+      },
+    });
+    renderPage();
+    await screen.findByRole('heading', { name: /orden #7/i });
+
+    fireEvent.change(screen.getByRole('textbox', { name: /^descripción$/i }), {
+      target: { value: 'Revisión tardía' },
+    });
+    fireEvent.change(screen.getByLabelText(/valor unitario/i), {
+      target: { value: '100.00' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /agregar ítem/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La orden ya fue cerrada y sus ítems están protegidos.',
+    );
   });
 
   it('updates only to an allowed state and sends the Phase 2-compatible body through the API module', async () => {
@@ -314,6 +344,9 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: /iniciar|marcar|entregar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/nuevo responsable/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /agregar ítem/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /eliminar kit de arrastre/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/ítems y su total quedan protegidos/i)).toBeInTheDocument();
 
     const type = screen.getByLabelText(/tipo de reapertura/i);
     expect([...type.options].map(({ value }) => value)).toEqual([
@@ -344,6 +377,8 @@ describe('WorkOrderDetailPage', () => {
     );
     expect(await screen.findByText(/orden reabierta en Diagnóstico/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /reabrir orden/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /agregar ítem/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /eliminar kit de arrastre/i })).toBeInTheDocument();
     await waitFor(() => expect(workOrdersApi.getHistory).toHaveBeenCalledTimes(2));
   });
 
@@ -388,6 +423,8 @@ describe('WorkOrderDetailPage', () => {
     const mechanicRender = renderPage(mechanicUser);
     await screen.findByRole('heading', { name: /orden #7/i });
     expect(screen.queryByRole('heading', { name: /reabrir orden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /agregar ítem/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/ítems y su total quedan protegidos/i)).toBeInTheDocument();
 
     mechanicRender.unmount();
     workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'CANCELADA' });

@@ -25,6 +25,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-STATE-008` a `PZ-STATE-009` | `frontend/tests/WorkOrderDetailPage.test.jsx` |
 | `PZ-REOPEN-001` a `PZ-REOPEN-009` | `backend/tests/workOrderReopen.integration.test.js` |
 | `PZ-REOPEN-010` a `PZ-REOPEN-011` | `frontend/tests/WorkOrderDetailPage.test.jsx`, `apiModules.test.js` |
+| `PZ-ITEM-001` a `PZ-ITEM-010` | `backend/tests/workOrderItemLifecycle.integration.test.js`, `workOrders.integration.test.js` |
+| `PZ-ITEM-011` | `frontend/tests/WorkOrderDetailPage.test.jsx` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -165,6 +167,16 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-REOPEN-007 | Fallo audit revierte status e history | forced audit rollback case | PASS |
 | PZ-REOPEN-008 | Dos reopens concurrentes dejan un único cambio/evento | concurrent reopen case | PASS |
 | PZ-REOPEN-009 | Reopen contra create/delete conserva unicidad y lifecycle | cross-operation races | PASS |
+| PZ-ITEM-001 | Alta atribuye actor autenticado e ignora suplantación del body | ADMIN/MECANICO attribution cases | PASS |
+| PZ-ITEM-002 | Creador se serializa como ID/nombre seguro y legacy permanece null | creator detail cases | PASS |
+| PZ-ITEM-003 | ENTREGADA/CANCELADA rechazan alta para ambos roles sin efectos | closed add matrix | PASS |
+| PZ-ITEM-004 | ENTREGADA/CANCELADA rechazan delete y preservan ítem/total | closed delete matrix | PASS |
+| PZ-ITEM-005 | Delete es ADMIN-only antes de validar ID | authorization boundary | PASS |
+| PZ-ITEM-006 | Reopen habilita add propio y delete ADMIN con total exacto | reopened lifecycle case | PASS |
+| PZ-ITEM-007 | ITEM_DELETED registra snapshot anterior, creador y actor | delete audit case | PASS |
+| PZ-ITEM-008 | Fallo audit revierte delete y total | forced delete-audit failure | PASS |
+| PZ-ITEM-009 | PATCH de ítem no existe y no reescribe evidencia | no-update route case | PASS |
+| PZ-ITEM-010 | Add/delete contra close/reopen se serializa sin corrupción | item lifecycle races | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |
@@ -218,6 +230,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-STATE-009 | Regresión permanece bloqueada sin motivo y exige confirmación | reason/confirmation case | PASS |
 | PZ-REOPEN-010 | Panel ADMIN ofrece tipos cerrados, reason y confirmación | admin reopen flow | PASS |
 | PZ-REOPEN-011 | Panel se oculta por rol/estado, evita doble submit y presenta conflictos | role/error/loading cases | PASS |
+| PZ-ITEM-011 | Detalle muestra creador, protege cerrado, rehabilita tras reopen y presenta conflicto tardío | item lifecycle UI cases | PASS |
 
 ## Evidencia no funcional y documental
 

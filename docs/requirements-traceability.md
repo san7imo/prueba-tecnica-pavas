@@ -166,6 +166,17 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-REOPEN-009 | Reopen se serializa contra alta y delete sin violar invariantes | HITO 11 | locks compartidos Client → Bike → WorkOrder | reopen/create/delete APIs | cross-operation races | Done |
 | PZ-REOPEN-010 | UI ADMIN ofrece sólo tipos válidos, reason y confirmación | HITO 11 | `ReopenPanel` + API dedicada | `/orders/:id` | admin reopen flow | Done |
 | PZ-REOPEN-011 | UI oculta por rol/estado, evita doble submit y muestra conflictos | HITO 11 | render condicional + estado local | `/orders/:id` | role/error/loading cases | Done |
+| PZ-ITEM-001 | Alta atribuye ADMIN/MECANICO autenticado e ignora actor del body | HITO 12 | allowlist + `req.user` dentro de transacción | POST items | actor attribution cases | Done |
+| PZ-ITEM-002 | API expone creador seguro y mantiene null para legacy | HITO 12 | include/serializer ID+name | order detail/item response | creator serialization cases | Done |
+| PZ-ITEM-003 | ENTREGADA/CANCELADA rechazan alta sin efectos | HITO 12 | status revalidado bajo WorkOrder lock | POST items | closed add matrix | Done |
+| PZ-ITEM-004 | ENTREGADA/CANCELADA rechazan delete y preservan total/fila | HITO 12 | WorkOrder lock antes de item | DELETE item | closed delete matrix | Done |
+| PZ-ITEM-005 | Delete continúa sólo ADMIN antes de validar ID | HITO 12 | route RBAC | DELETE item | authorization boundary | Done |
+| PZ-ITEM-006 | Reopen habilita nuevamente add/delete según rol | HITO 12 | estado DIAGNOSTICO confirmado | reopen/items APIs | reopened lifecycle case | Done |
+| PZ-ITEM-007 | Delete audita snapshot anterior, creador y actor | HITO 12 | `ITEM_DELETED` allowlisted | audit API | delete audit case | Done |
+| PZ-ITEM-008 | Fallo audit revierte delete y total | HITO 12 | transacción única | DELETE item | forced audit rollback | Done |
+| PZ-ITEM-009 | No existe endpoint de update de ítem | HITO 12 | routing cerrado | PATCH item | no-update case | Done |
+| PZ-ITEM-010 | Mutaciones contra close/reopen preservan estado y total exacto | HITO 12 | lock compartido WorkOrder + revalidación | items/status/reopen APIs | concurrency race cases | Done |
+| PZ-ITEM-011 | UI muestra creador y protege controles cerrado/reabierto | HITO 12 | tabla/form role-state-aware | `/orders/:id` | creator/closed/reopen/error cases | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

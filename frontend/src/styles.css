@@ -226,6 +226,7 @@ p { color: var(--ink-700); line-height: 1.55; }
 .items-empty { padding: 1.5rem; border: 1px dashed #cbd2dc; border-radius: var(--radius-md); background: var(--surface-muted); text-align: center; }
 .items-empty p { margin-bottom: 0.2rem; }
 .item-form { margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px solid var(--line); }
+.item-lifecycle-message { margin-top: 1.25rem; border-top: 1px solid var(--line); }
 .form-grid--item { grid-template-columns: 1.05fr 1.8fr 0.75fr 1fr; }
 .status-actions { display: grid; gap: 0.55rem; }
 .status-note { margin-bottom: 0.8rem; }

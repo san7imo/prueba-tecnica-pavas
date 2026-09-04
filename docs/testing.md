@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  25 suites, 314 pruebas
-Frontend: 12 suites, 76 pruebas
-Matriz:   185 filas PASS
+Backend:  26 suites, 327 pruebas
+Frontend: 12 suites, 77 pruebas
+Matriz:   196 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -144,6 +144,17 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 - rollback si falla persistir total;
 - delete, último ítem `0.00`;
 - carreras add/add y add/delete con conexiones distintas y `FOR UPDATE`.
+
+### Lifecycle de ítems — `workOrderItemLifecycle.integration.test.js`
+
+- `ADMIN` y `MECANICO` asignado quedan atribuidos desde autenticación; un actor enviado en body se ignora;
+- detalle/respuesta exponen sólo ID/nombre del creador y preservan `null` para filas legacy;
+- `ENTREGADA`/`CANCELADA` rechazan add/delete con `409 WORK_ORDER_CLOSED` sin alterar total, ítem o audit;
+- delete permanece `ADMIN`-only antes de validar ID y no existe PATCH de ítem;
+- reopen vuelve a habilitar add por mecánico propio y delete por ADMIN;
+- `ITEM_DELETED` conserva snapshot anterior con creador y actor del borrado;
+- fallo audit revierte delete y total;
+- add contra delivery, delete contra cancellation y add contra reopen producen resultados serializables con total exacto.
 
 ### Asignación de órdenes — `workOrderAssignment.integration.test.js`
 
@@ -296,6 +307,13 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - éxito actualiza el detalle devuelto y refresca history; conflicto muestra el mensaje seguro;
 - el estado de carga impide doble envío; `MECANICO` y `CANCELADA` no exponen la acción.
 
+### Ítems protegidos — `WorkOrderDetailPage.test.jsx`
+
+- cada fila muestra el nombre seguro del creador cuando está disponible;
+- una orden cerrada conserva la tabla pero oculta alta/eliminación y explica la protección;
+- tras reapertura reaparecen los controles permitidos;
+- un `WORK_ORDER_CLOSED` causado por estado desactualizado se muestra al usuario.
+
 ### Accesibilidad y polish
 
 - campos requeridos y labels asociados;
@@ -343,13 +361,15 @@ Las carreras usan fixtures confirmados y conexiones separadas:
 
 - refresh/refresh bloquea la fila de token;
 - add/add y add/delete comparten lock de WorkOrder;
+- add/delete contra close/reopen comparten el mismo lock y revalidan estado;
 - estados releen bajo `FOR UPDATE`;
 - ítems y estados releen ownership bajo el lock de WorkOrder;
 - la reasignación cambia inmediatamente quién puede consultar y operar la orden;
 - mismo target deja exactamente un evento;
 - 150 eventos empatados prueban el desempate por ID.
 
-HITO 12 repitió siete casos críticos tres veces en procesos Vitest frescos: 21 passes, cero fallos.
+Una verificación histórica de concurrencia repitió siete casos críticos tres
+veces en procesos Vitest frescos: 21 passes, cero fallos.
 
 ## Smoke de navegador y API
 

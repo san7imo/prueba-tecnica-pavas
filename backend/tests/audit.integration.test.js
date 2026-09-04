@@ -189,7 +189,7 @@ describe.sequential('Global business audit', () => {
       id: String(itemResponse.body.data.item.id),
       workOrderId: String(order.id),
       unitValue: '65000.00',
-      createdByUserId: null,
+      createdByUserId: String(admin.id),
     });
   });
 

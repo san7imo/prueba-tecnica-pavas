@@ -22,6 +22,7 @@ const ITEM_ATTRIBUTES = [
   'description',
   'count',
   'unitValue',
+  'createdByUserId',
 ];
 
 const bikeInclude = (plate) => ({
@@ -130,6 +131,11 @@ export const workOrderRepository = {
           association: 'items',
           attributes: ITEM_ATTRIBUTES,
           required: false,
+          include: {
+            association: 'createdBy',
+            attributes: ['id', 'name'],
+            required: false,
+          },
         },
       ],
     });

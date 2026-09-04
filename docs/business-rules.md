@@ -3,7 +3,7 @@
 ## Estado
 
 Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-los hitos de productización aprobados hasta HITO 11.
+los hitos de productización aprobados hasta HITO 12.
 
 ## Máquina de estados de la orden
 
@@ -113,7 +113,7 @@ Mapa canónico:
 ## Auditoría empresarial global
 
 - `work_order_status_history` conserva la secuencia especializada de estados; no es reemplazado por `audit_events`.
-- Las altas autenticadas de cliente, motocicleta, usuario y orden, los cambios de asignación, el alta de ítem y las transiciones/cancelaciones existentes generan un solo evento empresarial específico.
+- Las altas autenticadas de cliente, motocicleta, usuario y orden, los cambios de asignación, las altas/eliminaciones de ítems y las transiciones/cancelaciones generan un solo evento empresarial específico.
 - El evento se escribe en la misma transacción que el dominio. Si falla, toda la mutación revierte; intentos inválidos o sin permiso no auditan.
 - El actor siempre es el usuario autenticado y no se acepta desde el body.
 - `beforeData`, `afterData` y `metadata` tienen allowlists por entidad/acción; IDs, fechas y decimales usan representaciones deterministas.
@@ -138,11 +138,24 @@ count > 0
 unitValue >= 0
 ```
 
-Ambos roles pueden crear ítems. Sólo `ADMIN` puede eliminarlos; `MECANICO` recibe 403 sin alterar ítem ni total.
+Ambos roles pueden crear ítems únicamente mientras la orden esté abierta.
+`MECANICO` sólo lo hace sobre su orden asignada. Sólo `ADMIN` puede eliminar y
+también requiere una orden abierta; `MECANICO` recibe 403 antes de validar el ID.
+`ENTREGADA` y `CANCELADA` rechazan ambas mutaciones con
+`409 WORK_ORDER_CLOSED`. Una reapertura confirmada vuelve a dejar la orden en
+`DIAGNOSTICO` y habilita add/delete según esos mismos permisos.
 
 Los decimales admiten hasta dos posiciones. `count` cabe en `DECIMAL(10,2)` y `unitValue` en `DECIMAL(15,2)`. La validación de modelo y los CHECK de MySQL son barreras adicionales.
 
-Cada mutación bloquea la orden, modifica el ítem, agrega todos los ítems persistidos y actualiza el total en una sola transacción. La eliminación relee el ítem después del lock para evitar totales obsoletos.
+Cada alta persiste `createdByUserId` desde el actor autenticado; el body no puede
+suplantarlo. El detalle expone ID/nombre seguros, mientras filas legacy pueden
+conservar atribución `null`. Cada mutación bloquea y revalida la orden, modifica
+el ítem, agrega todos los ítems persistidos, actualiza el total y escribe
+`ITEM_ADDED` o `ITEM_DELETED` en una sola transacción. La eliminación bloquea y
+relee el ítem después de la orden para evitar totals o snapshots obsoletos.
+
+No existe update de ítem. Una corrección exige delete administrativo y una
+nueva fila mientras la orden esté abierta, preservando la secuencia auditada.
 
 ## Total
 

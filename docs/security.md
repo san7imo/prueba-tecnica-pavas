@@ -77,6 +77,14 @@ abierta; actor, tipo y razón provienen exclusivamente del contexto autenticado 
 del payload allowlisted. History y audit revierten junto con el estado ante
 cualquier fallo.
 
+Las mutaciones de ítems releen bajo el lock de la orden tanto status como
+responsable. Una orden cerrada devuelve `409 WORK_ORDER_CLOSED` aunque el
+frontend esté desactualizado; una reapertura confirmada vuelve a habilitar las
+reglas normales. `createdByUserId` se toma de `req.user` y no del body. Delete
+sigue protegido por RBAC `ADMIN` antes de validar el ID, bloquea después el ítem
+y escribe `ITEM_DELETED` con snapshot allowlisted en la misma transacción que
+el recálculo. No existe endpoint de edición que permita reescribir evidencia.
+
 ## Frontend, XSS y almacenamiento
 
 El access token sólo vive en módulo/contexto; ningún token va a `localStorage` o `sessionStorage`. JavaScript no puede leer la cookie `HttpOnly`. Un cliente auth separado evita recursión; una promesa compartida coordina 401 concurrentes y cada petición reintenta una vez. Logout limpia memoria incluso si falla la red, y un refresh obsoleto no restaura una sesión cerrada.

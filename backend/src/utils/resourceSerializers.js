@@ -100,6 +100,10 @@ export const serializeWorkOrderItem = (resource) => {
     description: item.description,
     count: item.count,
     unitValue: item.unitValue,
+    createdByUserId: item.createdByUserId ?? null,
+    createdBy: item.createdBy
+      ? { id: item.createdBy.id, name: item.createdBy.name }
+      : null,
   };
 };
 

@@ -19,6 +19,7 @@ export const createWorkOrderItem = async (request, response) => {
 export const deleteWorkOrderItem = async (request, response) => {
   const result = await workOrderItemService.deleteItem(
     request.validated.params.itemId,
+    request.user,
   );
 
   response.json({ data: result });

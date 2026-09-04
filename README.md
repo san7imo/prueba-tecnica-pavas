@@ -38,7 +38,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 
 - fundamentos de persistencia para ciclo de vida, responsable, actor de ítem y auditoría global;
 - eventos empresariales append-only con snapshots explícitos y sin secretos;
-- auditoría atómica de altas autenticadas, alta de ítems y cambios de estado existentes;
+- auditoría atómica de altas autenticadas, alta/eliminación de ítems y cambios de estado;
 - consulta paginada/filtrada del audit global, exclusiva para `ADMIN`.
 - lifecycle backend completo de clientes: edición, paginación, duplicados, soft delete y restore auditados.
 - lifecycle backend completo de motocicletas: búsqueda exacta/prefijo, propietario, edición, soft delete/restore, contexto de órdenes y auditoría.
@@ -50,6 +50,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - vista **Mis órdenes** para mecánicos y colas **Todas/Sin asignar** con gestión de responsable para `ADMIN`.
 - retrocesos controlados y auditados cuando la reparación revela otra falla o una prueba final falla.
 - reapertura administrativa de una orden entregada por garantía o la misma falla, con razón, history/audit y protección concurrente.
+- ítems atribuidos al actor autenticado, inmutables mientras la orden está cerrada y nuevamente operables tras reapertura.
 
 ## Stack tecnológico
 
@@ -195,7 +196,10 @@ desarrollo: pavas_workshop
 pruebas:    pavas_workshop_test
 ```
 
-Siete migraciones deterministas crean `clients`, `bikes`, `work_orders`, `work_order_items`, `users`, `refresh_tokens` y `work_order_status_history`.
+Las siete migraciones originales crean `clients`, `bikes`, `work_orders`,
+`work_order_items`, `users`, `refresh_tokens` y `work_order_status_history`.
+Seis migraciones posteriores agregan lifecycles, `audit_events`, responsable,
+actor de ítem, normalización de contactos y la unicidad de orden abierta.
 
 | Comando backend | Propósito |
 |---|---|
@@ -254,7 +258,7 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 |---|---|
 | `npm run dev` | inicia la API con recarga de Node.js |
 | `npm start` | inicia la API sin modo watch |
-| `npm test` | ejecuta 25 suites sobre MySQL de pruebas |
+| `npm test` | ejecuta 26 suites sobre MySQL de pruebas |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 | `npm run db:seed:admin` | crea de forma idempotente el ADMIN inicial |
@@ -312,6 +316,12 @@ Sólo `ADMIN` puede reabrir una orden `ENTREGADA` mediante la operación dedicad
 ninguna otra orden abierta. El resultado vuelve a `DIAGNOSTICO` y queda en
 history y audit `REOPENED`; una falla distinta se registra como orden nueva.
 
+Los ítems sólo se agregan o eliminan mientras la orden está abierta. Cada alta
+guarda el actor autenticado; sólo `ADMIN` elimina y ambas operaciones recalculan
+el total exacto junto con su audit. `ENTREGADA`/`CANCELADA` protegen la evidencia;
+reabrir a `DIAGNOSTICO` vuelve a permitir trabajo según el rol. No existe edición
+de ítems.
+
 - `ADMIN`: acceso completo a las acciones implementadas.
 - `MECANICO`: lectura, creación de ítems y avance a `DIAGNOSTICO`,
   `EN_PROCESO` y `LISTA` únicamente sobre órdenes propias asignadas; sin
@@ -340,9 +350,9 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        25 suites, 314 pruebas
-Frontend:       12 suites, 76 pruebas
-Matriz crítica: 185 casos/filas PASS
+Backend:        26 suites, 327 pruebas
+Frontend:       12 suites, 77 pruebas
+Matriz crítica: 196 casos/filas PASS
 Migraciones:    13 ejecutadas, 0 pendientes
 ```
 

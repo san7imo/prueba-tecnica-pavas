@@ -1,11 +1,13 @@
 import { formatCurrency, multiplyDecimals } from '../../../utils/formatters.js';
 
-export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete }) => {
+export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete, isOpen }) => {
   if (items.length === 0) {
     return (
       <div className="items-empty">
         <p><strong>Sin ítems registrados</strong></p>
-        <p>Agrega mano de obra o repuestos para construir el total de la orden.</p>
+        <p>{isOpen
+          ? 'Agrega mano de obra o repuestos para construir el total de la orden.'
+          : 'La orden cerró sin ítems registrados.'}</p>
       </div>
     );
   }
@@ -31,6 +33,11 @@ export const ItemsTable = ({ items, onDelete, deletingItemId, canDelete }) => {
                 <span className="item-summary">
                   <span className="item-type">{item.type === 'MANO_OBRA' ? 'Mano de obra' : 'Repuesto'}</span>
                   <span className="cell-primary">{item.description}</span>
+                  <span className="cell-secondary">
+                    {item.createdBy?.name
+                      ? `Registrado por ${item.createdBy.name}`
+                      : 'Registro anterior sin actor atribuido'}
+                  </span>
                 </span>
               </td>
               <td data-label="Cantidad">{item.count}</td>

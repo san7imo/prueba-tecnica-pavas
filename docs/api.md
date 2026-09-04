@@ -3,7 +3,7 @@
 ## Alcance implementado
 
 La API expone las rutas completas de las fases 1 y 2 y los hitos de
-productización aprobados hasta HITO 11. Clientes, motocicletas, órdenes y
+productización aprobados hasta HITO 12. Clientes, motocicletas, órdenes y
 usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
 públicos.
 
@@ -489,7 +489,9 @@ Authorization: Bearer <accessToken>
 ```
 
 Devuelve orden, Bike/Client, responsable actual seguro, total persistido e
-`items` con `id`, `type`, `description`, `count`, `unitValue`. Errores
+`items` con `id`, `type`, `description`, `count`, `unitValue`,
+`createdByUserId` y el actor seguro `{ id, name }` en `createdBy`. Los ítems
+legacy conservan ambos valores en `null`. Errores
 400/`404 WORK_ORDER_NOT_FOUND`. `ADMIN` consulta cualquier orden;
 `MECANICO` sólo una asignada actualmente a su usuario y recibe 403 ante una
 orden ajena o sin responsable, con `WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`.
@@ -656,24 +658,35 @@ Content-Type: application/json
 }
 ```
 
-Ambos roles. `MECANICO` sólo agrega sobre una orden asignada actualmente a su
-usuario; el service comprueba el responsable bajo el lock de la orden antes de
-escribir. `type` es `MANO_OBRA`/`REPUESTO`; descripción máximo 255; `count > 0`;
+Ambos roles, pero sólo sobre órdenes abiertas. `MECANICO` únicamente agrega
+sobre una orden asignada actualmente a su usuario; el service comprueba estado
+y responsable bajo el lock de la orden antes de escribir. `type` es
+`MANO_OBRA`/`REPUESTO`; descripción máximo 255; `count > 0`;
 `unitValue >= 0`; máximo dos decimales. Number JSON o string decimal se
-normaliza a string de dos decimales. El service bloquea orden, crea, suma en
-MySQL y persiste total.
+normaliza a string de dos decimales. `createdByUserId` proviene siempre del
+usuario autenticado y cualquier valor enviado para ese campo se ignora. El
+service bloquea la orden y confirma ítem, actor, audit `ITEM_ADDED` y total en
+una misma transacción.
 
 ```json
 {
   "data": {
-    "item": { "id": 1, "type": "MANO_OBRA", "description": "General inspection", "count": "1.50", "unitValue": "50000.00" },
+    "item": {
+      "id": 1,
+      "type": "MANO_OBRA",
+      "description": "General inspection",
+      "count": "1.50",
+      "unitValue": "50000.00",
+      "createdByUserId": 4,
+      "createdBy": { "id": 4, "name": "Mauro Mecánico" }
+    },
     "workOrderTotal": "75000.00"
   }
 }
 ```
 
 Éxito 201; errores 400/`403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`/
-`404 WORK_ORDER_NOT_FOUND`/500 seguro.
+`404 WORK_ORDER_NOT_FOUND`/`409 WORK_ORDER_CLOSED`/500 seguro.
 
 ### Eliminar ítem
 
@@ -682,13 +695,18 @@ DELETE /api/work-orders/items/:itemId
 Authorization: Bearer <ADMIN accessToken>
 ```
 
-Sólo `ADMIN`; `MECANICO` recibe 403 antes de validar ID. Se resuelve orden, se bloquea, se relee ítem, elimina y recalcula. Último ítem deja `0.00`.
+Sólo `ADMIN`; `MECANICO` recibe 403 antes de validar ID. La orden debe estar
+abierta. Se resuelve el padre, se bloquea la orden, se revalida el estado y
+luego se bloquea/relee el ítem. Delete, audit `ITEM_DELETED` con snapshot
+anterior y recálculo se confirman juntos. El último ítem deja `0.00`.
 
 ```json
 { "data": { "deletedItemId": 1, "workOrderTotal": "0.00" } }
 ```
 
-Errores: 400/403/`404 WORK_ORDER_ITEM_NOT_FOUND`/500 seguro.
+Errores: 400/403/`404 WORK_ORDER_ITEM_NOT_FOUND`/`409 WORK_ORDER_CLOSED`/500
+seguro. No existe endpoint PATCH/PUT de ítems: una corrección autorizada exige
+eliminar y crear una fila nueva mientras la orden siga abierta.
 
 ## Códigos HTTP
 
@@ -700,7 +718,7 @@ Errores: 400/403/`404 WORK_ORDER_ITEM_NOT_FOUND`/500 seguro.
 | 401 | autenticación ausente/inválida/expirada |
 | 403 | rol sin permiso u origen CORS denegado |
 | 404 | recurso o ruta ausente |
-| 409 | placa o email normalizado duplicado |
+| 409 | conflicto de lifecycle, duplicado o estado persistido de la orden |
 | 413 | JSON superior a 100 KiB |
 | 429 | límite de intentos de login |
 | 500 | fallo inesperado sanitizado |

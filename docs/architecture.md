@@ -2,7 +2,7 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 11 de
+Este documento describe la arquitectura implementada hasta HITO 12 de
 productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
 backend completos, una sola orden abierta por motocicleta y asignación
 auditable de responsable, un alta orientada a reutilizar maestras y ownership
@@ -19,7 +19,8 @@ HITO 7 activó la asignación, HITO 8 conectó esas capacidades en el flujo
 frontend cliente → motocicleta → orden y HITO 9 hizo efectiva la responsabilidad
 individual del mecánico. HITO 10 añadió tres regresiones operativas explícitas,
 con razón obligatoria y doble ledger. HITO 11 añadió la reapertura administrativa
-de garantía/misma falla como operación dedicada y transaccional. Una sola API Express permite
+de garantía/misma falla como operación dedicada y transaccional. HITO 12 activó
+atribución y protección de lifecycle para los ítems. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -94,7 +95,7 @@ Las operaciones con varias escrituras son atómicas:
 - **Altas de maestras/usuarios:** cliente, motocicleta o usuario y su evento `CREATED` se confirman o revierten juntos.
 - **Lifecycle de clientes:** update, soft delete y restore bloquean el cliente; delete bloquea además sus motos activas en orden canónico. Estado y evento global confirman o revierten juntos. Crear una moto toma primero el lock del cliente para serializarse contra delete.
 - **Lifecycle de motocicletas:** update bloquea la moto; owner change bloquea clientes origen/destino por ID y luego la moto; delete/restore bloquean propietario y moto antes de revalidar lifecycle. Delete también bloquea las órdenes abiertas y toda mutación confirma o revierte junto con su audit.
-- **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea el ítem, recalcula `SUM(count * unit_value)`, persiste el total y agrega `ITEM_ADDED` antes de commit. El mismo lock serializa add/add y add/delete; la auditoría de delete se activa en su hito específico.
+- **Ítems y total:** el service bloquea `WorkOrder`, revalida que esté abierto y, para `MECANICO`, su asignación. Add persiste el actor autenticado; delete `ADMIN` bloquea después el `WorkOrderItem`. Ítem, audit `ITEM_ADDED`/`ITEM_DELETED` y total recalculado con `SUM(count * unit_value)` confirman o revierten juntos. El lock de orden serializa add/add, add/delete y las carreras con close/reopen.
 - **Creación de orden:** bloquea propietario, motocicleta y responsable opcional en orden canónico; rechaza recursos eliminados, assignee inválido u otra orden abierta. Orden `RECIBIDA`, history inicial y `CREATED` se confirman o revierten juntos; un generated UNIQUE es la barrera final de una abierta por moto.
 - **Asignación:** bloquea los usuarios anterior/destino por ID y después la orden; revalida status y asignación persistida antes de escribir `ASSIGNED`, `REASSIGNED` o `UNASSIGNED` dentro de la misma transacción.
 - **Ownership operativo:** listas, detalle e historial restringen al `MECANICO` a su ID autenticado. Estado e ítems verifican de nuevo el responsable persistido después de bloquear la orden, por lo que una reasignación revoca acceso operativo inmediatamente.
@@ -169,6 +170,11 @@ separado que sólo ofrece `WARRANTY`/`SAME_ISSUE`, razón obligatoria y confirma
 al completar usa el detalle devuelto por el backend y refresca el timeline.
 Ocultar o bloquear controles es sólo UX: el servicio vuelve a comprobar arista,
 ownership, lifecycle, unicidad abierta y razón bajo lock.
+
+El detalle muestra el creador seguro de cada ítem cuando existe. En órdenes
+cerradas conserva la tabla como evidencia, oculta alta/eliminación y explica la
+protección del total; al reabrir, los controles permitidos reaparecen. No existe
+flujo ni endpoint de edición de ítems.
 
 React Router implementa guardas protegidas, anónimas y de `ADMIN`. Axios separa el cliente de negocio del cliente auth para evitar recursión. Un coordinador en memoria deduplica refresh concurrentes y limita cada 401 a un reintento.
 

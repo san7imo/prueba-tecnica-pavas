@@ -7,6 +7,13 @@ export const WORK_ORDER_STATUSES = [
   'CANCELADA',
 ];
 
+export const OPEN_WORK_ORDER_STATUSES = [
+  'RECIBIDA',
+  'DIAGNOSTICO',
+  'EN_PROCESO',
+  'LISTA',
+];
+
 export const WORK_ORDER_STATUS_LABELS = {
   RECIBIDA: 'Recibida',
   DIAGNOSTICO: 'Diagnóstico',

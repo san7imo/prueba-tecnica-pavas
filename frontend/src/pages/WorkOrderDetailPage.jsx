@@ -13,6 +13,7 @@ import { ReopenPanel } from '../features/workOrders/components/ReopenPanel.jsx';
 import { StatusActions } from '../features/workOrders/components/StatusActions.jsx';
 import {
   isWorkOrderRegression,
+  OPEN_WORK_ORDER_STATUSES,
   WORK_ORDER_STATUS_LABELS,
 } from '../constants/workOrders.js';
 import { useAuth } from '../hooks/useAuth.js';
@@ -156,6 +157,8 @@ export const WorkOrderDetailPage = () => {
     return <ErrorState message={loadError.message} onRetry={loadOrder} />;
   }
 
+  const orderOpen = OPEN_WORK_ORDER_STATUSES.includes(order.status);
+
   return (
     <section aria-labelledby="order-detail-title">
       <div className="page-heading page-heading--detail">
@@ -190,8 +193,20 @@ export const WorkOrderDetailPage = () => {
             <div className="section-heading section-heading--compact">
               <div><h2 id="items-title">Ítems de la orden</h2><p>{order.items.length} {order.items.length === 1 ? 'registro' : 'registros'}</p></div>
             </div>
-            <ItemsTable items={order.items} onDelete={deleteItem} deletingItemId={deletingItemId} canDelete={user.role === 'ADMIN'} />
-            <ItemForm form={itemForm} onChange={changeItem} onSubmit={addItem} loading={itemLoading} error={itemError} />
+            <ItemsTable
+              items={order.items}
+              onDelete={deleteItem}
+              deletingItemId={deletingItemId}
+              canDelete={user.role === 'ADMIN' && orderOpen}
+              isOpen={orderOpen}
+            />
+            {orderOpen ? (
+              <ItemForm form={itemForm} onChange={changeItem} onSubmit={addItem} loading={itemLoading} error={itemError} />
+            ) : (
+              <p className="terminal-message item-lifecycle-message" role="status">
+                La orden está cerrada: sus ítems y su total quedan protegidos.
+              </p>
+            )}
           </section>
           <HistoryTimeline key={`${id}-${historyVersion}`} workOrderId={id} />
         </div>

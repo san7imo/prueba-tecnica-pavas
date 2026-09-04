@@ -38,6 +38,8 @@ export const orderFixture = {
       description: 'Kit de arrastre',
       count: '2.00',
       unitValue: '50000.00',
+      createdByUserId: 2,
+      createdBy: { id: 2, name: 'Mauro Mecánico' },
     },
     {
       id: 10,
@@ -45,6 +47,8 @@ export const orderFixture = {
       description: 'Instalación',
       count: '1.00',
       unitValue: '30000.00',
+      createdByUserId: 1,
+      createdBy: { id: 1, name: 'Admin PAVAS' },
     },
   ],
 };
