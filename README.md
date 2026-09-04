@@ -4,7 +4,7 @@ Prueba Técnica Full Stack JavaScript
 
 ## Descripción
 
-PAVAS Moto Workshop es un MVP para gestionar órdenes de trabajo de un taller de motocicletas. Incluye el alcance obligatorio de las fases 1 y 2 de la prueba de PAVAS S.A.S.: clientes, motocicletas, órdenes, ítems, totales, flujo de estados, autenticación, roles, administración de usuarios e historial auditable.
+PAVAS Moto Workshop es un producto web para operar el ciclo de servicio de un taller de motocicletas. Evoluciona el alcance de las fases 1 y 2 de la prueba de PAVAS S.A.S. con maestras completas de clientes y motocicletas, responsabilidad mecánica explícita, órdenes consistentes, retornos controlados del trabajo, garantías y trazabilidad empresarial.
 
 El proyecto prioriza reglas de negocio explícitas, consistencia transaccional, seguridad, pruebas automatizadas y una instalación local reproducible. Los documentos originales de la prueba se conservan sin modificaciones en la raíz del repositorio.
 
@@ -51,6 +51,10 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - retrocesos controlados y auditados cuando la reparación revela otra falla o una prueba final falla.
 - reapertura administrativa de una orden entregada por garantía o la misma falla, con razón, history/audit y protección concurrente.
 - ítems atribuidos al actor autenticado, inmutables mientras la orden está cerrada y nuevamente operables tras reapertura.
+- protección del último `ADMIN` y de mecánicos con órdenes abiertas, con recuperación guiada por reasignación;
+- dashboard operativo por rol, auditoría navegable y colas Todas/Mis órdenes/Sin asignar;
+- búsquedas indexables, paginación acotada y consultas relacionales sin N+1;
+- autorización, serialización, recuperación de sesión, teclado y responsive auditados de extremo a extremo.
 
 ## Stack tecnológico
 
@@ -198,8 +202,9 @@ pruebas:    pavas_workshop_test
 
 Las siete migraciones originales crean `clients`, `bikes`, `work_orders`,
 `work_order_items`, `users`, `refresh_tokens` y `work_order_status_history`.
-Seis migraciones posteriores agregan lifecycles, `audit_events`, responsable,
-actor de ítem, normalización de contactos y la unicidad de orden abierta.
+Siete migraciones posteriores agregan lifecycles, `audit_events`, responsable,
+actor de ítem, normalización de contactos, unicidad de orden abierta e índices
+para las consultas operativas.
 
 | Comando backend | Propósito |
 |---|---|
@@ -258,7 +263,7 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 |---|---|
 | `npm run dev` | inicia la API con recarga de Node.js |
 | `npm start` | inicia la API sin modo watch |
-| `npm test` | ejecuta 26 suites sobre MySQL de pruebas |
+| `npm test` | ejecuta 28 suites sobre MySQL de pruebas |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 | `npm run db:seed:admin` | crea de forma idempotente el ADMIN inicial |
@@ -271,7 +276,7 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 | `npm run dev` | inicia Vite en desarrollo |
 | `npm run build` | genera el bundle de producción |
 | `npm run preview` | sirve localmente el bundle generado |
-| `npm test` | ejecuta 12 suites de Vitest/RTL |
+| `npm test` | ejecuta 15 suites de Vitest/RTL |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 
@@ -350,10 +355,10 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        26 suites, 327 pruebas
-Frontend:       12 suites, 77 pruebas
-Matriz crítica: 196 casos/filas PASS
-Migraciones:    13 ejecutadas, 0 pendientes
+Backend:        28 suites, 342 pruebas
+Frontend:       15 suites, 104 pruebas
+Matriz crítica: 235 casos/filas PASS
+Migraciones:    14 ejecutadas, 0 pendientes
 ```
 
 Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs/test-acceptance-matrix.md).
@@ -362,7 +367,11 @@ Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs
 
 Importe `postman/PAVAS-Moto-Workshop.postman_collection.json`, configure `adminEmail` y `adminPassword`, y confirme que `baseUrl` sea `http://localhost:3000/api` o la URL de su API.
 
-Ejecute primero `Auth / Iniciar sesión`. Su script guarda `accessToken`; el cookie jar de Postman conserva la cookie `HttpOnly`. Después puede recorrer las carpetas Usuarios, Clientes, Motocicletas y Órdenes de trabajo. No se incluyen credenciales reales. Consulte [Guía de Postman](postman/README.md).
+Ejecute primero `Salud / Comprobar API` y `Autenticación / Iniciar sesión`.
+El script guarda `accessToken`; el cookie jar de Postman conserva la cookie
+`HttpOnly`. La colección cubre usuarios, lifecycle completo de clientes y
+motocicletas, asignación, estados, reapertura, ítems, historial y auditoría. No
+incluye credenciales reales. Consulte [Guía de Postman](postman/README.md).
 
 ## Resumen de seguridad
 
@@ -399,14 +408,14 @@ Este repositorio no implementa infraestructura de despliegue.
 
 - MySQL 8/InnoDB es el motor objetivo.
 - No se impone una expresión regular de placa colombiana; sólo normalización técnica y unicidad.
-- No hay MFA, recuperación de contraseña ni protección de “último ADMIN”; son decisiones de alcance del MVP.
+- No hay MFA ni recuperación de contraseña. El último `ADMIN` y los mecánicos
+  con trabajo abierto sí están protegidos por reglas transaccionales.
 - El rate limiter es local al proceso.
 - No se incluye logout de todos los dispositivos.
 - Sequelize 6.37.8 incorpora transitivamente `uuid` 8.3.2 con un advisory moderado relacionado con APIs de UUID que esta aplicación no invoca. El fix automático propone un downgrade incompatible a Sequelize 3; por ello no se ejecutó `npm audit fix --force`. El riesgo residual está analizado en [Seguridad](docs/security.md).
 
 ## Documentación
 
-- [Guía de defensa técnica](docs/guia-defensa.md)
 - [Arquitectura](docs/architecture.md)
 - [API](docs/api.md)
 - [Base de datos](docs/database.md)
@@ -416,12 +425,20 @@ Este repositorio no implementa infraestructura de despliegue.
 - [Matriz crítica de aceptación](docs/test-acceptance-matrix.md)
 - [Trazabilidad de requisitos](docs/requirements-traceability.md)
 - [Checklist de entrega](docs/submission-checklist.md)
+- [Recorrido de demostración](docs/demo-walkthrough.md)
 - [ADR-001 — Monolito modular](docs/decisions/ADR-001-modular-monolith.md)
 - [ADR-002 — Rotación de refresh tokens](docs/decisions/ADR-002-refresh-token-rotation.md)
 - [ADR-003 — Máquina de estados](docs/decisions/ADR-003-work-order-state-machine.md)
 - [ADR-004 — Total calculado en servidor](docs/decisions/ADR-004-server-side-order-total.md)
+- [ADR-005 — Lifecycle de maestras y auditoría empresarial](docs/decisions/ADR-005-master-data-lifecycle-and-business-audit.md)
+- [ADR-006 — Una orden abierta y estrategia de locks](docs/decisions/ADR-006-single-open-order-and-locking.md)
+- [ADR-007 — Responsable único y retornos controlados](docs/decisions/ADR-007-assignment-and-controlled-workflow-return.md)
 - [Postman](postman/README.md)
 
 ## Decisiones arquitectónicas
 
-Los cuatro ADR aceptados explican por qué se eligieron un monolito modular, refresh tokens persistidos y rotativos, una máquina de estados explícita y el cálculo transaccional del total en MySQL. No se añadieron microservicios, cachés, colas ni dependencias sin una necesidad del alcance.
+Los siete ADR aceptados explican las decisiones estructurales y de producto:
+monolito modular, refresh tokens rotativos, máquina de estados explícita, total
+transaccional, lifecycle/auditoría, unicidad de orden abierta y responsabilidad
+mecánica con retornos controlados. No se añadieron microservicios, cachés, colas
+ni dependencias sin una necesidad del alcance.

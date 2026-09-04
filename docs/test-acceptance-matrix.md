@@ -276,7 +276,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | ID | Requisito o riesgo | Evidencia | Estado |
 |---|---|---|---|
 | P1-DOC-001 | Install/lint/test/build ejecutables | clean-install HITO 14 + regresión/lint/build HITO 18 | PASS |
-| P1-DOC-002 | Colección Postman original de Fases 1/2 permanece como JSON válido; su ampliación productizada corresponde al HITO 19 | parser JSON + inventario base de 5 carpetas/22 requests | PASS |
+| P1-DOC-002 | Colección Postman cubre todas las rutas del producto con recorrido y variantes documentadas | parser JSON + inventario de 7 carpetas/36 requests y contratos HTTP | PASS |
 | P2-AUDIT-008 | Historial <1s a escala de prueba | request 100/150: 9.40 ms, plan indexado | PASS |
 | P0-DOC-001 | Arquitectura, negocio, seguridad y API documentados | documentos y ADR versionados | PASS |
 | PZ-MIG-001 | Base vacía aplica y revierte las catorce migraciones sin residuos | `schema.integration.test.js`: full stack lifecycle | PASS |

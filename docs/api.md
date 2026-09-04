@@ -2,10 +2,9 @@
 
 ## Alcance implementado
 
-La API expone las rutas completas de las fases 1 y 2 y los hitos de
-productización aprobados hasta HITO 12. Clientes, motocicletas, órdenes y
-usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
-públicos.
+La API expone las rutas completas de las fases 1 y 2 y del producto consolidado
+en HITO 19. Clientes, motocicletas, órdenes, usuarios y auditoría requieren
+access JWT; sólo health y el ciclo login/refresh/logout son públicos.
 
 ```text
 GET  /api/health
@@ -176,11 +175,22 @@ Todas las rutas requieren `ADMIN`. Respuestas: `id`, `name`, `email`, `role`, `a
 
 ```text
 GET   /api/users
-PATCH /api/users/:id/role    { "role": "ADMIN" | "MECANICO" }
-PATCH /api/users/:id/active  { "active": true | false }
+PATCH /api/users/:id/role    { "role": "ADMIN" | "MECANICO", "reason": "..." }
+PATCH /api/users/:id/active  { "active": true | false, "reason": "..." }
 ```
 
-El listado no pagina por el alcance acotado y ordena por nombre, email, ID. ID/rol/boolean inválido devuelve 400; ausente, `404 USER_NOT_FOUND`. Se permite cambiar el propio rol/estado; no existe protección del último ADMIN. El token afectado falla en su siguiente petición.
+El listado no pagina por el alcance acotado y ordena por nombre, email, ID. Toda
+mutación exige `reason` no vacío de máximo 1000 caracteres y crea auditoría
+`ROLE_CHANGED`, `DEACTIVATED` o `ACTIVATED`. ID/rol/boolean inválido devuelve
+400; ausente, `404 USER_NOT_FOUND`.
+
+Desactivar o retirar el rol al último `ADMIN` activo responde
+`409 LAST_ACTIVE_ADMIN_REQUIRED`. Un `MECANICO` con órdenes abiertas asignadas
+no puede desactivarse ni cambiar a `ADMIN`: responde
+`409 MECHANIC_HAS_OPEN_ORDERS`; la UI ofrece el acceso seguro a la cola filtrada
+para reasignarlas. Los usuarios implicados se bloquean en orden determinista y las
+reglas se revalidan dentro de la transacción; el token afectado por un cambio
+válido falla en su siguiente petición.
 
 ## Auditoría empresarial global
 

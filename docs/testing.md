@@ -433,11 +433,32 @@ administradores.
   eventos empatados;
 - matriz crítica: 235 requisitos/riesgos con evidencia `PASS`.
 
+## Validación documental HITO 19 — 2026-09-03
+
+- colección Postman parseada como JSON y scripts compilados: 7 carpetas,
+  36 requests y 33/33 patrones de endpoint cubiertos;
+- enlaces Markdown locales de README, docs, ADR y guía Postman: todos resuelven;
+- trazabilidad: 214 IDs únicos, 208 `Done`, 6 `Foundation` y cero `Pending`;
+- `git diff --check`: sin errores de whitespace.
+- backend: 28/28 suites, 342/342 pruebas y lint en pass;
+- frontend aislado: 15/15 suites, 104/104 pruebas, lint y build en pass;
+- migraciones de desarrollo: 14 ejecutadas, cero pendientes.
+
+Una primera ejecución paralela de backend/frontend agotó el timeout de 5 s en
+9 pruebas UI (95 pasaron) por contención local mientras la integración MySQL
+seguía activa. Sin modificar código ni timeouts, la repetición frontend aislada
+pasó 104/104 en 9.96 s; ese es el gate válido reportado.
+
+Esta validación comprueba estructura y consistencia documental; el recorrido
+HTTP real de la colección se reserva para el gate limpio de HITO 20.
+
 ## Smoke de navegador y API
 
 El smoke real complementa, no reemplaza, las suites. El recorrido probado fue ADMIN creando Client → Bike → dos WorkOrders → REPUESTO/MANO_OBRA → total → estados → historial → MECANICO; luego MECANICO leyendo, agregando ítem, usando transición permitida y comprobando restricciones/logout.
 
-También se observaron envelopes 401/403/400/404/409/429. Postman se validó como JSON con 5 carpetas y 22 requests.
+También se observaron envelopes 401/403/400/404/409/429. HITO 18 validó la
+colección base con 5 carpetas/22 requests; HITO 19 la amplió y volvió a validar
+como JSON con 7 carpetas/36 requests que cubren todas las rutas productizadas.
 
 ### Registro local HITO 13 — 2026-08-24
 

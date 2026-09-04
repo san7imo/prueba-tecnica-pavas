@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 172 requisitos: 166 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 214 requisitos: 208 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -177,10 +177,52 @@ La tabla contiene 172 requisitos: 166 `Done` y 6 `Foundation`. No existen filas 
 | PZ-ITEM-009 | No existe endpoint de update de ítem | HITO 12 | routing cerrado | PATCH item | no-update case | Done |
 | PZ-ITEM-010 | Mutaciones contra close/reopen preservan estado y total exacto | HITO 12 | lock compartido WorkOrder + revalidación | items/status/reopen APIs | concurrency race cases | Done |
 | PZ-ITEM-011 | UI muestra creador y protege controles cerrado/reabierto | HITO 12 | tabla/form role-state-aware | `/orders/:id` | creator/closed/reopen/error cases | Done |
+| PZ-OPEN-001 | Upgrade aborta sin alterar datos si ya existen dos órdenes abiertas | HITO 6 | preflight de migración `013` | persistencia | invalid upgrade case | Done |
+| PZ-OPEN-002 | La base impone máximo una orden abierta por moto | HITO 6 | generated `open_bike_id` + UNIQUE | persistencia | direct DB constraint | Done |
+| PZ-OPEN-003 | Segunda orden abierta devuelve conflicto estable sin parciales | HITO 6 | servicio transaccional + mapping UNIQUE | POST Work Order | conflict/rollback case | Done |
+| PZ-OPEN-004 | Una falla distinta admite nueva orden después del cierre | HITO 6 | estados abiertos/cerrados explícitos | POST Work Order | closed-history/new case | Done |
+| PZ-OPEN-005 | Dos altas concurrentes confirman como máximo una | HITO 6 | Client→Bike lock + UNIQUE | POST Work Order | concurrent create | Done |
+| PZ-OPEN-006 | Cierre concurrente con alta conserva el invariante | HITO 6 | WorkOrder lock + revalidación | status/create APIs | close/create race | Done |
+| PZ-AUDIT-001 | Snapshots y metadata usan allowlists deterministas | HITO 2 | `auditService` + builders por acción | audit ledger | snapshot matrix | Done |
+| PZ-AUDIT-002 | Secretos, credenciales y tokens nunca entran al audit | HITO 2 | allowlist USER y serialización explícita | mutation/audit APIs | sensitive-field cases | Done |
+| PZ-AUDIT-003 | Mutaciones importantes generan acciones específicas | HITO 2 | evento dentro de transacción de dominio | mutation APIs | activation cases | Done |
+| PZ-AUDIT-004 | Actor proviene sólo de identidad autenticada | HITO 2 | `req.user` → service | mutation APIs | actor injection case | Done |
+| PZ-AUDIT-005 | Fallo del audit revierte la mutación completa | HITO 2 | transacción compartida | mutation APIs | forced failure matrix | Done |
+| PZ-AUDIT-006 | Lectura filtra/pagina y detalle es seguro | HITO 2 | repository acotado + serializer | GET Audit APIs | filter/detail cases | Done |
+| PZ-AUDIT-007 | Sólo ADMIN consulta auditoría | HITO 2 | auth/RBAC antes de validation | GET Audit APIs | authorization boundary | Done |
+| PZ-AUDIT-008 | Ledger no tiene API de mutación | HITO 2 | routes/repository append-only | Audit API | no-mutation cases | Done |
+| PZ-AUDIT-009 | UI ADMIN lista y filtra eventos | HITO 14 | `AuditListPage` | `/admin/audit` | list/filter/pagination | Done |
+| PZ-AUDIT-010 | UI presenta actor, razón y snapshots legibles | HITO 14 | `AuditDetailPage` | `/admin/audit/:id` | detail case | Done |
+| PZ-AUDIT-011 | Vistas audit tienen loading/error/retry/empty | HITO 14 | estados recuperables | Audit pages | recovery cases | Done |
+| PZ-USER-001 | Cambiar rol/actividad exige razón acotada | HITO 13 | validator + service | PATCH User APIs | reason validation | Done |
+| PZ-USER-002 | Último ADMIN activo no puede desactivarse/degradarse | HITO 13 | lock y conteo revalidado | PATCH User APIs | last-admin cases | Done |
+| PZ-USER-003 | Cambios de usuario se auditan con razón y snapshots | HITO 13 | transacción USER/audit | PATCH User APIs | audit cases | Done |
+| PZ-USER-004 | Mecánico con órdenes abiertas conserva rol/actividad | HITO 13 | consulta bloqueada de asignaciones | PATCH User APIs | assigned conflict | Done |
+| PZ-USER-005 | Reasignar trabajo desbloquea el lifecycle del mecánico | HITO 13 | invariant shared con assignment | Users/Orders APIs | recovery flow | Done |
+| PZ-USER-006 | Reducciones ADMIN concurrentes dejan uno activo | HITO 13 | locks por ID + revalidación | PATCH User APIs | concurrent reduction | Done |
+| PZ-USER-007 | Asignar contra desactivar no deja trabajo huérfano | HITO 13 | orden canónico User→WorkOrder | Users/Orders APIs | lifecycle race | Done |
+| PZ-USER-008 | Auth/RBAC preceden validación de usuario | HITO 13 | middleware order | PATCH User APIs | boundary case | Done |
+| PZ-USER-009 | UI enlaza conflicto a la cola de reasignación | HITO 13 | feedback accionable | Users/Orders pages | recovery UI case | Done |
+| PZ-DASH-001 | Dashboard ADMIN consulta cuatro colas abiertas reales | HITO 14 | queries por status/scope | `/dashboard` | admin queues | Done |
+| PZ-DASH-002 | Dashboard MECANICO consulta sólo `mine` | HITO 14 | scope role-aware + backend | `/dashboard` | mechanic dashboard | Done |
+| PZ-DASH-003 | Dashboard maneja vacío, fallo y retry | HITO 14 | estados por cola | `/dashboard` | recovery cases | Done |
+| PZ-DASH-004 | Navegación y guardas exponen rutas por rol | HITO 14 | AppLayout/RoleRoute | shell/rutas | route matrix | Done |
 | PZ-PERF-001 | Placa de órdenes usa igualdad normalizada indexable | HITO 15 | join Bike por igualdad, sin wildcard inicial | `GET /api/work-orders?plate=` | exact/incomplete/SQL shape | Done |
 | PZ-PERF-002 | All, estado, moto y responsable tienen índices alineados con filtro/orden | HITO 15 | migración reversible `014` | listados y dashboard | metadata + EXPLAIN con 2.400 órdenes | Done |
 | PZ-PERF-003 | Listados relacionales conservan dos consultas y evitan joins en count | HITO 15 | count raíz + findAll eager allowlisted | Bike/Order/History/Audit GET | query-count/SQL shape/regresión | Done |
 | PZ-PERF-004 | Paginación operativa permanece acotada y determinista | HITO 15 | máximo 100 + desempate por ID | colecciones paginadas | páginas/empates/planes de índice | Done |
+| PZ-UX-001 | Login retorna a la ruta completa y expiry termina seguro | HITO 17 | route state + refresh coordinator | sesión/rutas | return/failed refresh | Done |
+| PZ-UX-002 | Logout pendiente bloquea doble envío | HITO 17 | mutation lock visible | navegación | pending logout | Done |
+| PZ-UX-003 | Navegación SPA y búsquedas operan por teclado | HITO 17 | focus management + forms | vistas principales | keyboard cases | Done |
+| PZ-UX-004 | Edición de maestras recupera fallos con retry | HITO 17 | load states conservan ruta | edit pages | retry cases | Done |
+| PZ-UX-005 | Conflicto de placa enlaza a la maestra correcta | HITO 17 | error action con lifecycle | new order/bikes | recovery flow | Done |
+| PZ-UX-006 | Relaciones son navegables por nombres y placas | HITO 17 | links semánticos | detalle orden | navigation case | Done |
+| PZ-UX-007 | Layout conserva operación en tablet/móvil | HITO 17 | breakpoints y focus visible | shell/vistas | responsive contract | Done |
+| PZ-MIG-001 | Base vacía aplica/revierte 14 migraciones | HITO 18 | Umzug ESM | persistencia | schema lifecycle | Done |
+| PZ-MIG-002 | Filas legacy sobreviven upgrade/down/reapply 008–014 | HITO 18 | migraciones compatibles | persistencia | populated upgrade | Done |
+| PZ-MIG-003 | Contactos preflightan y canonicalizan atómicamente | HITO 18 | migración `012` | persistencia | valid/invalid/reapply | Done |
+| PZ-MIG-004 | Guard de orden abierta exige corrección humana | HITO 18 | migración `013` | persistencia | preflight cases | Done |
+| PZ-MIG-005 | Índices operativos tienen down/reapply sin pérdida | HITO 18 | migración `014` | persistencia | index lifecycle | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

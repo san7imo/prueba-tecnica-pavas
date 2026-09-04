@@ -2,11 +2,10 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 12 de
-productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
-backend completos, una sola orden abierta por motocicleta y asignación
-auditable de responsable, un alta orientada a reutilizar maestras y ownership
-operativo con vistas My Orders/Unassigned y retornos controlados del workflow.
+Este documento describe la arquitectura del producto consolidado en HITO 19:
+conserva las fases 1 y 2 y añade maestras completas, auditoría global, una sola
+orden abierta por motocicleta, responsabilidad mecánica, retornos controlados,
+reapertura, lifecycle seguro de usuarios, dashboard operativo y UX endurecida.
 
 ## Estilo arquitectónico
 
@@ -20,7 +19,12 @@ frontend cliente → motocicleta → orden y HITO 9 hizo efectiva la responsabil
 individual del mecánico. HITO 10 añadió tres regresiones operativas explícitas,
 con razón obligatoria y doble ledger. HITO 11 añadió la reapertura administrativa
 de garantía/misma falla como operación dedicada y transaccional. HITO 12 activó
-atribución y protección de lifecycle para los ítems. Una sola API Express permite
+atribución y protección de lifecycle para los ítems. HITO 13 protegió el último
+administrador y los mecánicos con trabajo abierto; HITO 14 incorporó el
+dashboard por rol; HITO 15 alineó consultas e índices; HITO 16 auditó las
+fronteras de seguridad y HITO 17 cerró recuperación de sesión, teclado,
+responsive y conflictos de extremo a extremo. HITO 18 consolidó la evidencia
+de aceptación y regresión. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -101,6 +105,10 @@ Las operaciones con varias escrituras son atómicas:
 - **Ownership operativo:** listas, detalle e historial restringen al `MECANICO` a su ID autenticado. Estado e ítems verifican de nuevo el responsable persistido después de bloquear la orden, por lo que una reasignación revoca acceso operativo inmediatamente.
 - **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, clasifica la arista como `FORWARD` o `REGRESSION` y exige razón para toda regresión. La actualización, una fila de history y un evento global se confirman o revierten juntos. Un competidor espera y valida contra el resultado confirmado.
 - **Reapertura:** el service bloquea `Client → Bike → WorkOrder`, exige recursos activos, estado `ENTREGADA` y ausencia de otra orden abierta. El paso a `DIAGNOSTICO`, history y audit `REOPENED` con tipo/razón son atómicos; los mismos locks serializan reapertura contra otra reapertura, alta de orden y eliminación de motocicleta.
+- **Lifecycle de usuarios:** role/active exige razón. La reducción de un ADMIN
+  bloquea el conjunto de administradores activos; la mutación de un mecánico
+  coordina su fila con sus órdenes abiertas. Revalidación y audit ocurren en una
+  transacción, evitando perder el último ADMIN u orfanar trabajo.
 - **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
 El total se calcula con operandos `DECIMAL` y viaja como string; no se usa `Number` para dinero. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
@@ -110,10 +118,11 @@ Los historiales se consultan con límite/offset acotado, un join del actor que s
 ## Persistencia y migraciones
 
 MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug
-ejecuta trece migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
+ejecuta catorce migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
 migraciones de HITO 1 añaden fundamentos compatibles con filas legacy; la 012
 prevalida y canonicaliza contactos de clientes sin inventar datos; la 013
-instala la barrera de orden abierta. No se usa
+instala la barrera de orden abierta y la 014 añade índices medidos para colas e
+historia operativa. No se usa
 `sequelize.sync` como estrategia de esquema.
 
 Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).

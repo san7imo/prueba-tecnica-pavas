@@ -91,7 +91,13 @@ rutas administrativas autentican y autorizan antes de validar el recurso; las
 rutas compartidas vuelven a comprobar el actor persistido dentro de la
 transacción. Los controllers de escritura con body consumen únicamente
 `request.validated`; repositories declaran `fields`/`attributes` explícitos y
-serializadores construyen respuestas campo por campo. Las regresiones
+serializadores construyen respuestas campo por campo. El lifecycle de usuarios
+también es autoritativo: rol y actividad exigen razón, los ADMIN activos se
+coordinan para impedir la reducción del último y las órdenes abiertas asignadas
+se verifican bajo lock antes de desactivar o retirar el rol a un mecánico. Los
+conflictos sólo exponen IDs y conteos necesarios para recuperar el flujo.
+
+Las regresiones
 adversariales confirman que IDs, actor, lifecycle, total, estado, propietario,
 responsable, hashes y tokens enviados en body no obtienen autoridad ni aparecen
 accidentalmente en respuestas/audit.

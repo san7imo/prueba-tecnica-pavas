@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c31a9ef8-21f3-4c1b-a144-9f38d3b33bd5",
     "name": "PAVAS Moto Workshop",
-    "description": "Colección completa de autenticación, usuarios, APIs de negocio protegidas e historial de órdenes de trabajo.",
+    "description": "Colección productizada: salud, sesión, usuarios, lifecycle de clientes y motocicletas, órdenes, asignación, estados, reapertura, ítems, historial y auditoría.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -28,14 +28,22 @@
     },
     {
       "key": "managedUserRole",
-      "value": "ADMIN"
+      "value": "MECANICO"
     },
     {
       "key": "managedUserActive",
-      "value": "false"
+      "value": "true"
+    },
+    {
+      "key": "mechanicId",
+      "value": ""
     },
     {
       "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "newOwnerClientId",
       "value": ""
     },
     {
@@ -57,6 +65,30 @@
     {
       "key": "toStatus",
       "value": "DIAGNOSTICO"
+    },
+    {
+      "key": "lifecycle",
+      "value": "active"
+    },
+    {
+      "key": "mutationReason",
+      "value": "Operación de demostración autorizada"
+    },
+    {
+      "key": "assignmentReason",
+      "value": "Redistribución de carga para la demostración"
+    },
+    {
+      "key": "reopenType",
+      "value": "WARRANTY"
+    },
+    {
+      "key": "reopenReason",
+      "value": "Persiste la misma falla reportada por el cliente"
+    },
+    {
+      "key": "auditEventId",
+      "value": ""
     }
   ],
   "auth": {
@@ -71,11 +103,39 @@
   },
   "item": [
     {
-      "name": "Auth",
+      "name": "Salud",
+      "item": [
+        {
+          "name": "Comprobar API",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "Comprueba que Express responde antes de iniciar el recorrido; no valida por sí solo la conexión a MySQL."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('ok');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Autenticación",
       "item": [
         {
           "name": "Iniciar sesión",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
               {
@@ -139,6 +199,7 @@
         {
           "name": "Renovar sesión",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/auth/refresh",
@@ -160,6 +221,31 @@
         },
         {
           "name": "Registrar usuario",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const suffix = Date.now().toString();",
+                  "pm.variables.set('requestUserEmail', `postman.mechanic.${suffix}@example.test`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).not.to.have.property('passwordHash');",
+                  "pm.collectionVariables.set('managedUserId', body.data.id);",
+                  "pm.collectionVariables.set('mechanicId', body.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -170,7 +256,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Mechanic\",\n  \"email\": \"postman.mechanic@example.test\",\n  \"password\": \"Replace-this-password-123\",\n  \"role\": \"MECANICO\"\n}",
+              "raw": "{\n  \"name\": \"Postman Mechanic\",\n  \"email\": \"{{requestUserEmail}}\",\n  \"password\": \"Replace-this-password-123\",\n  \"role\": \"MECANICO\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -179,25 +265,12 @@
             },
             "url": "{{baseUrl}}/auth/register",
             "description": "Registro exclusivo de ADMIN. Guarda el ID para las requests de Usuarios; reemplace la contraseña de ejemplo localmente."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Created', () => pm.response.to.have.status(201));",
-                  "const body = pm.response.json();",
-                  "pm.expect(body.data).not.to.have.property('passwordHash');",
-                  "pm.collectionVariables.set('managedUserId', body.data.id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
+          }
         },
         {
           "name": "Cerrar sesión",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/auth/logout",
@@ -257,7 +330,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"role\": \"{{managedUserRole}}\"\n}",
+              "raw": "{\n  \"role\": \"{{managedUserRole}}\",\n  \"reason\": \"{{mutationReason}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -265,7 +338,7 @@
               }
             },
             "url": "{{baseUrl}}/users/{{managedUserId}}/role",
-            "description": "Actualización de rol exclusiva de ADMIN. Use ADMIN o MECANICO."
+            "description": "Actualización de rol exclusiva de ADMIN. Exige razón y protege último ADMIN/mecánicos con órdenes abiertas. Use ADMIN o MECANICO."
           },
           "event": [
             {
@@ -292,7 +365,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"active\": {{managedUserActive}}\n}",
+              "raw": "{\n  \"active\": {{managedUserActive}},\n  \"reason\": \"{{mutationReason}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -300,7 +373,7 @@
               }
             },
             "url": "{{baseUrl}}/users/{{managedUserId}}/active",
-            "description": "Activación o desactivación exclusiva de ADMIN mediante un boolean JSON real."
+            "description": "Activación o desactivación exclusiva de ADMIN mediante un boolean JSON real y razón obligatoria; no permite orfanar trabajo ni perder el último ADMIN."
           },
           "event": [
             {
@@ -322,27 +395,18 @@
       "item": [
         {
           "name": "Crear cliente",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Juan Perez\",\n  \"phone\": \"3001234567\",\n  \"email\": \"juan.hito2@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const suffix = Date.now().toString();",
+                  "pm.variables.set('requestClientPhone', `30${suffix.slice(-10)}`);",
+                  "pm.variables.set('requestClientEmail', `postman.client.${suffix}@example.test`);"
+                ],
+                "type": "text/javascript"
               }
             },
-            "url": "{{baseUrl}}/clients",
-            "description": "Crea un cliente y guarda su ID en clientId."
-          },
-          "event": [
             {
               "listen": "test",
               "script": {
@@ -355,15 +419,35 @@
                 "type": "text/javascript"
               }
             }
-          ]
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Postman\",\n  \"phone\": \"{{requestClientPhone}}\",\n  \"email\": \"{{requestClientEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients",
+            "description": "Crea un cliente y guarda su ID en clientId."
+          }
         },
         {
           "name": "Buscar clientes",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/clients?search=Juan",
-            "description": "Busca parcialmente por nombre, teléfono y email."
+            "url": "{{baseUrl}}/clients?search=Postman&lifecycle={{lifecycle}}&page=1&pageSize=20",
+            "description": "Busca por nombre, teléfono o email, filtra active/deleted/all y devuelve metadata paginada. deleted/all requieren ADMIN."
           },
           "event": [
             {
@@ -371,7 +455,9 @@
               "script": {
                 "exec": [
                   "pm.test('OK', () => pm.response.to.have.status(200));",
-                  "pm.expect(pm.response.json().data).to.be.an('array');"
+                  "const body = pm.response.json();",
+                  "pm.expect(body.data).to.be.an('array');",
+                  "pm.expect(body.meta.page).to.eql(1);"
                 ],
                 "type": "text/javascript"
               }
@@ -397,6 +483,78 @@
               }
             }
           ]
+        },
+        {
+          "name": "Actualizar cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Postman actualizado\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/clients/{{clientId}}",
+            "description": "Actualiza campos allowlisted. Phone/email aplican la política de riesgo duplicado."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.name).to.eql('Cliente Postman actualizado');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Archivar cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"{{mutationReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/clients/{{clientId}}",
+            "description": "Soft delete exclusivo de ADMIN. Requiere razón y sólo funciona cuando el cliente no tiene motocicletas activas."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.lifecycle).to.eql('deleted');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Restaurar cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"{{mutationReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/clients/{{clientId}}/restore",
+            "description": "Restaura el cliente sin restaurar motos; un conflicto de contacto activo puede exigir confirmDuplicate y duplicateReason."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.lifecycle).to.eql('active');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
         }
       ]
     },
@@ -455,8 +613,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/bikes?plate={{bikePlate}}",
-            "description": "Busca por una placa parcial normalizada."
+            "url": "{{baseUrl}}/bikes?plate={{bikePlate}}&lifecycle={{lifecycle}}&page=1&pageSize=20",
+            "description": "Busca por igualdad exacta de placa normalizada y filtra active/deleted/all. No usa subcadena."
           },
           "event": [
             {
@@ -492,6 +650,121 @@
               }
             }
           ]
+        },
+        {
+          "name": "Buscar por prefijo y propietario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/bikes?platePrefix={{bikePlate}}&clientId={{clientId}}&lifecycle={{lifecycle}}&page=1&pageSize=20",
+            "description": "Ejercita el prefijo indexable y la relación con propietario; no combine plate y platePrefix."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data).to.be.an('array');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Actualizar motocicleta",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"FZ 2.0 actualizada\",\n  \"cylinder\": \"149\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/bikes/{{bikeId}}",
+            "description": "Actualiza placa/marca/modelo/cilindraje mediante allowlist; el propietario usa otra operación."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.model).to.eql('FZ 2.0 actualizada');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Cambiar propietario",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": {{newOwnerClientId}},\n  \"reason\": \"{{mutationReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/bikes/{{bikeId}}/owner",
+            "description": "Conserva la identidad e historia de la moto. Configure newOwnerClientId con otro cliente activo."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(String(pm.response.json().data.clientId)).to.eql(String(pm.collectionVariables.get('newOwnerClientId')));"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Archivar motocicleta",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"{{mutationReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/bikes/{{bikeId}}",
+            "description": "Soft delete exclusivo de ADMIN; una orden abierta bloquea con BIKE_HAS_ACTIVE_WORK_ORDER."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.lifecycle).to.eql('deleted');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Restaurar motocicleta",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"{{mutationReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/bikes/{{bikeId}}/restore",
+            "description": "Restaura placa, propietario e historia; requiere que el propietario actual siga activo."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.lifecycle).to.eql('active');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
         }
       ]
     },
@@ -535,6 +808,31 @@
               }
             }
           ]
+        },
+        {
+          "name": "Asignar responsable",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mechanicId\": {{mechanicId}},\n  \"reason\": \"{{assignmentReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}/assignment",
+            "description": "Asigna o reasigna un MECANICO activo. Use null para dejar sin responsable; reasignar/desasignar exige razón."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json().data;",
+                "pm.expect(String(data.assignedMechanicId)).to.eql(String(pm.collectionVariables.get('mechanicId')));"
+              ],
+              "type": "text/javascript"
+            }
+          }]
         },
         {
           "name": "Agregar ítem",
@@ -597,12 +895,31 @@
           ]
         },
         {
+          "name": "Listar órdenes sin asignar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/work-orders?scope=unassigned&page=1&pageSize=20",
+            "description": "Cola administrativa de trabajo abierto o histórico sin responsable. Con token MECANICO este scope responde 403."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data).to.be.an('array');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
           "name": "Filtrar órdenes",
           "request": {
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/work-orders?status=RECIBIDA&plate={{bikePlate}}&page=1&pageSize=20",
-            "description": "Combina los filtros contractuales de estado y placa parcial normalizada."
+            "description": "Combina estado y placa por igualdad exacta normalizada; también admite bikeId, scope y assignedMechanicId."
           },
           "event": [
             {
@@ -654,7 +971,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"toStatus\": \"{{toStatus}}\",\n  \"note\": \"Status changed and recorded by HITO 9 audit\"\n}",
+              "raw": "{\n  \"toStatus\": \"{{toStatus}}\",\n  \"note\": \"Motivo operativo de la transición o regresión\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -662,7 +979,7 @@
               }
             },
             "url": "{{baseUrl}}/work-orders/{{workOrderId}}/status",
-            "description": "Actualiza el estado e inserta actor y nota en una transacción. Configure toStatus con un destino válido desde el estado actual."
+            "description": "Actualiza estado, history y audit en una transacción. Configure toStatus con una arista válida; las regresiones requieren note."
           },
           "event": [
             {
@@ -678,6 +995,30 @@
               }
             }
           ]
+        },
+        {
+          "name": "Reabrir por garantía o misma falla",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"{{reopenType}}\",\n  \"reason\": \"{{reopenReason}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/work-orders/{{workOrderId}}/reopen",
+            "description": "Sólo ADMIN y sólo desde ENTREGADA. Use WARRANTY o SAME_ISSUE; una falla distinta requiere una nueva orden."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().data.status).to.eql('DIAGNOSTICO');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
         },
         {
           "name": "Consultar historial",
@@ -727,6 +1068,54 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Auditoría",
+      "item": [
+        {
+          "name": "Listar eventos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/audit-events?entityType=WORK_ORDER&page=1&pageSize=20",
+            "description": "Lectura append-only exclusiva de ADMIN. Admite entityType, entityId, action, actorUserId, dateFrom y dateTo."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.data).to.be.an('array');",
+                "pm.expect(body.meta.page).to.eql(1);",
+                "if (body.data.length > 0) pm.collectionVariables.set('auditEventId', body.data[0].id);"
+              ],
+              "type": "text/javascript"
+            }
+          }]
+        },
+        {
+          "name": "Consultar evento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/audit-events/{{auditEventId}}",
+            "description": "Muestra actor, razón y snapshots/metadata allowlisted. Ejecute primero Listar eventos para capturar auditEventId."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('OK', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(String(body.data.id)).to.eql(String(pm.collectionVariables.get('auditEventId')));",
+                "pm.expect(JSON.stringify(body)).not.to.include('passwordHash');"
+              ],
+              "type": "text/javascript"
+            }
+          }]
         }
       ]
     }

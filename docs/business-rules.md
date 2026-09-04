@@ -3,7 +3,7 @@
 ## Estado
 
 Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-los hitos de productización aprobados hasta HITO 12.
+la productización consolidada en HITO 19.
 
 ## Máquina de estados de la orden
 
@@ -208,7 +208,22 @@ La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar
 
 Todos los endpoints de negocio exigen autenticación. Para estados, primero se valida la arista bajo lock: una arista inválida es 400; una arista válida pero prohibida al actor es 403. La UI no es frontera de autorización.
 
-La auto-desactivación y el cambio del propio rol están permitidos. El access token afectado falla en la siguiente petición. Preservar un último `ADMIN` queda fuera de este MVP.
+## Lifecycle de usuarios
+
+- Sólo `ADMIN` registra usuarios y cambia rol/actividad.
+- Cambiar rol o actividad exige una razón no vacía de máximo 1000 caracteres.
+- Siempre debe permanecer al menos un `ADMIN` activo; desactivar o degradar al
+  último devuelve `409 LAST_ACTIVE_ADMIN_REQUIRED`.
+- Un `MECANICO` con órdenes abiertas asignadas no puede desactivarse ni cambiar
+  de rol; primero se reasignan o cierran sus órdenes. El conflicto
+  `MECHANIC_HAS_OPEN_ORDERS` activa contexto seguro de UI para recuperar el
+  flujo.
+- Reducciones concurrentes de administradores y carreras entre asignación y
+  desactivación usan locks y revalidación de estado persistido; nunca dejan el
+  sistema sin administrador ni trabajo abierto en un usuario no operativo.
+- Todo cambio efectivo crea auditoría con actor, razón y snapshots allowlisted;
+  un intento rechazado o no-op no la crea.
+- El access token afectado por un cambio válido falla en la siguiente petición.
 
 ## Reglas de autenticación
 

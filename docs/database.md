@@ -4,7 +4,7 @@
 
 El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
 fundaciones de persistencia de productización: lifecycle de clientes/motos,
-`audit_events`, responsable de orden y actor de ítem. Trece migraciones son la
+`audit_events`, responsable de orden y actor de ítem. Catorce migraciones son la
 fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
 forma segura sus contactos; HITO 4 activa el lifecycle y ownership de motos
 y las demás capacidades se activan por hito. La reapertura de HITO 11 no agrega
@@ -68,6 +68,7 @@ erDiagram
       datetime entry_date
       text fault_description
       enum status
+      bigint open_bike_id UK "generated, nullable"
       decimal total
       bigint assigned_mechanic_id FK "nullable"
       datetime created_at
@@ -265,7 +266,10 @@ misma transacción; delete bloquea `WorkOrder → WorkOrderItem`. Consulte
 | `active` | `BOOLEAN` | requerido, default true |
 | timestamps | `DATETIME(3)` | requeridos |
 
-El email se recorta y pasa a minúsculas. La administración no modifica el esquema.
+El email se recorta y pasa a minúsculas. La administración no modifica el
+esquema. Las invariantes del último `ADMIN` activo y del mecánico con órdenes
+abiertas dependen de consultas bloqueadas y auditoría transaccional; no pueden
+expresarse como un CHECK local de una sola fila.
 
 ## `refresh_tokens`
 
@@ -349,6 +353,7 @@ reemplazo de refresh usa `ON DELETE SET NULL`.
 202609030011-add-work-order-item-creator.js
 202609030012-normalize-client-contacts.js
 202609030013-enforce-single-open-order.js
+202609030014-harden-operational-query-indexes.js
 ```
 
 Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; las
@@ -365,6 +370,10 @@ más de una orden abierta para una moto, aborta informando `bike_id` y cantidad,
 sin cerrar, cancelar ni eliminar datos. Si pasa, instala la columna generated,
 el índice UNIQUE y la política referencial compatible; su `down` revierte los
 tres cambios en orden seguro.
+
+La 014 añade únicamente los índices compuestos de orden general, estado y moto
+descritos en `work_orders`. Su `down` conserva la FK de motocicleta restaurando
+primero el índice simple que MySQL requiere; no modifica filas de negocio.
 
 ## Ambientes de base de datos
 

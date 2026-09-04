@@ -6,7 +6,10 @@
 - **Estado de la decisión:** aprobado y congelado.
 - **Fecha:** 2026-09-03.
 - **Contrato rector:** `AGENTS.md` 2.4, con la corrección de orden de locks documentada en este hito.
-- **Efecto actual:** ninguno sobre runtime, esquema o API. Este documento describe el destino aprobado; los documentos generales continúan describiendo el comportamiento existente hasta que cada hito lo implemente.
+- **Efecto al aprobarse:** ninguno sobre runtime, esquema o API.
+- **Estado de implementación:** el destino quedó materializado en HITO 18. La
+  medición de HITO 15 añadió la migración reversible `014` para los índices
+  operativos, sin cambiar las reglas congeladas.
 
 ## 1. Objetivo de producto
 
@@ -552,6 +555,7 @@ Los nombres y el orden quedan fijados así:
 | 011 | 1 | `202609030011-add-work-order-item-creator.js` | FK nullable legacy |
 | 012 | 3 | `202609030012-normalize-client-contacts.js` | preflight + canonicalización data-only |
 | 013 | 6 | `202609030013-enforce-single-open-order.js` | preflight + generated column + UNIQUE |
+| 014 | 15 | `202609030014-harden-operational-query-indexes.js` | índices medidos para All, estado e historia por moto |
 
 Reglas:
 
@@ -560,6 +564,7 @@ Reglas:
 - down quita dependencias en orden inverso;
 - la canonicalización 012 es idempotente pero no recupera puntuación visual eliminada; su down documenta esta irreversibilidad semánticamente segura y no inventa datos;
 - 013 hace preflight antes de DDL y aborta mostrando sólo `bike_id` y cantidad, nunca cambia status;
+- 014 sólo agrega índices operativos reversibles y no transforma datos;
 - fresh DB, DB poblada, rollback/reapply y demo seed forman parte de sus tests.
 
 ## 13. Estrategia de pruebas
