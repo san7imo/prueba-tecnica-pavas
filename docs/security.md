@@ -54,7 +54,7 @@ Errores esperados exponen código/mensaje estable. Excepciones inesperadas devue
 
 ## Autorización, SQL y auditoría
 
-Todas las rutas de negocio autentican primero. RBAC vive en middleware y, para destinos de estado/lifecycle, en servicio y transacción. Sólo `ADMIN` muta clientes o motocicletas; `MECANICO` conserva lectura de maestras activas. Los lifecycle `deleted/all` y los detalles eliminados son administrativos. Autorización se ejecuta antes de validación en PATCH/owner/delete/restore.
+Todas las rutas de negocio autentican primero. RBAC vive en middleware y, para destinos de estado/lifecycle y ownership de órdenes, en servicio y transacción. Sólo `ADMIN` muta clientes o motocicletas; `MECANICO` conserva lectura de maestras activas, pero sólo lista, consulta historial/detalle y opera órdenes asignadas a su identidad autenticada. Los filtros manipulados no amplían ese scope. Estado e ítems revalidan el responsable persistido bajo el lock de la orden, de modo que una reasignación revoca el acceso anterior sin depender del frontend. Los lifecycle `deleted/all` y los detalles eliminados son administrativos. Autorización se ejecuta antes de validación en PATCH/owner/delete/restore.
 
 Sequelize parametriza entrada. El único literal SQL de producción es una expresión fija y sin input para el total `DECIMAL`. UNIQUE, FKs, CHECK y ENUM agregan defensa. Totales, refresh, creación/auditoría y estado/auditoría son transaccionales con row locks.
 

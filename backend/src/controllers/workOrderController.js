@@ -13,7 +13,10 @@ export const createWorkOrder = async (request, response) => {
 };
 
 export const listWorkOrders = async (request, response) => {
-  const result = await workOrderService.listWorkOrders(request.validated.query);
+  const result = await workOrderService.listWorkOrders(
+    request.validated.query,
+    request.user,
+  );
   response.json({
     data: result.workOrders.map(serializeWorkOrder),
     meta: result.meta,
@@ -21,7 +24,10 @@ export const listWorkOrders = async (request, response) => {
 };
 
 export const getWorkOrder = async (request, response) => {
-  const workOrder = await workOrderService.getWorkOrder(request.validated.params.id);
+  const workOrder = await workOrderService.getWorkOrder(
+    request.validated.params.id,
+    request.user,
+  );
   response.json({ data: serializeWorkOrder(workOrder) });
 };
 
@@ -29,6 +35,7 @@ export const listWorkOrderStatusHistory = async (request, response) => {
   const result = await workOrderService.listStatusHistory(
     request.validated.params.id,
     request.validated.query,
+    request.user,
   );
   response.json({
     data: result.history.map(serializeWorkOrderStatusHistory),

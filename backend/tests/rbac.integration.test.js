@@ -157,6 +157,7 @@ describe.sequential('HITO 8 role-based access control', () => {
         .send({
           bikeId: bikeResponse.body.data.id,
           faultDescription: 'RBAC business access test.',
+          assignedMechanicId: mechanic.id,
         });
       expect(orderResponse.status).toBe(201);
       await request(app)
@@ -184,6 +185,7 @@ describe.sequential('HITO 8 role-based access control', () => {
       bikeId: bike.id,
       entryDate: new Date(),
       faultDescription: 'Item permissions.',
+      assignedMechanicId: mechanic.id,
     });
     const payload = {
       type: WORK_ORDER_ITEM_TYPE.LABOR,
@@ -415,6 +417,7 @@ describe.sequential('HITO 8 role-based access control', () => {
       bikeId: bike.id,
       entryDate: new Date(),
       faultDescription: 'Mechanic workflow.',
+      assignedMechanicId: mechanic.id,
     });
 
     for (const toStatus of [
@@ -446,6 +449,7 @@ describe.sequential('HITO 8 role-based access control', () => {
       bikeId: cancellationBike.id,
       entryDate: new Date(),
       faultDescription: 'Mechanic cancellation boundary.',
+      assignedMechanicId: mechanic.id,
     });
     const cancel = await request(app)
       .patch(`/api/work-orders/${cancellable.id}/status`)
@@ -466,6 +470,7 @@ describe.sequential('HITO 8 role-based access control', () => {
       bikeId: bike.id,
       entryDate: new Date(),
       faultDescription: 'Invalid workflow.',
+      assignedMechanicId: mechanic.id,
     });
     const invalid = await request(app)
       .patch(`/api/work-orders/${invalidOrder.id}/status`)

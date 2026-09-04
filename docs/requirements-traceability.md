@@ -136,6 +136,16 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-NEW-006 | Orden abierta bloquea antes del alta y un conflicto tardío se presenta claramente | HITO 8 | detail precheck + manejo `BIKE_HAS_ACTIVE_WORK_ORDER` | `/orders/new` | preflight/race conflict cases | Done |
 | PZ-NEW-007 | Responsable inicial es MECANICO activo opcional o unassigned explícito | HITO 8 | catálogo filtrado + validación backend HITO 7 | `/orders/new` | assigned/unassigned/stale cases | Done |
 | PZ-NEW-008 | Cargas, retry, validación y doble submit están controlados por paso | HITO 8 | estados locales y locks con refs | `/orders/new` | loading/error/retry/double-submit cases | Done |
+| PZ-OWN-001 | MECANICO lista por defecto y exclusivamente sus órdenes | HITO 9 | scope contextual forzado desde auth | `GET /api/work-orders` | mine/default/forbidden scope cases | Done |
+| PZ-OWN-002 | ADMIN conserva vistas all/unassigned y filtro por responsable | HITO 9 | scopes allowlisted + filtro escalar | `GET /api/work-orders` | admin filter matrix | Done |
+| PZ-OWN-003 | MECANICO sólo consulta detalle de una orden propia | HITO 9 | autorización contextual de servicio | `GET /api/work-orders/:id` | own/foreign/unassigned detail cases | Done |
+| PZ-OWN-004 | MECANICO sólo consulta historial de una orden propia | HITO 9 | resolución de identidad antes del history | `GET /api/work-orders/:id/history` | own/foreign/unassigned history cases | Done |
+| PZ-OWN-005 | MECANICO sólo cambia estado en su orden asignada | HITO 9 | ownership persistido bajo WorkOrder lock | status API | own/foreign/unassigned transition cases | Done |
+| PZ-OWN-006 | MECANICO sólo agrega ítems en su orden asignada | HITO 9 | ownership persistido bajo WorkOrder lock | item create API | own/foreign/unassigned item cases | Done |
+| PZ-OWN-007 | Reasignar revoca acceso anterior y habilita al nuevo responsable | HITO 9 | autorización siempre contra asignación actual | Work Order read/mutation APIs | post-reassignment access case | Done |
+| PZ-OWN-008 | Frontend MECANICO ofrece Mis órdenes sin controles de asignación | HITO 9 | navegación/consulta role-aware | `/orders`, `/orders/:id` | mechanic UI cases | Done |
+| PZ-OWN-009 | Frontend ADMIN ofrece colas Todas/Sin asignar y responsable visible | HITO 9 | scope switch + columna responsable | `/orders` | admin scope UI cases | Done |
+| PZ-OWN-010 | ADMIN gestiona asignación con razón, confirmación y recuperación | HITO 9 | `AssignmentPanel` + API dedicada | `/orders/:id` | assign/reassign/unassign/error/closed cases | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

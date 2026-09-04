@@ -6,12 +6,22 @@ export const workOrdersApi = {
     return response.data.data;
   },
 
-  async list({ status = '', plate = '', bikeId = '', page = 1, pageSize = 20 } = {}) {
+  async list({
+    status = '',
+    plate = '',
+    bikeId = '',
+    scope = '',
+    assignedMechanicId = '',
+    page = 1,
+    pageSize = 20,
+  } = {}) {
     const response = await httpClient.get('/work-orders', {
       params: {
         ...(status ? { status } : {}),
         ...(plate ? { plate } : {}),
         ...(bikeId ? { bikeId } : {}),
+        ...(scope ? { scope } : {}),
+        ...(assignedMechanicId ? { assignedMechanicId } : {}),
         page,
         pageSize,
       },
@@ -38,6 +48,14 @@ export const workOrdersApi = {
     const response = await httpClient.patch(`/work-orders/${id}/status`, {
       toStatus,
       note: note?.trim() || null,
+    });
+    return response.data.data;
+  },
+
+  async changeAssignment(id, mechanicId, reason = null) {
+    const response = await httpClient.patch(`/work-orders/${id}/assignment`, {
+      mechanicId,
+      ...(reason?.trim() ? { reason: reason.trim() } : {}),
     });
     return response.data.data;
   },

@@ -1,9 +1,17 @@
 import { sequelize } from '../config/databaseContext.js';
 import { AUDIT_ACTION, AUDIT_ENTITY_TYPE } from '../constants/audit.js';
+import { USER_ROLE } from '../constants/auth.js';
+import { AuthorizationError } from '../errors/AuthorizationError.js';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { workOrderItemRepository } from '../repositories/workOrderItemRepository.js';
 import { workOrderRepository } from '../repositories/workOrderRepository.js';
 import { auditService } from './auditService.js';
+
+const workOrderNotAssignedToActor = () =>
+  new AuthorizationError({
+    code: 'WORK_ORDER_NOT_ASSIGNED_TO_ACTOR',
+    message: 'The work order is not assigned to the authenticated mechanic.',
+  });
 
 const workOrderNotFound = () =>
   new NotFoundError({
@@ -35,6 +43,12 @@ export const workOrderItemService = {
       );
       if (!workOrder) {
         throw workOrderNotFound();
+      }
+      if (
+        actor.role === USER_ROLE.MECHANIC &&
+        String(workOrder.assignedMechanicId ?? '') !== String(actor.id)
+      ) {
+        throw workOrderNotAssignedToActor();
       }
 
       const item = await workOrderItemRepository.create(

@@ -22,6 +22,14 @@ export const orderFixture = {
   faultDescription: 'Ruido anormal en la transmisión',
   status: 'RECIBIDA',
   total: '130000.00',
+  assignedMechanicId: 2,
+  assignedMechanic: {
+    id: 2,
+    name: 'Mauro Mecánico',
+    email: 'mauro@pavas.test',
+    role: 'MECANICO',
+    active: true,
+  },
   bike: bikeFixture,
   items: [
     {

@@ -3,7 +3,7 @@
 ## Alcance implementado
 
 La API expone las rutas completas de las fases 1 y 2 y los hitos de
-productización aprobados hasta HITO 7. Clientes, motocicletas, órdenes y
+productización aprobados hasta HITO 9. Clientes, motocicletas, órdenes y
 usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
 públicos.
 
@@ -36,7 +36,7 @@ DELETE /api/bikes/:id
 POST /api/bikes/:id/restore
 
 POST   /api/work-orders
-GET    /api/work-orders?status=&plate=&bikeId=&assignedMechanicId=&page=&pageSize=
+GET    /api/work-orders?status=&plate=&bikeId=&scope=&assignedMechanicId=&page=&pageSize=
 GET    /api/work-orders/:id
 GET    /api/work-orders/:id/history?page=&pageSize=
 PATCH  /api/work-orders/:id/assignment
@@ -421,7 +421,7 @@ Además de errores de validación/not-found/lifecycle, puede responder
 ### Listar y filtrar órdenes
 
 ```http
-GET /api/work-orders?status=RECIBIDA&assignedMechanicId=12&page=1&pageSize=20
+GET /api/work-orders?status=RECIBIDA&scope=mine&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
@@ -430,11 +430,19 @@ Queries opcionales:
 - `status`: uno de `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
 - `plate`: búsqueda parcial normalizada;
 - `bikeId`: ID exacto para consultar la historia de una motocicleta;
+- `scope`: `all`, `mine` o `unassigned`;
 - `assignedMechanicId`: ID exacto del mecánico responsable;
 - `page`: entero positivo, default 1;
 - `pageSize`: 1–100, default 20.
 
-Filtros combinan con AND. Cada fila incluye Bike/Client y el responsable seguro,
+Para `MECANICO`, el backend usa `mine` por defecto y siempre fuerza
+`assignedMechanicId` al usuario autenticado; pedir `all`, `unassigned` u otro
+responsable devuelve 403. `ADMIN` usa `all` por defecto y puede consultar
+`unassigned` o un responsable exacto. Combinar `scope=unassigned` con
+`assignedMechanicId` es contradictorio y devuelve
+`400 INVALID_ASSIGNMENT_FILTERS`.
+
+Los demás filtros combinan con AND. Cada fila incluye Bike/Client y el responsable seguro,
 o `assignedMechanicId: null`/`assignedMechanic: null` cuando está sin asignar;
 no incluye items. Orden: `entryDate DESC, id DESC`.
 
@@ -469,7 +477,8 @@ no incluye items. Orden: `entryDate DESC, id DESC`.
 }
 ```
 
-Sin resultados, ambos totales son cero. Query inválida: `400 VALIDATION_ERROR`.
+Sin resultados, ambos totales son cero. Query inválida:
+`400 VALIDATION_ERROR`; un scope prohibido para el actor devuelve 403.
 
 ### Detalle de orden
 
@@ -480,7 +489,9 @@ Authorization: Bearer <accessToken>
 
 Devuelve orden, Bike/Client, responsable actual seguro, total persistido e
 `items` con `id`, `type`, `description`, `count`, `unitValue`. Errores
-400/`404 WORK_ORDER_NOT_FOUND`.
+400/`404 WORK_ORDER_NOT_FOUND`. `ADMIN` consulta cualquier orden;
+`MECANICO` sólo una asignada actualmente a su usuario y recibe 403 ante una
+orden ajena o sin responsable, con `WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`.
 
 ### Asignar, reasignar o dejar sin responsable
 
@@ -526,7 +537,11 @@ Content-Type: application/json
 | `ENTREGADA` | ninguno |
 | `CANCELADA` | ninguno |
 
-`ADMIN` ejecuta cualquier arista válida; `MECANICO` sólo apunta a `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`. Una arista inválida para todos es 400; una válida pero prohibida es 403.
+`ADMIN` ejecuta cualquier arista válida; `MECANICO` sólo apunta a
+`DIAGNOSTICO`, `EN_PROCESO`, `LISTA` y únicamente en una orden asignada a su
+usuario. La propiedad se relee después del `FOR UPDATE`. Una arista inválida
+para todos es 400; una válida pero prohibida o una orden ajena/sin asignar es
+403.
 
 ```json
 { "data": { "id": 10, "status": "DIAGNOSTICO" } }
@@ -541,7 +556,8 @@ Content-Type: application/json
 }
 ```
 
-Errores: `400 VALIDATION_ERROR`, `400 INVALID_STATUS_TRANSITION`, 403, `404 WORK_ORDER_NOT_FOUND`, 500 seguro.
+Errores: `400 VALIDATION_ERROR`, `400 INVALID_STATUS_TRANSITION`,
+`403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`, `404 WORK_ORDER_NOT_FOUND`, 500 seguro.
 
 ### Consultar historial
 
@@ -550,7 +566,9 @@ GET /api/work-orders/:id/history?page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
-Roles: ambos. `pageSize` máximo 100. Orden `createdAt DESC, id DESC`; actor sólo ID/nombre.
+Roles: ambos. `ADMIN` consulta cualquier orden; `MECANICO` sólo el historial de
+una orden asignada actualmente a su usuario. `pageSize` máximo 100. Orden
+`createdAt DESC, id DESC`; actor sólo ID/nombre.
 
 ```json
 {
@@ -576,7 +594,8 @@ Roles: ambos. `pageSize` máximo 100. Orden `createdAt DESC, id DESC`; actor só
 }
 ```
 
-Errores: 400, 401, `404 WORK_ORDER_NOT_FOUND`.
+Errores: 400, 401, `403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`,
+`404 WORK_ORDER_NOT_FOUND`.
 
 ### Agregar ítem
 
@@ -593,7 +612,12 @@ Content-Type: application/json
 }
 ```
 
-Ambos roles. `type` es `MANO_OBRA`/`REPUESTO`; descripción máximo 255; `count > 0`; `unitValue >= 0`; máximo dos decimales. Number JSON o string decimal se normaliza a string de dos decimales. El service bloquea orden, crea, suma en MySQL y persiste total.
+Ambos roles. `MECANICO` sólo agrega sobre una orden asignada actualmente a su
+usuario; el service comprueba el responsable bajo el lock de la orden antes de
+escribir. `type` es `MANO_OBRA`/`REPUESTO`; descripción máximo 255; `count > 0`;
+`unitValue >= 0`; máximo dos decimales. Number JSON o string decimal se
+normaliza a string de dos decimales. El service bloquea orden, crea, suma en
+MySQL y persiste total.
 
 ```json
 {
@@ -604,7 +628,8 @@ Ambos roles. `type` es `MANO_OBRA`/`REPUESTO`; descripción máximo 255; `count 
 }
 ```
 
-Éxito 201; errores 400/`404 WORK_ORDER_NOT_FOUND`/500 seguro.
+Éxito 201; errores 400/`403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`/
+`404 WORK_ORDER_NOT_FOUND`/500 seguro.
 
 ### Eliminar ítem
 

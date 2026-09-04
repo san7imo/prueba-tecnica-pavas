@@ -18,6 +18,16 @@ export const OPEN_WORK_ORDER_STATUSES = Object.freeze([
   WORK_ORDER_STATUS.READY,
 ]);
 
+export const WORK_ORDER_SCOPE = Object.freeze({
+  ALL: 'all',
+  MINE: 'mine',
+  UNASSIGNED: 'unassigned',
+});
+
+export const WORK_ORDER_SCOPES = Object.freeze(
+  Object.values(WORK_ORDER_SCOPE),
+);
+
 export const WORK_ORDER_ITEM_TYPE = Object.freeze({
   LABOR: 'MANO_OBRA',
   PART: 'REPUESTO',

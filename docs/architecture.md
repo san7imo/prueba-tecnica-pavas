@@ -2,10 +2,11 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 8 de
+Este documento describe la arquitectura implementada hasta HITO 9 de
 productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
 backend completos, una sola orden abierta por motocicleta y asignación
-auditable de responsable, más un alta de orden orientada a reutilizar maestras.
+auditable de responsable, un alta orientada a reutilizar maestras y ownership
+operativo con vistas My Orders/Unassigned.
 
 ## Estilo arquitectónico
 
@@ -14,8 +15,9 @@ es cohesivo y requiere transacciones directas sobre una única base relacional.
 Las siete entidades originales se preservan; HITO 1 añadió `AuditEvent` como
 fundación persistente, HITO 2 activó la auditoría, HITO 3 completó clientes y
 HITO 4 completó motocicletas, HITO 6 protegió la unicidad de la orden abierta y
-HITO 7 activó la asignación y HITO 8 conectó esas capacidades en el flujo
-frontend cliente → motocicleta → orden. Una sola API Express permite
+HITO 7 activó la asignación, HITO 8 conectó esas capacidades en el flujo
+frontend cliente → motocicleta → orden y HITO 9 hizo efectiva la responsabilidad
+individual del mecánico. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -93,6 +95,7 @@ Las operaciones con varias escrituras son atómicas:
 - **Ítems y total:** el service abre una transacción, bloquea `work_orders` con `SELECT ... FOR UPDATE`, crea el ítem, recalcula `SUM(count * unit_value)`, persiste el total y agrega `ITEM_ADDED` antes de commit. El mismo lock serializa add/add y add/delete; la auditoría de delete se activa en su hito específico.
 - **Creación de orden:** bloquea propietario, motocicleta y responsable opcional en orden canónico; rechaza recursos eliminados, assignee inválido u otra orden abierta. Orden `RECIBIDA`, history inicial y `CREATED` se confirman o revierten juntos; un generated UNIQUE es la barrera final de una abierta por moto.
 - **Asignación:** bloquea los usuarios anterior/destino por ID y después la orden; revalida status y asignación persistida antes de escribir `ASSIGNED`, `REASSIGNED` o `UNASSIGNED` dentro de la misma transacción.
+- **Ownership operativo:** listas, detalle e historial restringen al `MECANICO` a su ID autenticado. Estado e ítems verifican de nuevo el responsable persistido después de bloquear la orden, por lo que una reasignación revoca acceso operativo inmediatamente.
 - **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, actualiza y agrega exactamente una fila de history y un evento global. Un competidor espera y valida contra el resultado confirmado.
 - **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
@@ -150,6 +153,11 @@ es una rama subordinada al resultado vacío; los conflictos de duplicado ofrecen
 reutilización o restauración según el lifecycle. La asignación inicial es
 opcional y el catálogo visual de mecánicos activos no sustituye la validación
 autoritativa del backend.
+
+`/orders` envía un scope explícito: `mine` para `MECANICO` y `all` o
+`unassigned` para `ADMIN`. El detalle muestra el responsable actual; sólo
+`ADMIN` puede asignar, reasignar o dejar una orden abierta sin responsable, con
+razón y confirmación cuando reemplaza o retira una asignación existente.
 
 React Router implementa guardas protegidas, anónimas y de `ADMIN`. Axios separa el cliente de negocio del cliente auth para evitar recursión. Un coordinador en memoria deduplica refresh concurrentes y limita cada 401 a un reintento.
 

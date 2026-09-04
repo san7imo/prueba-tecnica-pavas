@@ -14,6 +14,7 @@ export const OrderTable = ({ orders }) => (
           <th scope="col">Placa</th>
           <th scope="col">Cliente</th>
           <th scope="col">Estado</th>
+          <th scope="col">Responsable</th>
           <th scope="col">Ingreso</th>
           <th scope="col" className="align-right">Total</th>
           <th scope="col"><span className="visually-hidden">Acciones</span></th>
@@ -29,6 +30,7 @@ export const OrderTable = ({ orders }) => (
               <span className="cell-secondary">{order.bike.brand} {order.bike.model}</span>
             </td>
             <td data-label="Estado"><StatusBadge status={order.status} /></td>
+            <td data-label="Responsable"><span className="cell-primary">{order.assignedMechanic?.name ?? 'Sin asignar'}</span></td>
             <td data-label="Ingreso">{formatDateTime(order.entryDate)}</td>
             <td data-label="Total" className="align-right money">{formatCurrency(order.total)}</td>
             <td className="table-action">

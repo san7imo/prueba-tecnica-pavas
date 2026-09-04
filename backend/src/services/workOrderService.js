@@ -12,6 +12,7 @@ import {
 import { USER_ROLE } from '../constants/auth.js';
 import {
   OPEN_WORK_ORDER_STATUSES,
+  WORK_ORDER_SCOPE,
   WORK_ORDER_STATUS,
 } from '../constants/workOrder.js';
 import { AuthorizationError } from '../errors/AuthorizationError.js';
@@ -91,6 +92,61 @@ const assignmentUnchanged = () =>
     code: 'ASSIGNMENT_UNCHANGED',
     message: 'The work order is already assigned to that mechanic.',
   });
+
+const invalidAssignmentFilters = () =>
+  new BusinessRuleError({
+    code: 'INVALID_ASSIGNMENT_FILTERS',
+    message: 'Unassigned scope cannot be combined with an assigned mechanic filter.',
+  });
+
+const workOrderNotAssignedToActor = () =>
+  new AuthorizationError({
+    code: 'WORK_ORDER_NOT_ASSIGNED_TO_ACTOR',
+    message: 'The work order is not assigned to the authenticated mechanic.',
+  });
+
+const assertMechanicOwnership = (workOrder, actor) => {
+  if (
+    actor.role === USER_ROLE.MECHANIC &&
+    String(workOrder.assignedMechanicId ?? '') !== String(actor.id)
+  ) {
+    throw workOrderNotAssignedToActor();
+  }
+};
+
+const scopedListFilters = (filters, actor) => {
+  const scope = filters.scope ?? (
+    actor.role === USER_ROLE.MECHANIC
+      ? WORK_ORDER_SCOPE.MINE
+      : WORK_ORDER_SCOPE.ALL
+  );
+
+  if (actor.role === USER_ROLE.MECHANIC) {
+    if (
+      scope !== WORK_ORDER_SCOPE.MINE ||
+      (
+        filters.assignedMechanicId !== undefined &&
+        String(filters.assignedMechanicId) !== String(actor.id)
+      )
+    ) {
+      throw new AuthorizationError();
+    }
+    return { ...filters, scope, assignedMechanicId: actor.id };
+  }
+
+  if (scope === WORK_ORDER_SCOPE.UNASSIGNED) {
+    if (filters.assignedMechanicId !== undefined) {
+      throw invalidAssignmentFilters();
+    }
+    return { ...filters, scope, assignedMechanicId: null };
+  }
+
+  if (scope === WORK_ORDER_SCOPE.MINE) {
+    return { ...filters, scope, assignedMechanicId: actor.id };
+  }
+
+  return { ...filters, scope };
+};
 
 const plain = (resource) =>
   typeof resource?.get === 'function' ? resource.get({ plain: true }) : resource;
@@ -219,8 +275,9 @@ export const workOrderService = {
     }
   },
 
-  async listWorkOrders(filters) {
-    const { count, rows } = await workOrderRepository.findPaginated(filters);
+  async listWorkOrders(filters, actor) {
+    const effectiveFilters = scopedListFilters(filters, actor);
+    const { count, rows } = await workOrderRepository.findPaginated(effectiveFilters);
     return {
       workOrders: rows,
       meta: {
@@ -303,18 +360,19 @@ export const workOrderService = {
     }
   },
 
-  async getWorkOrder(id) {
+  async getWorkOrder(id, actor) {
     const workOrder = await workOrderRepository.findById(id);
     if (!workOrder) {
       throw workOrderNotFound();
     }
+    assertMechanicOwnership(workOrder, actor);
     return workOrder;
   },
 
-  async listStatusHistory(id, pagination) {
-    if (!(await workOrderRepository.existsById(id))) {
-      throw workOrderNotFound();
-    }
+  async listStatusHistory(id, pagination, actor) {
+    const identity = await workOrderRepository.findIdentityById(id);
+    if (!identity) throw workOrderNotFound();
+    assertMechanicOwnership(identity, actor);
 
     const { count, rows } =
       await workOrderStatusHistoryRepository.findPaginatedByWorkOrder(
@@ -358,6 +416,7 @@ export const workOrderService = {
         if (String(workOrder.bikeId) !== String(identity.bikeId)) {
           throw concurrentModification();
         }
+        assertMechanicOwnership(workOrder, actor);
 
         if (!canTransition(workOrder.status, toStatus)) {
           throw invalidStatusTransition(workOrder.status, toStatus);

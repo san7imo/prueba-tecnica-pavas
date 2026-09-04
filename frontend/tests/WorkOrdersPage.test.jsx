@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { workOrdersApi } from '../src/api/workOrdersApi.js';
 import { WorkOrdersPage } from '../src/pages/WorkOrdersPage.jsx';
 import { orderFixture } from './fixtures.js';
-import { renderWithAuth } from './testUtils.jsx';
+import { authValue, mechanicUser, renderWithAuth } from './testUtils.jsx';
 
 vi.mock('../src/api/workOrdersApi.js', () => ({
   workOrdersApi: { list: vi.fn() },
@@ -16,7 +16,10 @@ const emptyResult = {
   meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
 };
 
-const renderPage = () => renderWithAuth(<MemoryRouter><WorkOrdersPage /></MemoryRouter>);
+const renderPage = (user) => renderWithAuth(
+  <MemoryRouter><WorkOrdersPage /></MemoryRouter>,
+  user ? { auth: authValue(user) } : undefined,
+);
 
 describe('WorkOrdersPage', () => {
   beforeEach(() => {
@@ -42,6 +45,7 @@ describe('WorkOrdersPage', () => {
 
     expect(await screen.findByText('ABC123')).toBeInTheDocument();
     expect(screen.getByText('Ana Torres')).toBeInTheDocument();
+    expect(screen.getByText('Mauro Mecánico')).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Recibida' })).toBeInTheDocument();
     expect(screen.getByText(/130\.000,00/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ver orden 7/i })).toHaveAttribute('href', '/orders/7');
@@ -70,12 +74,44 @@ describe('WorkOrdersPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /aplicar filtros/i }));
 
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: 'RECIBIDA', plate: 'abc 123', page: 1, pageSize: 20,
+      status: 'RECIBIDA', plate: 'abc 123', scope: 'all', page: 1, pageSize: 20,
     }));
     fireEvent.click(await screen.findByRole('button', { name: /siguiente/i }));
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: 'RECIBIDA', plate: 'abc 123', page: 2, pageSize: 20,
+      status: 'RECIBIDA', plate: 'abc 123', scope: 'all', page: 2, pageSize: 20,
     }));
+  });
+
+  it('switches ADMIN between all and unassigned queues', async () => {
+    workOrdersApi.list.mockResolvedValue(emptyResult);
+    renderPage();
+    await screen.findByText(/aún no hay órdenes/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /sin asignar/i }));
+
+    await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
+      status: '', plate: '', scope: 'unassigned', page: 1, pageSize: 20,
+    }));
+    expect(await screen.findByText(/no hay órdenes sin asignar/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sin asignar/i }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows MECANICO only the personal mine view without creation controls', async () => {
+    workOrdersApi.list.mockResolvedValue(emptyResult);
+    renderPage(mechanicUser);
+
+    expect(await screen.findByRole('heading', { name: /mis órdenes/i }))
+      .toBeInTheDocument();
+    expect(workOrdersApi.list).toHaveBeenCalledWith({
+      status: '', plate: '', scope: 'mine', page: 1, pageSize: 20,
+    });
+    expect(screen.getByText(/sólo órdenes asignadas a Mauro Mecánico/i))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sin asignar/i }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /nueva orden/i }))
+      .not.toBeInTheDocument();
   });
 
   it('shows the API message and retries the request', async () => {

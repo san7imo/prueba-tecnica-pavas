@@ -57,10 +57,6 @@ export const workOrderRepository = {
     });
   },
 
-  existsById(id) {
-    return models.WorkOrder.findByPk(id, { attributes: ['id'] });
-  },
-
   findIdentityById(id, transaction) {
     return models.WorkOrder.findByPk(id, {
       attributes: ['id', 'bikeId', 'assignedMechanicId'],
@@ -150,7 +146,9 @@ export const workOrderRepository = {
     const where = {};
     if (status) where.status = status;
     if (bikeId) where.bikeId = bikeId;
-    if (assignedMechanicId) where.assignedMechanicId = assignedMechanicId;
+    if (assignedMechanicId !== undefined) {
+      where.assignedMechanicId = assignedMechanicId;
+    }
     return models.WorkOrder.findAndCountAll({
       attributes: WORK_ORDER_ATTRIBUTES,
       where,

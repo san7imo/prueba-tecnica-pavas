@@ -60,6 +60,7 @@ const createPersistedOrder = (bikeId, overrides = {}) =>
     bikeId,
     entryDate: new Date('2026-08-24T15:00:00.000Z'),
     faultDescription: 'Audit verification.',
+    assignedMechanicId: mechanic.id,
     ...overrides,
   });
 

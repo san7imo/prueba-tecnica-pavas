@@ -105,6 +105,9 @@ p { color: var(--ink-700); line-height: 1.55; }
 .filters { display: flex; align-items: flex-end; gap: 0.85rem; }
 .filters__plate { flex: 1 1 18rem; }
 .filters__actions { display: flex; gap: 0.45rem; }
+.scope-switch { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.scope-switch .button[aria-pressed='true'] { color: #fff; border-color: var(--blue-700); background: var(--blue-700); }
+.scope-summary { margin: 0 0 1rem; padding: 0.7rem 0.9rem; border-left: 3px solid var(--blue-600); color: var(--ink-700); background: var(--blue-100); font-size: 0.82rem; }
 .field { display: grid; gap: 0.4rem; }
 .field label { color: var(--ink-700); font-size: 0.78rem; font-weight: 750; }
 .field label span, .field > small { color: var(--ink-500); font-weight: 500; }
@@ -227,6 +230,9 @@ p { color: var(--ink-700); line-height: 1.55; }
 .status-actions { display: grid; gap: 0.55rem; }
 .status-note { margin-bottom: 0.8rem; }
 .status-note textarea { min-height: 5rem; }
+.assignment-panel .section-heading p:last-child { margin-top: 0.25rem; color: var(--ink-500); }
+.assignment-reason { margin-top: 0.8rem; }
+.assignment-reason textarea { min-height: 5.5rem; }
 .terminal-message { margin-bottom: 0; padding: 0.8rem; border-radius: var(--radius-sm); color: var(--ink-700); background: var(--surface-muted); font-size: 0.8rem; }
 
 .login-page { display: grid; min-height: 100vh; place-items: center; padding: 1.25rem; background: radial-gradient(circle at top left, #e7eef7 0, transparent 34%), var(--navy-950); }
@@ -326,6 +332,7 @@ p { color: var(--ink-700); line-height: 1.55; }
   .filters { display: grid; }
   .field--compact { min-width: 0; }
   .filters__actions .button { flex: 1; }
+  .scope-switch .button { flex: 1; }
   .workflow-card { grid-template-columns: 2.5rem minmax(0, 1fr); padding: 1rem; }
   .quick-registration { margin-left: 3.5rem; }
   .lookup-form, .form-grid, .form-grid--item { grid-template-columns: 1fr; }

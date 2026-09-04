@@ -1,4 +1,5 @@
 import {
+  WORK_ORDER_SCOPES,
   WORK_ORDER_STATUSES,
 } from '../constants/workOrder.js';
 import { normalizePlate } from '../utils/normalizePlate.js';
@@ -150,6 +151,13 @@ export const validateCreateWorkOrder = (request, _response, next) => {
 
 export const validateWorkOrderList = (request, _response, next) => {
   const details = [];
+  const scope = optionalQueryString({
+    value: request.query.scope,
+    field: 'scope',
+    label: 'Scope',
+    maxLength: 20,
+    details,
+  });
   const rawStatus = optionalQueryString({
     value: request.query.status,
     field: 'status',
@@ -168,6 +176,9 @@ export const validateWorkOrderList = (request, _response, next) => {
 
   if (rawStatus !== undefined && !WORK_ORDER_STATUSES.includes(rawStatus)) {
     details.push({ field: 'status', message: 'Status must be a contractual work-order status.' });
+  }
+  if (scope !== undefined && !WORK_ORDER_SCOPES.includes(scope)) {
+    details.push({ field: 'scope', message: 'Scope must be all, mine or unassigned.' });
   }
   if (plate !== undefined && plate.length > 20) {
     details.push({ field: 'plate', message: 'Normalized plate must contain at most 20 characters.' });
@@ -211,6 +222,7 @@ export const validateWorkOrderList = (request, _response, next) => {
     section: 'query',
     value: {
       status: rawStatus,
+      scope,
       plate,
       bikeId,
       assignedMechanicId,

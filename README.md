@@ -46,6 +46,8 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - una sola orden abierta por motocicleta, protegida también ante concurrencia;
 - asignación o reasignación auditable de un único `MECANICO` activo;
 - nueva orden guiada por reutilización: cliente existente → motocicleta activa del cliente → falla → responsable opcional.
+- ownership operativo: cada `MECANICO` sólo consulta y muta sus órdenes asignadas;
+- vista **Mis órdenes** para mecánicos y colas **Todas/Sin asignar** con gestión de responsable para `ADMIN`.
 
 ## Stack tecnológico
 
@@ -283,9 +285,10 @@ Login ADMIN
 ```
 
 Para comprobar RBAC, cree un usuario `MECANICO`, inicie sesión con él y
-verifique que puede consultar, agregar ítems y avanzar por estados intermedios,
-pero no puede crear órdenes, cambiar responsables, entregar/cancelar, borrar
-ítems ni administrar usuarios.
+asígnele una orden. Verifique que sólo puede consultar esa orden, agregarle
+ítems y avanzar por estados intermedios; una orden asignada a otra persona o sin
+responsable debe responder 403. Tampoco puede crear órdenes, cambiar
+responsables, entregar/cancelar, borrar ítems ni administrar usuarios.
 
 ## Reglas de negocio principales
 
@@ -297,8 +300,9 @@ RECIBIDA → DIAGNOSTICO → EN_PROCESO → LISTA → ENTREGADA
 
 - `ADMIN`: acceso completo a las acciones implementadas.
 - `MECANICO`: lectura, creación de ítems y avance a `DIAGNOSTICO`,
-  `EN_PROCESO` y `LISTA`; sin creación de órdenes/maestras, asignación,
-  administración, borrado de ítems, entrega o cancelación.
+  `EN_PROCESO` y `LISTA` únicamente sobre órdenes propias asignadas; sin
+  creación de órdenes/maestras, asignación, administración, borrado de ítems,
+  entrega o cancelación.
 
 Consulte [Reglas de negocio](docs/business-rules.md).
 
@@ -322,9 +326,9 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        21 suites, 258 pruebas
-Frontend:       12 suites, 64 pruebas
-Matriz crítica: 155 casos/filas PASS
+Backend:        24 suites, 281 pruebas
+Frontend:       12 suites, 71 pruebas
+Matriz crítica: 165 casos/filas PASS
 Migraciones:    13 ejecutadas, 0 pendientes
 ```
 

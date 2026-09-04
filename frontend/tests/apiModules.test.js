@@ -61,6 +61,29 @@ describe('feature API modules', () => {
     });
   });
 
+  it('sends ownership scopes and normalized assignment changes', async () => {
+    httpClient.get.mockResolvedValue({ data: { data: [], meta: {} } });
+    httpClient.patch.mockResolvedValue({
+      data: { data: { id: 7, assignedMechanicId: 12 } },
+    });
+
+    await workOrdersApi.list({
+      scope: 'mine',
+      assignedMechanicId: 12,
+      page: 2,
+      pageSize: 10,
+    });
+    await workOrdersApi.changeAssignment(7, 12, '  Redistribución de carga  ');
+
+    expect(httpClient.get).toHaveBeenCalledWith('/work-orders', {
+      params: { scope: 'mine', assignedMechanicId: 12, page: 2, pageSize: 10 },
+    });
+    expect(httpClient.patch).toHaveBeenCalledWith('/work-orders/7/assignment', {
+      mechanicId: 12,
+      reason: 'Redistribución de carga',
+    });
+  });
+
   it('requests paginated status history newest-first as provided by the API', async () => {
     httpClient.get.mockResolvedValue({ data: { data: [], meta: { page: 2 } } });
     await workOrdersApi.getHistory(7, { page: 2, pageSize: 20 });

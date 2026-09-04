@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  21 suites, 258 pruebas
-Frontend: 12 suites, 64 pruebas
-Matriz:   155 filas PASS
+Backend:  24 suites, 281 pruebas
+Frontend: 12 suites, 71 pruebas
+Matriz:   165 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -66,7 +66,7 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 ### Esquema — `schema.integration.test.js`
 
-- aplica las doce migraciones desde cero;
+- aplica las trece migraciones desde cero;
 - verifica asociaciones, FKs, ENUM, UNIQUE y CHECK;
 - verifica columnas lifecycle, tabla/índices de audit, asignación y actor de ítem;
 - prueba placa normalizada y `DECIMAL` como string;
@@ -155,6 +155,15 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 - autorización `ADMIN` antes de validación y allowlists de entrada;
 - rollback completo si falla audit;
 - dos reasignaciones concurrentes producen un único cambio/evento confirmado.
+
+### Ownership de órdenes — `workOrderOwnership.integration.test.js`
+
+- `MECANICO` lista por defecto y exclusivamente las órdenes asignadas a su identidad;
+- scopes `all`/`unassigned` y filtros por otra persona se rechazan para mecánicos;
+- `ADMIN` conserva vistas all/unassigned y filtro exacto por responsable;
+- detalle e historial de órdenes ajenas o sin asignar devuelven 403;
+- estado e ítems verifican ownership dentro de la transacción bloqueada y no dejan efectos al rechazar;
+- una reasignación revoca inmediatamente a la persona anterior y habilita a la nueva.
 
 ### Estados — `workOrderStatus.integration.test.js`
 
@@ -248,6 +257,15 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - responsable inicial limitado visualmente a mecánicos activos u opción unassigned;
 - catálogo de mecánicos recuperable y rechazo autoritativo de una selección desactualizada.
 
+### Ownership y colas operativas
+
+- navegación y título **Mis órdenes** para `MECANICO`, siempre con `scope=mine`;
+- listado `ADMIN` alterna entre **Todas** y **Sin asignar** y muestra el responsable;
+- estados vacíos se adaptan al rol y al scope activo;
+- el detalle muestra el responsable al mecánico sin exponer controles administrativos;
+- `ADMIN` asigna sin razón desde unassigned y exige razón/confirmación para reasignar o desasignar;
+- carga y retry del catálogo, doble submit y órdenes cerradas se manejan explícitamente.
+
 ### Accesibilidad y polish
 
 - campos requeridos y labels asociados;
@@ -296,6 +314,8 @@ Las carreras usan fixtures confirmados y conexiones separadas:
 - refresh/refresh bloquea la fila de token;
 - add/add y add/delete comparten lock de WorkOrder;
 - estados releen bajo `FOR UPDATE`;
+- ítems y estados releen ownership bajo el lock de WorkOrder;
+- la reasignación cambia inmediatamente quién puede consultar y operar la orden;
 - mismo target deja exactamente un evento;
 - 150 eventos empatados prueban el desempate por ID.
 

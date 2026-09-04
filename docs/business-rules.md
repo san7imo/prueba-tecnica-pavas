@@ -3,7 +3,7 @@
 ## Estado
 
 Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-los hitos de productización aprobados hasta HITO 7.
+los hitos de productización aprobados hasta HITO 9.
 
 ## Máquina de estados de la orden
 
@@ -72,7 +72,12 @@ Mapa canónico:
 - La misma asignación se rechaza como no-op y nunca audita.
 - Los usuarios se bloquean por ID ascendente antes de la orden; toda decisión se revalida después de los locks.
 - Las respuestas/listas muestran ID y datos seguros del responsable; `assignedMechanicId` también filtra por responsable exacto.
-- Ownership de lectura/mutación para `MECANICO` y scopes `mine/unassigned` se activan en HITO 9.
+- `ADMIN` consulta todas las órdenes, la cola `unassigned` o un responsable exacto.
+- Para `MECANICO`, el scope predeterminado y único es `mine`; no puede solicitar `all`, `unassigned` ni el ID de otra persona.
+- Un `MECANICO` sólo consulta detalle e historial de órdenes asignadas a su usuario autenticado.
+- Un `MECANICO` sólo agrega ítems o cambia estados permitidos en su orden asignada; la comprobación usa el responsable persistido bajo lock.
+- Una orden sin responsable no puede ser operada por un `MECANICO`.
+- Una reasignación efectiva revoca inmediatamente el acceso del responsable anterior y habilita al nuevo.
 
 ## Historial de estados
 

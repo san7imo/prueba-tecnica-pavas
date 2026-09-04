@@ -62,7 +62,7 @@ describe('App routing and session gates', () => {
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
 
     await waitFor(() => expect(authApi.login).toHaveBeenCalledWith({ email: 'mauro@pavas.test', password: 'secret123' }));
-    expect(await screen.findByText('Mauro Mecánico')).toBeInTheDocument();
+    expect((await screen.findAllByText('Mauro Mecánico')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /nueva orden/i })).not.toBeInTheDocument();
   });
@@ -92,7 +92,7 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/admin/users']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /mis órdenes/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^usuarios$/i })).not.toBeInTheDocument();
     expect(usersApi.list).not.toHaveBeenCalled();
   });
@@ -101,7 +101,7 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/clients/new']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /mis órdenes/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /nuevo cliente/i })).not.toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/orders/new']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i }))
+    expect(await screen.findByRole('heading', { name: /mis órdenes/i }))
       .toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /nueva orden de trabajo/i }))
       .not.toBeInTheDocument();

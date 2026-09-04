@@ -2,8 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth.js';
 
-const navigation = [
-  { to: '/orders', label: 'Órdenes', end: true },
+const resourceNavigation = [
   { to: '/clients', label: 'Clientes', end: false },
   { to: '/bikes', label: 'Motocicletas', end: false },
 ];
@@ -24,7 +23,8 @@ export const AppShell = () => {
       </NavLink>
 
       <nav className="primary-nav" aria-label="Navegación principal">
-        {navigation.map((item) => (
+        <NavLink to="/orders" end className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />{user.role === 'ADMIN' ? 'Órdenes' : 'Mis órdenes'}</NavLink>
+        {resourceNavigation.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

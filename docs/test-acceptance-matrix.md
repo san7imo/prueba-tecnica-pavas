@@ -17,7 +17,10 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
 | `PZ-CLIENT-*` | `backend/tests/clientLifecycle.integration.test.js`, `clientContactMigration.integration.test.js` |
 | `PZ-BIKE-*` | `backend/tests/bikeLifecycle.integration.test.js`, `clientsBikes.integration.test.js` |
+| `PZ-ASSIGN-*` | `backend/tests/workOrderAssignment.integration.test.js` |
 | `PZ-NEW-*` | `frontend/tests/NewWorkOrderPage.test.jsx`, `App.test.jsx` |
+| `PZ-OWN-001` a `PZ-OWN-007` | `backend/tests/workOrderOwnership.integration.test.js` |
+| `PZ-OWN-008` a `PZ-OWN-010` | `frontend/tests/WorkOrdersPage.test.jsx`, `WorkOrderDetailPage.test.jsx`, `App.test.jsx` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -135,6 +138,13 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-ASSIGN-006 | Lista filtra por responsable y serializa identidad segura/null | filter/serialization case | PASS |
 | PZ-ASSIGN-007 | Mecánico no asigna y fallo audit revierte el dominio | authorization/rollback cases | PASS |
 | PZ-ASSIGN-008 | Dos reassign concurrentes confirman exactamente un evento | concurrent reassignment case | PASS |
+| PZ-OWN-001 | MECANICO lista por defecto sólo sus órdenes y no amplía scope/filtro | mine/default/forbidden scope cases | PASS |
+| PZ-OWN-002 | ADMIN lista all, unassigned y responsable exacto; contradicción valida | admin filter matrix | PASS |
+| PZ-OWN-003 | Detalle permite orden propia y rechaza ajena/sin asignar | ownership detail cases | PASS |
+| PZ-OWN-004 | Historial permite orden propia y rechaza ajena/sin asignar | ownership history cases | PASS |
+| PZ-OWN-005 | Estado propio avanza; ajeno/sin asignar queda intacto | locked transition ownership cases | PASS |
+| PZ-OWN-006 | Ítem propio se crea; ajeno/sin asignar no altera ítems/total/audit | locked item ownership cases | PASS |
+| PZ-OWN-007 | Reasignación revoca al anterior y habilita inmediatamente al nuevo | post-reassignment access case | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |
@@ -181,6 +191,9 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-NEW-006 | Conflicto tardío de orden abierta no duplica el request | race conflict/double-submit case | PASS |
 | PZ-NEW-007 | Responsable activo opcional y unassigned producen payload correcto | mechanic/unassigned cases | PASS |
 | PZ-NEW-008 | Fallo/retry de catálogo y mecánico desactualizado son recuperables | mechanics recovery cases | PASS |
+| PZ-OWN-008 | MECANICO navega a Mis órdenes con scope mine y sin gestión de responsable | list/navigation/detail mechanic cases | PASS |
+| PZ-OWN-009 | ADMIN alterna Todas/Sin asignar y ve responsable explícito | admin scope/list cases | PASS |
+| PZ-OWN-010 | ADMIN asigna, reasigna y desasigna con razón/confirmación y estados UX | assignment panel cases | PASS |
 
 ## Evidencia no funcional y documental
 

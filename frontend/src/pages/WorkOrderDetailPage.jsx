@@ -5,6 +5,7 @@ import { workOrdersApi } from '../api/workOrdersApi.js';
 import { ErrorState } from '../components/ui/ErrorState.jsx';
 import { LoadingState } from '../components/ui/LoadingState.jsx';
 import { StatusBadge } from '../components/ui/StatusBadge.jsx';
+import { AssignmentPanel } from '../features/workOrders/components/AssignmentPanel.jsx';
 import { ItemForm } from '../features/workOrders/components/ItemForm.jsx';
 import { HistoryTimeline } from '../features/workOrders/components/HistoryTimeline.jsx';
 import { ItemsTable } from '../features/workOrders/components/ItemsTable.jsx';
@@ -115,6 +116,13 @@ export const WorkOrderDetailPage = () => {
     }
   };
 
+  const assignmentChanged = (updatedOrder) => {
+    setOrder(updatedOrder);
+    setNotice(updatedOrder.assignedMechanic
+      ? `Responsable actualizado a ${updatedOrder.assignedMechanic.name}.`
+      : 'La orden quedó sin responsable.');
+  };
+
   if (loading) return <LoadingState message="Cargando detalle de la orden…" />;
 
   if (loadError) {
@@ -187,6 +195,15 @@ export const WorkOrderDetailPage = () => {
               <div><dt>Correo</dt><dd>{order.bike.client.email || 'No registrado'}</dd></div>
             </dl>
           </section>
+          {user.role === 'ADMIN' ? (
+            <AssignmentPanel order={order} onChanged={assignmentChanged} />
+          ) : (
+            <section className="panel resource-card" aria-labelledby="mechanic-info-title">
+              <p className="card-label">Responsable</p>
+              <h2 id="mechanic-info-title">{order.assignedMechanic?.name ?? 'Sin asignar'}</h2>
+              <p>Esta orden está asignada a tu cuenta.</p>
+            </section>
+          )}
           <StatusActions key={`${order.status}-${historyVersion}`} status={order.status} role={user.role} onTransition={transitionStatus} loadingStatus={statusLoading} error={statusError} />
         </aside>
       </div>
