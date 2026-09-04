@@ -8,7 +8,7 @@ La API Express es la frontera autoritativa. Guardas y controles ocultos del fron
 
 bcrypt almacena únicamente `password_hash`. `BCRYPT_ROUNDS` admite 10–15 y usa 12 por defecto. Serializadores, atributos de repository y `toJSON` excluyen hashes.
 
-El login normaliza email y devuelve el mismo `401 INVALID_CREDENTIALS` para email desconocido, contraseña errónea o usuario inactivo. Un rate limiter local al proceso protege sólo `POST /api/auth/login` y responde `429 LOGIN_RATE_LIMITED`.
+El login normaliza email y devuelve el mismo `401 INVALID_CREDENTIALS` para email desconocido, contraseña errónea o usuario inactivo. También ejecuta una comparación bcrypt con el costo configurado cuando el email no existe, usando un hash dummy reutilizable, para no introducir el atajo temporal evidente de omitir por completo el trabajo de contraseña. Un rate limiter local al proceso protege sólo `POST /api/auth/login` y responde `429 LOGIN_RATE_LIMITED`.
 
 ## Access token
 
@@ -40,7 +40,7 @@ Clear-cookie reutiliza Path, HttpOnly, SameSite y Secure. El startup rechaza `Sa
 
 `FRONTEND_ORIGIN` es un único origen HTTP(S), nunca `*`. Sólo ese origen puede leer respuestas credentialed; otro recibe 403. Peticiones sin `Origin` siguen disponibles para Postman y clientes servidor.
 
-Las mutaciones de negocio usan Bearer en memoria y la cookie sólo alcanza endpoints auth. SameSite, CORS exacto y path reducido limitan CSRF. No se añade token CSRF porque ninguna mutación general depende de cookies; debe reconsiderarse si el alcance de cookie se amplía o se habilita cross-site.
+Las mutaciones de negocio usan Bearer en memoria y la cookie sólo alcanza endpoints auth. SameSite, CORS exacto y path reducido limitan CSRF. CORS se ejecuta antes de las rutas: un origen hostil no alcanza `refresh` ni `logout` y, por tanto, no rota ni revoca la sesión. Las peticiones `POST` de navegador aportan `Origin`; Postman y clientes servidor sin `Origin` siguen siendo un caso admitido deliberadamente. No se añade token CSRF porque ninguna mutación general depende de cookies; debe reconsiderarse si el alcance de cookie se amplía o se habilita cross-site.
 
 ## Headers HTTP
 
@@ -50,7 +50,7 @@ Helmet se instala antes de rutas y desactiva `X-Powered-By`. HSTS sólo se emite
 
 Los endpoints de escritura usan allowlists, longitudes y rangos. IDs/paginación son acotados; body JSON máximo 100 KiB. JSON malformado devuelve `400 INVALID_JSON`; payload excesivo, `413 PAYLOAD_TOO_LARGE`.
 
-Errores esperados exponen código/mensaje estable. Excepciones inesperadas devuelven `500 INTERNAL_ERROR` y `An unexpected error occurred.` No se serializan stack, SQL, JWT internos, paths, env, cookies, hashes ni secretos. Los fallos de conexión al iniciar se registran de forma genérica.
+Errores esperados exponen código/mensaje estable. La ruta desconocida devuelve un 404 genérico sin reflejar path ni query string. Excepciones inesperadas devuelven `500 INTERNAL_ERROR` y `An unexpected error occurred.` No se serializan stack, SQL, JWT internos, paths, env, cookies, hashes ni secretos. Los fallos de conexión al iniciar se registran de forma genérica.
 
 ## Autorización, SQL y auditoría
 
@@ -85,6 +85,17 @@ sigue protegido por RBAC `ADMIN` antes de validar el ID, bloquea después el ít
 y escribe `ITEM_DELETED` con snapshot allowlisted en la misma transacción que
 el recálculo. No existe endpoint de edición que permita reescribir evidencia.
 
+La auditoría de HITO 16 recorrió PATCH, delete/restore, assignment, reopen,
+lectura de audit, mutaciones de ítems, ownership, serializadores y errores. Las
+rutas administrativas autentican y autorizan antes de validar el recurso; las
+rutas compartidas vuelven a comprobar el actor persistido dentro de la
+transacción. Los controllers de escritura con body consumen únicamente
+`request.validated`; repositories declaran `fields`/`attributes` explícitos y
+serializadores construyen respuestas campo por campo. Las regresiones
+adversariales confirman que IDs, actor, lifecycle, total, estado, propietario,
+responsable, hashes y tokens enviados en body no obtienen autoridad ni aparecen
+accidentalmente en respuestas/audit.
+
 ## Frontend, XSS y almacenamiento
 
 El access token sólo vive en módulo/contexto; ningún token va a `localStorage` o `sessionStorage`. JavaScript no puede leer la cookie `HttpOnly`. Un cliente auth separado evita recursión; una promesa compartida coordina 401 concurrentes y cada petición reintenta una vez. Logout limpia memoria incluso si falla la red, y un refresh obsoleto no restaura una sesión cerrada.
@@ -106,11 +117,13 @@ Sólo se versionan ejemplos seguros.
 
 ## Auditoría de dependencias
 
-En la verificación del 2026-08-24, frontend reportó cero findings tanto completo como `--omit=dev`. Backend reportó dos registros moderados de una sola cadena transitiva: Sequelize 6.37.8 depende de `uuid` 8.3.2, afectado por un advisory de bounds-check cuando el caller suministra buffer a UUID v3/v5/v6.
+En la verificación de producción del 2026-09-03 (`npm audit --omit=dev`), frontend reportó cero findings. Backend reportó dos registros moderados de una sola cadena transitiva: Sequelize 6.37.8 depende de `uuid` 8.3.2, afectado por un advisory de bounds-check cuando el caller suministra buffer a UUID v3/v5/v6.
 
 La aplicación no invoca esas APIs y Sequelize 6.37.8 es la última versión v6. npm propone un downgrade semver-major a Sequelize 3.30.0, incompatible con la arquitectura. No se ejecutó `npm audit fix --force`.
 
-Es un riesgo residual aceptado para la evaluación. Antes de producción se debe revisar una corrección compatible o planificar upgrade mayor.
+Durante la misma auditoría se detectó `qs` 6.15.3 transitivo de Express con dos advisories moderados de disponibilidad. Se actualizó de forma compatible y acotada a 6.16.0 en el lockfile; dejó de aparecer en la repetición del audit.
+
+El hallazgo de `uuid` es un riesgo residual aceptado para la evaluación. Antes de producción se debe revisar una corrección compatible o planificar upgrade mayor.
 
 ## Riesgos residuales
 
@@ -119,7 +132,7 @@ Es un riesgo residual aceptado para la evaluación. Antes de producción se debe
 - JWT simétricos requieren distribución/rotación disciplinada.
 - CORS no autentica; clientes no-browser pueden omitir `Origin`.
 - La CSP corresponde al host frontend.
-- No hay protección de último `ADMIN`.
+- La protección del último `ADMIN` y de mecánicos con órdenes abiertas depende de locks MySQL; despliegues futuros deben conservar el mismo orden de adquisición.
 - El advisory Sequelize/`uuid` debe permanecer visible.
 
 ## Recomendaciones de producción

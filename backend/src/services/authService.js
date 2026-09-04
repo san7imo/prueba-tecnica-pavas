@@ -26,6 +26,16 @@ const invalidRefresh = () =>
     message: 'The refresh token is invalid or expired.',
   });
 
+let dummyPasswordHashPromise;
+
+const getDummyPasswordHash = () => {
+  dummyPasswordHashPromise ??= bcrypt.hash(
+    'pavas-invalid-credentials-timing-sentinel',
+    env.auth.bcryptRounds,
+  );
+  return dummyPasswordHashPromise;
+};
+
 const createRefreshRecord = async ({ userId, familyId, transaction }) => {
   const issued = issueRefreshToken({ userId, familyId });
   const record = await refreshTokenRepository.create(
@@ -42,8 +52,14 @@ const createRefreshRecord = async ({ userId, familyId, transaction }) => {
 
 export const authService = {
   async login({ email, password }) {
-    const user = await userRepository.findForAuthentication(email);
-    const validPassword = user ? await bcrypt.compare(password, user.passwordHash) : false;
+    const [user, dummyPasswordHash] = await Promise.all([
+      userRepository.findForAuthentication(email),
+      getDummyPasswordHash(),
+    ]);
+    const validPassword = await bcrypt.compare(
+      password,
+      user?.passwordHash ?? dummyPasswordHash,
+    );
 
     if (!user || !user.active || !validPassword) throw invalidCredentials();
 

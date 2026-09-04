@@ -7,8 +7,8 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  26 suites, 327 pruebas
-Frontend: 12 suites, 77 pruebas
+Backend:  28 suites, 342 pruebas
+Frontend: 14 suites, 93 pruebas
 Matriz:   196 filas PASS
 ```
 
@@ -216,7 +216,7 @@ La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando 
 ### Autenticación — `auth.integration.test.js`
 
 - bcrypt, seed ADMIN idempotente y login normalizado;
-- error genérico e inactivo;
+- error genérico e inactivo, con comparación bcrypt también para email inexistente;
 - claims/access y `/me` seguro;
 - tokens ausentes, malformados, expirados, firma/algoritmo/propósito incorrectos y usuario/rol obsoleto;
 - atributos de cookie y persistencia sólo del digest;
@@ -224,7 +224,8 @@ La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando 
 - replay, familias independientes y revocación;
 - logout idempotente y rate limit 429;
 - dos refresh concurrentes: sólo uno rota y el replay deja cero descendientes activos;
-- flujo CORS credentialed login → refresh → negocio → logout.
+- flujo CORS credentialed login → refresh → negocio → logout;
+- origen hostil rechazado antes de poder rotar o revocar la sesión cookie.
 
 ### RBAC/usuarios — `rbac.integration.test.js`
 
@@ -252,7 +253,7 @@ En la medición local del 2026-08-24, una petición autenticada de 100 filas ent
 
 ### Seguridad HTTP — `security.test.js`
 
-Comprueba Helmet, ausencia de `X-Powered-By`, decisión CSP, HSTS por ambiente, CORS exacto/preflight/no-Origin, JSON 100 KiB, JSON malformado y 500 sanitizado.
+Comprueba Helmet, ausencia de `X-Powered-By`, decisión CSP, HSTS por ambiente, CORS exacto/preflight/no-Origin, JSON 100 KiB, JSON malformado y 500 sanitizado. `notFound.test.js` prueba además que el 404 genérico no refleja path, query ni valores potencialmente sensibles.
 
 ## Suites frontend
 

@@ -1,7 +1,16 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { seedInitialAdmin } from '../seeders/seedInitialAdmin.js';
 import { app } from '../src/app.js';
@@ -58,6 +67,10 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
     await models.AuditEvent.destroy({ where: {}, force: true });
     await models.RefreshToken.destroy({ where: {}, force: true });
     await models.User.destroy({ where: {}, force: true });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -141,6 +154,20 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
       expect(JSON.stringify(response.body)).not.toMatch(/sql|jwt|passwordHash|password_hash/);
     }
     expect(await models.RefreshToken.count()).toBe(0);
+  });
+
+  it('performs bcrypt verification for both unknown and known emails', async () => {
+    await createUser();
+    const compare = vi.spyOn(bcrypt, 'compare');
+
+    await login('missing@example.test', PASSWORD).expect(401);
+    await login('ada@example.test', 'wrong-password').expect(401);
+
+    expect(compare).toHaveBeenCalledTimes(2);
+    for (const [, hash] of compare.mock.calls) {
+      expect(hash).toMatch(/^\$2[aby]\$/);
+      expect(Number(hash.split('$')[2])).toBe(env.auth.bcryptRounds);
+    }
   });
 
   it('returns the safe current user and rejects missing, malformed and invalid access tokens', async () => {
@@ -256,6 +283,40 @@ describe.sequential('HITO 7 authentication and refresh tokens', () => {
     expect(logout.status).toBe(200);
     expect(logout.headers['access-control-allow-origin']).toBe(origin);
     expect(logout.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('rejects hostile browser origins before refresh or logout can mutate the session', async () => {
+    await createUser();
+    const session = await login();
+    const refreshCookie = cookieValue(session);
+    const rawToken = rawCookieToken(refreshCookie);
+
+    for (const endpoint of ['/api/auth/refresh', '/api/auth/logout']) {
+      const rejected = await request(app)
+        .post(endpoint)
+        .set('Origin', 'https://evil.example')
+        .set('Cookie', refreshCookie);
+      expect(rejected.status).toBe(403);
+      expect(rejected.body).toEqual({
+        error: {
+          code: 'CORS_ORIGIN_DENIED',
+          message: 'Origin is not allowed by the CORS policy.',
+        },
+      });
+    }
+
+    const persisted = await models.RefreshToken.findOne({
+      where: { tokenHash: digestRefreshToken(rawToken) },
+    });
+    expect(persisted.revokedAt).toBeNull();
+    expect(persisted.replacedByTokenId).toBeNull();
+    expect(await models.RefreshToken.count()).toBe(1);
+
+    await request(app)
+      .post('/api/auth/refresh')
+      .set('Origin', env.frontendOrigin)
+      .set('Cookie', refreshCookie)
+      .expect(200);
   });
 
   it('rotates a valid refresh token transactionally in the same family', async () => {
