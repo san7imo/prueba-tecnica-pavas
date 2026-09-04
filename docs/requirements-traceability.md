@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 172 requisitos: 166 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -177,6 +177,10 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-ITEM-009 | No existe endpoint de update de ítem | HITO 12 | routing cerrado | PATCH item | no-update case | Done |
 | PZ-ITEM-010 | Mutaciones contra close/reopen preservan estado y total exacto | HITO 12 | lock compartido WorkOrder + revalidación | items/status/reopen APIs | concurrency race cases | Done |
 | PZ-ITEM-011 | UI muestra creador y protege controles cerrado/reabierto | HITO 12 | tabla/form role-state-aware | `/orders/:id` | creator/closed/reopen/error cases | Done |
+| PZ-PERF-001 | Placa de órdenes usa igualdad normalizada indexable | HITO 15 | join Bike por igualdad, sin wildcard inicial | `GET /api/work-orders?plate=` | exact/incomplete/SQL shape | Done |
+| PZ-PERF-002 | All, estado, moto y responsable tienen índices alineados con filtro/orden | HITO 15 | migración reversible `014` | listados y dashboard | metadata + EXPLAIN con 2.400 órdenes | Done |
+| PZ-PERF-003 | Listados relacionales conservan dos consultas y evitan joins en count | HITO 15 | count raíz + findAll eager allowlisted | Bike/Order/History/Audit GET | query-count/SQL shape/regresión | Done |
+| PZ-PERF-004 | Paginación operativa permanece acotada y determinista | HITO 15 | máximo 100 + desempate por ID | colecciones paginadas | páginas/empates/planes de índice | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

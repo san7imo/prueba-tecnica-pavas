@@ -98,7 +98,7 @@ describe.sequential('Productization persistence migrations', () => {
     expect(itemId).toEqual(expect.any(Number));
 
     const foundations = await migrator.up();
-    expect(foundations).toHaveLength(6);
+    expect(foundations).toHaveLength(7);
 
     const [migratedRows] = await sequelize.query(
       `SELECT
@@ -130,8 +130,8 @@ describe.sequential('Productization persistence migrations', () => {
       }),
     ]);
 
-    const reverted = await migrator.down({ step: 6 });
-    expect(reverted).toHaveLength(6);
+    const reverted = await migrator.down({ step: 7 });
+    expect(reverted).toHaveLength(7);
     expect(await migrator.executed()).toHaveLength(7);
     const [legacyStillPresent] = await sequelize.query(
       `SELECT c.name, b.plate, wo.fault_description, woi.description
@@ -152,7 +152,7 @@ describe.sequential('Productization persistence migrations', () => {
     ]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(6);
-    expect(await migrator.executed()).toHaveLength(13);
+    expect(reapplied).toHaveLength(7);
+    expect(await migrator.executed()).toHaveLength(14);
   }, 30000);
 });

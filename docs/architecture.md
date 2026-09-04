@@ -209,7 +209,21 @@ Consulte [API](api.md).
 
 ## Estrategia de consultas
 
-Los listados de clientes, motocicletas y órdenes son paginados y acotados a 100 filas. Motocicletas usa igualdad sobre el índice único para `plate`, prefijo indexable para `platePrefix`, y los índices de lifecycle/propietario para sus vistas administrativas. Órdenes admite `bikeId` exacto para la historia desde el detalle de moto. `findAndCountAll` con `distinct: true` conserva conteos correctos y el resumen de orden abierta se resuelve sin cargar ítems.
+Los listados de clientes, motocicletas y órdenes son paginados y acotados a
+100 filas. Motocicletas usa igualdad sobre el índice único para `plate`,
+prefijo indexable para `platePrefix`, y los índices de lifecycle/propietario
+para sus vistas administrativas. El filtro de placa de órdenes también es una
+igualdad normalizada; no existe `LIKE '%placa%'`. Órdenes admite `bikeId`
+exacto para la historia desde el detalle de moto y mantiene orden determinista
+`entryDate DESC, id DESC`.
+
+Los listados con relaciones ejecutan un `COUNT` sobre la tabla raíz —uniendo
+sólo Bike cuando la placa lo exige— y una consulta de datos con includes
+allowlisted. Por tanto el número de consultas es constante, sin N+1, y los
+joins de Client, actor o responsable no inflan innecesariamente el conteo. Los
+índices de orden general, estado, moto y asignación cubren las colas del
+dashboard, All/My/Unassigned y la historia de una motocicleta. El resumen de
+orden abierta continúa resolviéndose sin cargar ítems.
 
 ## Arquitectura de seguridad
 

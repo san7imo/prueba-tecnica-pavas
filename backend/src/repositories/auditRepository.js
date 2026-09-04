@@ -66,16 +66,19 @@ export const auditRepository = {
       if (dateTo) where.createdAt[Op.lte] = dateTo;
     }
 
-    return models.AuditEvent.findAndCountAll({
-      attributes: AUDIT_ATTRIBUTES,
-      include: ACTOR_INCLUDE,
-      where,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      order: [
-        ['createdAt', 'DESC'],
-        ['id', 'DESC'],
-      ],
-    });
+    return Promise.all([
+      models.AuditEvent.count({ where }),
+      models.AuditEvent.findAll({
+        attributes: AUDIT_ATTRIBUTES,
+        include: ACTOR_INCLUDE,
+        where,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: [
+          ['createdAt', 'DESC'],
+          ['id', 'DESC'],
+        ],
+      }),
+    ]).then(([count, rows]) => ({ count, rows }));
   },
 };

@@ -429,7 +429,7 @@ Authorization: Bearer <accessToken>
 Queries opcionales:
 
 - `status`: uno de `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
-- `plate`: búsqueda parcial normalizada;
+- `plate`: igualdad exacta después de normalizar mayúsculas y espacios;
 - `bikeId`: ID exacto para consultar la historia de una motocicleta;
 - `scope`: `all`, `mine` o `unassigned`;
 - `assignedMechanicId`: ID exacto del mecánico responsable;
@@ -442,6 +442,10 @@ responsable devuelve 403. `ADMIN` usa `all` por defecto y puede consultar
 `unassigned` o un responsable exacto. Combinar `scope=unassigned` con
 `assignedMechanicId` es contradictorio y devuelve
 `400 INVALID_ASSIGNMENT_FILTERS`.
+
+La búsqueda de órdenes por placa no acepta semántica de subcadena: `ABC123`
+encuentra esa motocicleta y `BC1` no. Esto permite resolver primero la placa
+mediante `uq_bikes_plate` y evita el wildcard inicial no indexable.
 
 Los demás filtros combinan con AND. Cada fila incluye Bike/Client y el responsable seguro,
 o `assignedMechanicId: null`/`assignedMechanic: null` cuando está sin asignar;

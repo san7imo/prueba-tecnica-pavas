@@ -206,6 +206,19 @@ Unassigned activadas en HITO 9. Desde HITO 7, el servicio sólo permite destinos
 `MECANICO`, bloquea usuarios por ID antes de la orden y audita todo cambio de
 responsable.
 
+HITO 15 añade tres índices medidos contra las consultas operativas restantes:
+
+- `ix_work_orders_entry_id (entry_date DESC, id DESC)` para la lista All;
+- `ix_work_orders_status_entry_id (status, entry_date DESC, id DESC)` para las
+  colas del dashboard y filtros por estado;
+- `ix_work_orders_bike_entry_id (bike_id, entry_date DESC, id DESC)` para la
+  historia paginada de una motocicleta.
+
+El último también satisface la FK por su prefijo `bike_id`; MySQL puede retirar
+el índice simple implícito al crearlo. Por eso el `down` de la migración `014`
+restaura primero `fk_work_orders_bike` y sólo después elimina el compuesto.
+Los tres índices preservan el mismo desempate que la API y no modifican datos.
+
 ## `work_order_items`
 
 | Columna | Tipo | Reglas |

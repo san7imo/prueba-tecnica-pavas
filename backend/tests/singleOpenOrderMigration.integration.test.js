@@ -7,6 +7,8 @@ import { createMigrator } from '../src/config/migrator.js';
 import { assertSafeTestDatabase } from '../src/config/testDatabaseGuard.js';
 
 const PREVIOUS_MIGRATION = '202609030012-normalize-client-contacts.js';
+const SINGLE_OPEN_ORDER_MIGRATION =
+  '202609030013-enforce-single-open-order.js';
 const timestamp = new Date('2026-09-03T15:00:00.000Z');
 
 describe.sequential('Single-open-order migration', () => {
@@ -88,7 +90,9 @@ describe.sequential('Single-open-order migration', () => {
       { replacements: { bikeId } },
     );
 
-    await expect(migrator.up()).resolves.toHaveLength(1);
+    await expect(
+      migrator.up({ to: SINGLE_OPEN_ORDER_MIGRATION }),
+    ).resolves.toHaveLength(1);
     expect(await migrator.executed()).toHaveLength(13);
 
     const [columnRows] = await sequelize.query(

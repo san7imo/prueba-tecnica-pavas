@@ -87,18 +87,20 @@ export const bikeRepository = {
     }
     if (clientId) filters.clientId = clientId;
 
-    return models.Bike.findAndCountAll({
-      attributes: BIKE_ATTRIBUTES,
-      include: CLIENT_INCLUDE,
-      where: filters,
-      distinct: true,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      order: [
-        ['plate', 'ASC'],
-        ['id', 'ASC'],
-      ],
-    });
+    return Promise.all([
+      models.Bike.count({ where: filters }),
+      models.Bike.findAll({
+        attributes: BIKE_ATTRIBUTES,
+        include: CLIENT_INCLUDE,
+        where: filters,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: [
+          ['plate', 'ASC'],
+          ['id', 'ASC'],
+        ],
+      }),
+    ]).then(([count, rows]) => ({ count, rows }));
   },
 
   findActiveByClientForUpdate(clientId, transaction) {

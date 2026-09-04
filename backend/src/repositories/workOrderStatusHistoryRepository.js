@@ -24,20 +24,23 @@ export const workOrderStatusHistoryRepository = {
   },
 
   findPaginatedByWorkOrder(workOrderId, { page, pageSize }) {
-    return models.WorkOrderStatusHistory.findAndCountAll({
-      attributes: HISTORY_ATTRIBUTES,
-      where: { workOrderId },
-      include: {
-        association: 'changedBy',
-        attributes: ['id', 'name'],
-        required: true,
-      },
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      order: [
-        ['createdAt', 'DESC'],
-        ['id', 'DESC'],
-      ],
-    });
+    return Promise.all([
+      models.WorkOrderStatusHistory.count({ where: { workOrderId } }),
+      models.WorkOrderStatusHistory.findAll({
+        attributes: HISTORY_ATTRIBUTES,
+        where: { workOrderId },
+        include: {
+          association: 'changedBy',
+          attributes: ['id', 'name'],
+          required: true,
+        },
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: [
+          ['createdAt', 'DESC'],
+          ['id', 'DESC'],
+        ],
+      }),
+    ]).then(([count, rows]) => ({ count, rows }));
   },
 };

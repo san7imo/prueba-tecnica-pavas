@@ -353,8 +353,7 @@ describe('Work Orders API', () => {
       ['exact', 'ABC123'],
       ['lowercase', 'abc123'],
       ['spaces', 'a b c 1 2 3'],
-      ['partial', 'BC1'],
-    ])('filters by %s normalized plate', async (_case, plate) => {
+    ])('filters by %s normalized exact plate', async (_case, plate) => {
       const client = await createClient();
       const { bike: matchingBike } = await createBike({ client, plate: 'ABC123' });
       const { bike: otherBike } = await createBike({ client, plate: 'XYZ987' });
@@ -370,6 +369,19 @@ describe('Work Orders API', () => {
       expect(response.body.data[0].bike.plate).toBe('ABC123');
     });
 
+    it('does not treat an incomplete plate as a substring search', async () => {
+      const { bike } = await createBike({ plate: 'ABC123' });
+      await createWorkOrder(bike.id);
+
+      const response = await request(app)
+        .get('/api/work-orders')
+        .query({ plate: 'BC1' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.meta.totalItems).toBe(0);
+    });
+
     it('combines status and plate filters', async () => {
       const client = await createClient();
       const { bike: matchingBike } = await createBike({ client, plate: 'ABC123' });
@@ -380,7 +392,7 @@ describe('Work Orders API', () => {
 
       const response = await request(app).get('/api/work-orders').query({
         status: WORK_ORDER_STATUS.DIAGNOSIS,
-        plate: 'abc',
+        plate: 'abc123',
       });
 
       expect(response.status).toBe(200);
@@ -493,6 +505,35 @@ describe('Work Orders API', () => {
       }
 
       expect(queryCount).toBe(3);
+    });
+
+    it('uses equality for plate and keeps the count query free of unrelated joins', async () => {
+      const { bike } = await createBike();
+      await createWorkOrder(bike.id);
+      const statements = [];
+      const originalLogging = sequelize.options.logging;
+      sequelize.options.logging = (sql) => statements.push(sql);
+
+      try {
+        await request(app).get('/api/work-orders').expect(200);
+        await request(app)
+          .get('/api/work-orders')
+          .query({ plate: 'abc123' })
+          .expect(200);
+      } finally {
+        sequelize.options.logging = originalLogging;
+      }
+
+      const workOrderStatements = statements.filter((sql) =>
+        /FROM `work_orders`/i.test(sql));
+      expect(workOrderStatements).toHaveLength(4);
+      expect(workOrderStatements.every((sql) => !/\bLIKE\b/i.test(sql))).toBe(true);
+      expect(workOrderStatements.some((sql) =>
+        /`bike`\.`plate`\s*=\s*'ABC123'/i.test(sql))).toBe(true);
+
+      const unfilteredCount = workOrderStatements.find((sql) =>
+        /count\(/i.test(sql) && !/JOIN/i.test(sql));
+      expect(unfilteredCount).toBeDefined();
     });
   });
 

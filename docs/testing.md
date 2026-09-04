@@ -136,14 +136,27 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 - orden válida/inválida, fecha explícita/omitida y defaults `RECIBIDA`/`0.00`;
 - protección de mass assignment;
-- listas vacías/pobladas, filtros, paginación y orden `entryDate DESC, id DESC`;
+- listas vacías/pobladas, placa exacta sin subcadena, filtros, paginación y orden `entryDate DESC, id DESC`;
 - grafo Bike/Client/items y ausencia de N+1;
+- forma SQL sin `LIKE` para placa y count sin joins ajenos al filtro;
 - ambos tipos de ítem, cantidades fraccionarias y valor cero;
 - escalas/rangos y recursos ausentes;
 - total 130000 y exactitud `0.10 + 0.20 = 0.30`;
 - rollback si falla persistir total;
 - delete, último ítem `0.00`;
 - carreras add/add y add/delete con conexiones distintas y `FOR UPDATE`.
+
+### Consultas operativas — `operationalQueries.integration.test.js`
+
+- inventario exacto de los tres índices de HITO 15 y conservación de los
+  índices previos de asignación/orden abierta;
+- `down`/reapply reversible sin pérdida de filas;
+- fixture de 2.400 órdenes y `ANALYZE TABLE` para planes representativos;
+- `EXPLAIN` verifica `uq_bikes_plate`, las colas por estado, la historia por
+  moto y My Orders sin `Using filesort`;
+- el índice de All se fuerza únicamente dentro de `EXPLAIN` para probar que
+  satisface el orden completo sin convertir una decisión costo-dependiente del
+  optimizador de MySQL en una prueba frágil.
 
 ### Lifecycle de ítems — `workOrderItemLifecycle.integration.test.js`
 

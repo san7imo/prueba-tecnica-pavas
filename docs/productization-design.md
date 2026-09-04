@@ -94,7 +94,12 @@ o todos informados. La FK del actor se denomina
 La actualización de IDs de usuario no forma parte del producto; `RESTRICT`
 permite que MySQL mantenga esta columna dentro del CHECK lifecycle.
 
-Índice inicial: `(deleted_at, name, id)` para vistas lifecycle ordenadas. La búsqueda libre por nombre/teléfono/email puede seguir usando contains en la primera entrega; HITO 15 medirá antes de añadir otra estrategia.
+Índice inicial: `(deleted_at, name, id)` para vistas lifecycle ordenadas. HITO
+15 conservó la búsqueda libre por nombre/teléfono/email con semántica contains:
+el dominio de evaluación es acotado y cambiar a FULLTEXT alteraría resultados
+de negocio sin evidencia que lo justifique. La paginación continúa limitada a
+100 filas; una estrategia de búsqueda distinta requiere medición con volumen
+real, no un índice añadido a ciegas.
 
 ### 4.2 `bikes`
 
@@ -118,6 +123,11 @@ HITO 1 agrega:
 | `assigned_mechanic_id` | `BIGINT UNSIGNED` | Sí | FK `users.id`, `RESTRICT`; sólo un `MECANICO` activo puede ser asignado por servicio |
 
 Los datos existentes quedan sin asignar. Índice: `(assigned_mechanic_id, status, entry_date DESC, id DESC)` para My Orders y Unassigned.
+
+HITO 15 completa las rutas de lectura con `(entry_date DESC, id DESC)` para
+All, `(status, entry_date DESC, id DESC)` para colas por estado y `(bike_id,
+entry_date DESC, id DESC)` para historia por motocicleta. La placa en órdenes
+se filtra por igualdad normalizada, nunca por subcadena.
 
 HITO 6 agrega, después de un preflight sin violaciones:
 

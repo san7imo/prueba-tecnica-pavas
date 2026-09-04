@@ -29,12 +29,19 @@ const bikeInclude = (plate) => ({
   association: 'bike',
   attributes: BIKE_ATTRIBUTES,
   required: true,
-  where: plate ? { plate: { [Op.like]: `%${plate}%` } } : undefined,
+  where: plate ? { plate } : undefined,
   include: {
     association: 'client',
     attributes: CLIENT_ATTRIBUTES,
     required: true,
   },
+});
+
+const bikeCountInclude = (plate) => ({
+  association: 'bike',
+  attributes: [],
+  required: true,
+  where: { plate },
 });
 
 const assignedMechanicInclude = {
@@ -168,17 +175,22 @@ export const workOrderRepository = {
     if (assignedMechanicId !== undefined) {
       where.assignedMechanicId = assignedMechanicId;
     }
-    return models.WorkOrder.findAndCountAll({
-      attributes: WORK_ORDER_ATTRIBUTES,
-      where,
-      include: [bikeInclude(plate), assignedMechanicInclude],
-      distinct: true,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      order: [
-        ['entryDate', 'DESC'],
-        ['id', 'DESC'],
-      ],
-    });
+    return Promise.all([
+      models.WorkOrder.count({
+        where,
+        include: plate ? bikeCountInclude(plate) : undefined,
+      }),
+      models.WorkOrder.findAll({
+        attributes: WORK_ORDER_ATTRIBUTES,
+        where,
+        include: [bikeInclude(plate), assignedMechanicInclude],
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: [
+          ['entryDate', 'DESC'],
+          ['id', 'DESC'],
+        ],
+      }),
+    ]).then(([count, rows]) => ({ count, rows }));
   },
 };
