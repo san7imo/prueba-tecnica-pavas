@@ -3,12 +3,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../src/App.jsx';
+import { auditApi } from '../src/api/auditApi.js';
 import { authApi } from '../src/api/authApi.js';
 import { usersApi } from '../src/api/usersApi.js';
 import { adminUser, mechanicUser } from './testUtils.jsx';
 
 vi.mock('../src/api/authApi.js', () => ({
   authApi: { login: vi.fn(), refresh: vi.fn(), logout: vi.fn(), me: vi.fn() },
+}));
+
+vi.mock('../src/api/auditApi.js', () => ({
+  auditApi: { list: vi.fn(), getById: vi.fn() },
 }));
 
 vi.mock('../src/api/usersApi.js', () => ({
@@ -33,6 +38,10 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(adminUser));
     authApi.logout.mockResolvedValue({ loggedOut: true });
     usersApi.list.mockResolvedValue([]);
+    auditApi.list.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+    });
   });
 
   it('restores an authenticated session before rendering the protected application shell', async () => {
@@ -41,10 +50,21 @@ describe('App routing and session gates', () => {
     expect(screen.getByText(/restaurando sesión/i)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /pavas taller/i })).toBeInTheDocument();
     expect(screen.getByText('Ada Admin')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /auditoría/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^clientes$/i })).toHaveAttribute('href', '/clients');
     expect(screen.getByRole('link', { name: /^motocicletas$/i })).toHaveAttribute('href', '/bikes');
     expect(await screen.findByText(/aún no hay órdenes/i)).toBeInTheDocument();
+  });
+
+  it('uses the operational dashboard as the authenticated home route', async () => {
+    render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: /dashboard/i }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pavas taller/i }))
+      .toHaveAttribute('href', '/dashboard');
   });
 
   it('redirects an anonymous visitor to login and authenticates with a generic form', async () => {
@@ -64,6 +84,7 @@ describe('App routing and session gates', () => {
     await waitFor(() => expect(authApi.login).toHaveBeenCalledWith({ email: 'mauro@pavas.test', password: 'secret123' }));
     expect((await screen.findAllByText('Mauro Mecánico')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /auditoría/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /nueva orden/i })).not.toBeInTheDocument();
   });
 
@@ -84,7 +105,7 @@ describe('App routing and session gates', () => {
   it('redirects an authenticated visitor away from login', async () => {
     render(<MemoryRouter initialEntries={['/login']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /órdenes de trabajo/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /iniciar sesión/i })).not.toBeInTheDocument();
   });
 
@@ -92,16 +113,24 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/admin/users']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /mis órdenes/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^usuarios$/i })).not.toBeInTheDocument();
     expect(usersApi.list).not.toHaveBeenCalled();
+  });
+
+  it('redirects a mechanic away from ADMIN audit routes', async () => {
+    authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
+    render(<MemoryRouter initialEntries={['/admin/audit/41']}><App /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(auditApi.getById).not.toHaveBeenCalled();
   });
 
   it('redirects a mechanic away from master-data mutation routes', async () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/clients/new']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /mis órdenes/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /nuevo cliente/i })).not.toBeInTheDocument();
   });
 
@@ -109,7 +138,7 @@ describe('App routing and session gates', () => {
     authApi.refresh.mockResolvedValue(sessionFor(mechanicUser));
     render(<MemoryRouter initialEntries={['/orders/new']}><App /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: /mis órdenes/i }))
+    expect(await screen.findByRole('heading', { name: /dashboard/i }))
       .toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /nueva orden de trabajo/i }))
       .not.toBeInTheDocument();
@@ -120,6 +149,14 @@ describe('App routing and session gates', () => {
 
     expect(await screen.findByRole('heading', { name: /^usuarios$/i })).toBeInTheDocument();
     await waitFor(() => expect(usersApi.list).toHaveBeenCalledTimes(1));
+  });
+
+  it('allows only ADMIN to enter the audit views', async () => {
+    render(<MemoryRouter initialEntries={['/admin/audit']}><App /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: /^auditoría$/i }))
+      .toBeInTheDocument();
+    expect(auditApi.list).toHaveBeenCalledTimes(1);
   });
 
   it('renders a friendly not-found page inside authenticated routes', async () => {

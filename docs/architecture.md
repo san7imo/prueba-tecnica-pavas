@@ -150,6 +150,20 @@ src/
 
 Los datos de servidor viven cerca de la pantalla que los consume. `AuthContext` se limita a sesión; los formularios usan estado local; Redux no es necesario.
 
+`/dashboard` es el inicio autenticado. Consulta las cuatro colas abiertas reales
+(`RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`) con scope `all` para
+`ADMIN` y `mine` para `MECANICO`; cada tarjeta abre `/orders` con esos filtros
+en la URL. `ADMIN` dispone además de accesos directos a todas las órdenes, la
+cola sin asignar y la creación. El dashboard no calcula métricas derivadas ni
+simula reglas de negocio en cliente.
+
+`/admin/audit` y `/admin/audit/:id` consumen la lectura append-only existente.
+Ambas rutas están detrás de `RoleRoute(ADMIN)` además del RBAC del backend. El
+listado aplica filtros acotados por entidad, acción, actor, fechas e IDs; el
+detalle presenta actor, razón y snapshots allowlisted, sin ofrecer mutaciones.
+La navegación oculta Usuarios y Auditoría a `MECANICO`, pero esa ocultación es
+sólo una ayuda de UX y no sustituye la autorización del API.
+
 `/orders/new` es una ruta exclusiva para `ADMIN`. La página busca y selecciona
 primero un cliente activo, carga únicamente sus motocicletas activas y confirma
 el detalle de la elegida antes de habilitar el alta. Crear cliente o motocicleta

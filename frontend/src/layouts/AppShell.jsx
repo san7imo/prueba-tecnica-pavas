@@ -2,10 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth.js';
 
-const resourceNavigation = [
-  { to: '/clients', label: 'Clientes', end: false },
-  { to: '/bikes', label: 'Motocicletas', end: false },
-];
+const navClassName = ({ isActive }) =>
+  `nav-link${isActive ? ' nav-link--active' : ''}`;
 
 export const AppShell = () => {
   const { user, logout } = useAuth();
@@ -14,7 +12,7 @@ export const AppShell = () => {
     <div className="app-shell">
     <a className="skip-link" href="#main-content">Saltar al contenido principal</a>
     <aside className="sidebar">
-      <NavLink className="brand" to="/orders" aria-label="PAVAS Taller, inicio">
+      <NavLink className="brand" to="/dashboard" aria-label="PAVAS Taller, inicio">
         <span className="brand__mark" aria-hidden="true">P</span>
         <span>
           <strong>PAVAS</strong>
@@ -23,22 +21,14 @@ export const AppShell = () => {
       </NavLink>
 
       <nav className="primary-nav" aria-label="Navegación principal">
-        <NavLink to="/orders" end className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />{user.role === 'ADMIN' ? 'Órdenes' : 'Mis órdenes'}</NavLink>
-        {resourceNavigation.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
-          >
-            <span className="nav-link__dot" aria-hidden="true" />
-            {item.label}
-          </NavLink>
-        ))}
+        <NavLink to="/dashboard" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />Dashboard</NavLink>
+        <NavLink to="/orders" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />{user.role === 'ADMIN' ? 'Órdenes' : 'Mis órdenes'}</NavLink>
+        <NavLink to="/clients" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />Clientes</NavLink>
+        <NavLink to="/bikes" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />Motocicletas</NavLink>
         {user.role === 'ADMIN' ? (
           <>
-            <NavLink to="/orders/new" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />Nueva orden</NavLink>
-            <NavLink to="/admin/users" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}><span className="nav-link__dot" aria-hidden="true" />Usuarios</NavLink>
+            <NavLink to="/admin/users" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />Usuarios</NavLink>
+            <NavLink to="/admin/audit" className={navClassName}><span className="nav-link__dot" aria-hidden="true" />Auditoría</NavLink>
           </>
         ) : null}
       </nav>

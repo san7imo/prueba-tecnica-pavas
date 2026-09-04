@@ -12,7 +12,7 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/orders" replace />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -27,7 +27,7 @@ export const LoginPage = () => {
     try {
       await login({ email: form.email.trim(), password: form.password });
       const destination = location.state?.from?.pathname;
-      navigate(destination && destination !== '/login' ? destination : '/orders', { replace: true });
+      navigate(destination && destination !== '/login' ? destination : '/dashboard', { replace: true });
     } catch (requestError) {
       const apiError = getApiError(requestError, 'No fue posible iniciar sesión. Intenta nuevamente.');
       setError(apiError.status === 401 ? 'Correo o contraseña inválidos.' : apiError.message);

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { auditApi } from '../src/api/auditApi.js';
 import { bikesApi } from '../src/api/bikesApi.js';
 import { clientsApi } from '../src/api/clientsApi.js';
 import { httpClient } from '../src/api/httpClient.js';
@@ -108,5 +109,30 @@ describe('feature API modules', () => {
     expect(httpClient.get).toHaveBeenCalledWith('/work-orders/7/history', {
       params: { page: 2, pageSize: 20 },
     });
+  });
+
+  it('sends only active audit filters and unwraps immutable detail', async () => {
+    httpClient.get
+      .mockResolvedValueOnce({ data: { data: [], meta: { page: 2 } } })
+      .mockResolvedValueOnce({ data: { data: { id: 41 } } });
+
+    await expect(auditApi.list({
+      entityType: 'WORK_ORDER',
+      action: '',
+      actorUserId: '1',
+      page: 2,
+      pageSize: 20,
+    })).resolves.toEqual({ data: [], meta: { page: 2 } });
+    await expect(auditApi.getById(41)).resolves.toEqual({ id: 41 });
+
+    expect(httpClient.get).toHaveBeenNthCalledWith(1, '/audit-events', {
+      params: {
+        entityType: 'WORK_ORDER',
+        actorUserId: '1',
+        page: 2,
+        pageSize: 20,
+      },
+    });
+    expect(httpClient.get).toHaveBeenNthCalledWith(2, '/audit-events/41');
   });
 });

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { ErrorState } from '../components/ui/ErrorState.jsx';
@@ -9,32 +9,65 @@ import { OrderTable } from '../features/workOrders/components/OrderTable.jsx';
 import { Pagination } from '../features/workOrders/components/Pagination.jsx';
 import { useWorkOrders } from '../features/workOrders/hooks/useWorkOrders.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { WORK_ORDER_STATUSES } from '../constants/workOrders.js';
 
 const EMPTY_FILTERS = { status: '', plate: '' };
+const ADMIN_SCOPES = ['all', 'unassigned'];
+
+const positivePage = (value) => {
+  if (!/^[1-9]\d*$/.test(value ?? '')) return 1;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : 1;
+};
 
 export const WorkOrdersPage = () => {
   const { user } = useAuth();
   const isAdmin = user.role === 'ADMIN';
-  const [scope, setScope] = useState(isAdmin ? 'all' : 'mine');
-  const [draft, setDraft] = useState(EMPTY_FILTERS);
-  const [applied, setApplied] = useState(EMPTY_FILTERS);
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedScope = searchParams.get('scope');
+  const requestedStatus = searchParams.get('status');
+  const initialFilters = {
+    status: WORK_ORDER_STATUSES.includes(requestedStatus) ? requestedStatus : '',
+    plate: searchParams.get('plate') ?? '',
+  };
+  const [scope, setScope] = useState(
+    isAdmin && ADMIN_SCOPES.includes(requestedScope) ? requestedScope : isAdmin ? 'all' : 'mine',
+  );
+  const [draft, setDraft] = useState(initialFilters);
+  const [applied, setApplied] = useState(initialFilters);
+  const [page, setPage] = useState(positivePage(searchParams.get('page')));
   const filters = useMemo(
     () => ({ ...applied, scope, page, pageSize: 20 }),
     [applied, page, scope],
   );
   const { orders, meta, loading, error, retry } = useWorkOrders(filters);
 
+  const updateLocation = ({
+    nextScope = scope,
+    nextFilters = applied,
+    nextPage = page,
+  } = {}) => {
+    const next = new URLSearchParams();
+    next.set('scope', nextScope);
+    if (nextFilters.status) next.set('status', nextFilters.status);
+    if (nextFilters.plate) next.set('plate', nextFilters.plate);
+    if (nextPage > 1) next.set('page', String(nextPage));
+    setSearchParams(next, { replace: true });
+  };
+
   const applyFilters = (event) => {
     event.preventDefault();
+    const nextFilters = { status: draft.status, plate: draft.plate.trim() };
     setPage(1);
-    setApplied({ status: draft.status, plate: draft.plate.trim() });
+    setApplied(nextFilters);
+    updateLocation({ nextFilters, nextPage: 1 });
   };
 
   const clearFilters = () => {
     setDraft(EMPTY_FILTERS);
     setApplied(EMPTY_FILTERS);
     setPage(1);
+    updateLocation({ nextFilters: EMPTY_FILTERS, nextPage: 1 });
   };
 
   const hasFilters = Boolean(applied.status || applied.plate);
@@ -42,6 +75,12 @@ export const WorkOrdersPage = () => {
   const changeScope = (nextScope) => {
     setScope(nextScope);
     setPage(1);
+    updateLocation({ nextScope, nextPage: 1 });
+  };
+
+  const changePage = (nextPage) => {
+    setPage(nextPage);
+    updateLocation({ nextPage });
   };
 
   return (
@@ -105,7 +144,7 @@ export const WorkOrdersPage = () => {
         {!loading && !error && orders.length > 0 ? (
           <>
             <OrderTable orders={orders} />
-            <Pagination meta={meta} onPageChange={setPage} disabled={loading} />
+            <Pagination meta={meta} onPageChange={changePage} disabled={loading} />
           </>
         ) : null}
       </div>

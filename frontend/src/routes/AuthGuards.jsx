@@ -17,10 +17,10 @@ export const ProtectedRoute = () => {
 export const AnonymousOnlyRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingState message="Restaurando sesión…" />;
-  return isAuthenticated ? <Navigate to="/orders" replace /> : <Outlet />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
 };
 
 export const RoleRoute = ({ role }) => {
   const { user } = useAuth();
-  return user?.role === role ? <Outlet /> : <Navigate to="/orders" replace />;
+  return user?.role === role ? <Outlet /> : <Navigate to="/dashboard" replace />;
 };

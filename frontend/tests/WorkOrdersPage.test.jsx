@@ -16,8 +16,8 @@ const emptyResult = {
   meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
 };
 
-const renderPage = (user) => renderWithAuth(
-  <MemoryRouter><WorkOrdersPage /></MemoryRouter>,
+const renderPage = (user, initialEntry = '/orders') => renderWithAuth(
+  <MemoryRouter initialEntries={[initialEntry]}><WorkOrdersPage /></MemoryRouter>,
   user ? { auth: authValue(user) } : undefined,
 );
 
@@ -95,6 +95,22 @@ describe('WorkOrdersPage', () => {
     expect(await screen.findByText(/no hay órdenes sin asignar/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sin asignar/i }))
       .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('opens dashboard entry links with authoritative scope and status filters', async () => {
+    workOrdersApi.list.mockResolvedValue(emptyResult);
+    renderPage(undefined, '/orders?scope=unassigned&status=DIAGNOSTICO');
+
+    await waitFor(() => expect(workOrdersApi.list).toHaveBeenCalledWith({
+      status: 'DIAGNOSTICO',
+      plate: '',
+      scope: 'unassigned',
+      page: 1,
+      pageSize: 20,
+    }));
+    expect(screen.getByRole('button', { name: /sin asignar/i }))
+      .toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Estado')).toHaveValue('DIAGNOSTICO');
   });
 
   it('shows MECANICO only the personal mine view without creation controls', async () => {

@@ -1,12 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppShell } from '../layouts/AppShell.jsx';
+import { AuditEventDetailPage } from '../pages/AuditEventDetailPage.jsx';
+import { AuditEventsPage } from '../pages/AuditEventsPage.jsx';
 import { BikeDetailPage } from '../pages/BikeDetailPage.jsx';
 import { BikeFormPage } from '../pages/BikeFormPage.jsx';
 import { BikesPage } from '../pages/BikesPage.jsx';
 import { ClientDetailPage } from '../pages/ClientDetailPage.jsx';
 import { ClientFormPage } from '../pages/ClientFormPage.jsx';
 import { ClientsPage } from '../pages/ClientsPage.jsx';
+import { DashboardPage } from '../pages/DashboardPage.jsx';
 import { LoginPage } from '../pages/LoginPage.jsx';
 import { NewWorkOrderPage } from '../pages/NewWorkOrderPage.jsx';
 import { NotFoundPage } from '../pages/NotFoundPage.jsx';
@@ -22,7 +25,8 @@ export const AppRoutes = () => (
     </Route>
     <Route element={<ProtectedRoute />}>
       <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/orders" replace />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
         <Route path="orders" element={<WorkOrdersPage />} />
         <Route path="orders/:id" element={<WorkOrderDetailPage />} />
         <Route path="clients" element={<ClientsPage />} />
@@ -36,6 +40,8 @@ export const AppRoutes = () => (
           <Route path="bikes/new" element={<BikeFormPage />} />
           <Route path="bikes/:id/edit" element={<BikeFormPage />} />
           <Route path="admin/users" element={<UsersPage />} />
+          <Route path="admin/audit" element={<AuditEventsPage />} />
+          <Route path="admin/audit/:id" element={<AuditEventDetailPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
