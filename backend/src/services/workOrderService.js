@@ -54,6 +54,12 @@ const statusRegressionReasonRequired = () =>
     message: 'A non-empty reason is required for a backward status transition.',
   });
 
+const workOrderNotDelivered = () =>
+  new ConflictError({
+    code: 'WORK_ORDER_NOT_DELIVERED',
+    message: 'Only a delivered work order can be reopened.',
+  });
+
 const bikeHasActiveWorkOrder = () =>
   new ConflictError({
     code: 'BIKE_HAS_ACTIVE_WORK_ORDER',
@@ -376,6 +382,90 @@ export const workOrderService = {
     }
     assertMechanicOwnership(workOrder, actor);
     return workOrder;
+  },
+
+  async reopenWorkOrder(id, { type, reason }, actor) {
+    const identity = await workOrderRepository.findIdentityById(id);
+    if (!identity) throw workOrderNotFound();
+    const bikeIdentity = await bikeRepository.findIdentityById(identity.bikeId);
+    if (!bikeIdentity) throw bikeNotFound();
+
+    try {
+      const workOrderId = await sequelize.transaction(async (transaction) => {
+        const owner = await clientRepository.findByIdForUpdate(
+          bikeIdentity.clientId,
+          transaction,
+        );
+        const bike = await bikeRepository.findByIdForUpdate(
+          identity.bikeId,
+          transaction,
+        );
+        if (!bike) throw bikeNotFound();
+        if (String(bike.clientId) !== String(bikeIdentity.clientId)) {
+          throw concurrentModification();
+        }
+        if (bike.deletedAt !== null) {
+          throw new ConflictError({
+            code: 'BIKE_INACTIVE',
+            message: 'Deleted motorcycles cannot have work orders reopened.',
+          });
+        }
+        if (!owner || owner.deletedAt !== null) {
+          throw new ConflictError({
+            code: 'BIKE_OWNER_INACTIVE',
+            message: 'The motorcycle owner must be active to reopen a work order.',
+          });
+        }
+
+        const workOrder = await workOrderRepository.findByIdForUpdate(
+          id,
+          transaction,
+        );
+        if (!workOrder) throw workOrderNotFound();
+        if (String(workOrder.bikeId) !== String(identity.bikeId)) {
+          throw concurrentModification();
+        }
+        if (workOrder.status !== WORK_ORDER_STATUS.DELIVERED) {
+          throw workOrderNotDelivered();
+        }
+
+        const openOrders = await workOrderRepository.findOpenByBikeIdForUpdate(
+          bike.id,
+          transaction,
+        );
+        if (openOrders.length > 0) throw bikeHasActiveWorkOrder();
+
+        const before = detachedPlain(workOrder);
+        await workOrderRepository.updateStatus(
+          workOrder.id,
+          WORK_ORDER_STATUS.DIAGNOSIS,
+          transaction,
+        );
+        await workOrderStatusHistoryRepository.create({
+          workOrderId: workOrder.id,
+          fromStatus: WORK_ORDER_STATUS.DELIVERED,
+          toStatus: WORK_ORDER_STATUS.DIAGNOSIS,
+          note: reason,
+          changedByUserId: actor.id,
+        }, transaction);
+        await auditService.record({
+          entityType: AUDIT_ENTITY_TYPE.WORK_ORDER,
+          action: AUDIT_ACTION.REOPENED,
+          actor,
+          before,
+          after: {
+            ...before,
+            status: WORK_ORDER_STATUS.DIAGNOSIS,
+          },
+          metadata: { reopenType: type },
+          reason,
+        }, transaction);
+        return workOrder.id;
+      });
+      return workOrderRepository.findById(workOrderId);
+    } catch (error) {
+      return translatePersistenceConflict(error);
+    }
   },
 
   async listStatusHistory(id, pagination, actor) {

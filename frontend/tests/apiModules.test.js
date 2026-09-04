@@ -84,6 +84,23 @@ describe('feature API modules', () => {
     });
   });
 
+  it('sends the dedicated reopening contract with a normalized reason', async () => {
+    httpClient.post.mockResolvedValue({
+      data: { data: { id: 7, status: 'DIAGNOSTICO' } },
+    });
+
+    await expect(workOrdersApi.reopen(
+      7,
+      'SAME_ISSUE',
+      '  Persiste la falla original.  ',
+    )).resolves.toEqual({ id: 7, status: 'DIAGNOSTICO' });
+
+    expect(httpClient.post).toHaveBeenCalledWith('/work-orders/7/reopen', {
+      type: 'SAME_ISSUE',
+      reason: 'Persiste la falla original.',
+    });
+  });
+
   it('requests paginated status history newest-first as provided by the API', async () => {
     httpClient.get.mockResolvedValue({ data: { data: [], meta: { page: 2 } } });
     await workOrdersApi.getHistory(7, { page: 2, pageSize: 20 });

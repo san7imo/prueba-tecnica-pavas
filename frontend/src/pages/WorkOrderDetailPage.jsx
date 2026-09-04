@@ -9,6 +9,7 @@ import { AssignmentPanel } from '../features/workOrders/components/AssignmentPan
 import { ItemForm } from '../features/workOrders/components/ItemForm.jsx';
 import { HistoryTimeline } from '../features/workOrders/components/HistoryTimeline.jsx';
 import { ItemsTable } from '../features/workOrders/components/ItemsTable.jsx';
+import { ReopenPanel } from '../features/workOrders/components/ReopenPanel.jsx';
 import { StatusActions } from '../features/workOrders/components/StatusActions.jsx';
 import {
   isWorkOrderRegression,
@@ -133,6 +134,13 @@ export const WorkOrderDetailPage = () => {
       : 'La orden quedó sin responsable.');
   };
 
+  const orderReopened = (updatedOrder) => {
+    setOrder(updatedOrder);
+    setHistoryVersion((current) => current + 1);
+    setStatusError('');
+    setNotice('Orden reabierta en Diagnóstico. El motivo quedó registrado.');
+  };
+
   if (loading) return <LoadingState message="Cargando detalle de la orden…" />;
 
   if (loadError) {
@@ -214,6 +222,9 @@ export const WorkOrderDetailPage = () => {
               <p>Esta orden está asignada a tu cuenta.</p>
             </section>
           )}
+          {user.role === 'ADMIN' && order.status === 'ENTREGADA' ? (
+            <ReopenPanel order={order} onReopened={orderReopened} />
+          ) : null}
           <StatusActions key={`${order.status}-${historyVersion}`} status={order.status} role={user.role} onTransition={transitionStatus} loadingStatus={statusLoading} error={statusError} />
         </aside>
       </div>

@@ -6,6 +6,7 @@ import {
   getWorkOrder,
   listWorkOrders,
   listWorkOrderStatusHistory,
+  reopenWorkOrder,
   updateWorkOrderAssignment,
   updateWorkOrderStatus,
 } from '../controllers/workOrderController.js';
@@ -24,6 +25,7 @@ import {
   validateWorkOrderHistoryList,
   validateWorkOrderId,
   validateWorkOrderList,
+  validateWorkOrderReopen,
   validateWorkOrderStatusUpdate,
 } from '../validators/workOrderValidators.js';
 
@@ -53,6 +55,12 @@ workOrderRouter.patch(
   '/:id/status',
   validateWorkOrderStatusUpdate,
   updateWorkOrderStatus,
+);
+workOrderRouter.post(
+  '/:id/reopen',
+  authorize(USER_ROLE.ADMIN),
+  validateWorkOrderReopen,
+  reopenWorkOrder,
 );
 workOrderRouter.get(
   '/:id/history',

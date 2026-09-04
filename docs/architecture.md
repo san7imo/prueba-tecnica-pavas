@@ -2,7 +2,7 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura implementada hasta HITO 10 de
+Este documento describe la arquitectura implementada hasta HITO 11 de
 productización: conserva las fases 1 y 2 y añade auditoría global, lifecycles
 backend completos, una sola orden abierta por motocicleta y asignación
 auditable de responsable, un alta orientada a reutilizar maestras y ownership
@@ -18,7 +18,8 @@ HITO 4 completó motocicletas, HITO 6 protegió la unicidad de la orden abierta 
 HITO 7 activó la asignación, HITO 8 conectó esas capacidades en el flujo
 frontend cliente → motocicleta → orden y HITO 9 hizo efectiva la responsabilidad
 individual del mecánico. HITO 10 añadió tres regresiones operativas explícitas,
-con razón obligatoria y doble ledger. Una sola API Express permite
+con razón obligatoria y doble ledger. HITO 11 añadió la reapertura administrativa
+de garantía/misma falla como operación dedicada y transaccional. Una sola API Express permite
 conservar límites claros sin introducir costes operativos que la prueba no
 necesita.
 
@@ -98,6 +99,7 @@ Las operaciones con varias escrituras son atómicas:
 - **Asignación:** bloquea los usuarios anterior/destino por ID y después la orden; revalida status y asignación persistida antes de escribir `ASSIGNED`, `REASSIGNED` o `UNASSIGNED` dentro de la misma transacción.
 - **Ownership operativo:** listas, detalle e historial restringen al `MECANICO` a su ID autenticado. Estado e ítems verifican de nuevo el responsable persistido después de bloquear la orden, por lo que una reasignación revoca acceso operativo inmediatamente.
 - **Cambio de estado:** el service bloquea la orden, relee el estado persistido, valida grafo y actor, clasifica la arista como `FORWARD` o `REGRESSION` y exige razón para toda regresión. La actualización, una fila de history y un evento global se confirman o revierten juntos. Un competidor espera y valida contra el resultado confirmado.
+- **Reapertura:** el service bloquea `Client → Bike → WorkOrder`, exige recursos activos, estado `ENTREGADA` y ausencia de otra orden abierta. El paso a `DIAGNOSTICO`, history y audit `REOPENED` con tipo/razón son atómicos; los mismos locks serializan reapertura contra otra reapertura, alta de orden y eliminación de motocicleta.
 - **Refresh:** la fila del token presentado se bloquea durante rotación. Una segunda utilización concurrente se interpreta defensivamente como replay.
 
 El total se calcula con operandos `DECIMAL` y viaja como string; no se usa `Number` para dinero. Consulte [ADR-004](decisions/ADR-004-server-side-order-total.md).
@@ -162,8 +164,11 @@ razón y confirmación cuando reemplaza o retira una asignación existente.
 
 Las acciones de estado se derivan de la misma matriz explícita que el backend.
 Los tres retornos muestran etiquetas “Volver”, permanecen deshabilitados sin
-motivo y requieren confirmación. Ocultar o bloquear controles es sólo UX: el
-servicio vuelve a comprobar arista, ownership y razón bajo lock.
+motivo y requieren confirmación. Una orden entregada muestra a `ADMIN` un panel
+separado que sólo ofrece `WARRANTY`/`SAME_ISSUE`, razón obligatoria y confirmación;
+al completar usa el detalle devuelto por el backend y refresca el timeline.
+Ocultar o bloquear controles es sólo UX: el servicio vuelve a comprobar arista,
+ownership, lifecycle, unicidad abierta y razón bajo lock.
 
 React Router implementa guardas protegidas, anónimas y de `ADMIN`. Axios separa el cliente de negocio del cliente auth para evitar recursión. Un coordinador en memoria deduplica refresh concurrentes y limita cada 401 a un reintento.
 

@@ -4,10 +4,12 @@
 
 El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
 fundaciones de persistencia de productización: lifecycle de clientes/motos,
-`audit_events`, responsable de orden y actor de ítem. Doce migraciones son la
+`audit_events`, responsable de orden y actor de ítem. Trece migraciones son la
 fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
 forma segura sus contactos; HITO 4 activa el lifecycle y ownership de motos
-y las demás capacidades se activan por hito.
+y las demás capacidades se activan por hito. La reapertura de HITO 11 no agrega
+columnas: sus repeticiones se reconstruyen desde `work_order_status_history` y
+`audit_events`, evitando un campo mutable de “última reapertura”.
 
 ## Convenciones
 

@@ -28,6 +28,15 @@ export const WORK_ORDER_SCOPES = Object.freeze(
   Object.values(WORK_ORDER_SCOPE),
 );
 
+export const WORK_ORDER_REOPEN_TYPE = Object.freeze({
+  WARRANTY: 'WARRANTY',
+  SAME_ISSUE: 'SAME_ISSUE',
+});
+
+export const WORK_ORDER_REOPEN_TYPES = Object.freeze(
+  Object.values(WORK_ORDER_REOPEN_TYPE),
+);
+
 export const WORK_ORDER_ITEM_TYPE = Object.freeze({
   LABOR: 'MANO_OBRA',
   PART: 'REPUESTO',

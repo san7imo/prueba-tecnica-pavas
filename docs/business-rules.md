@@ -3,7 +3,7 @@
 ## Estado
 
 Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-los hitos de productización aprobados hasta HITO 10.
+los hitos de productización aprobados hasta HITO 11.
 
 ## Máquina de estados de la orden
 
@@ -21,6 +21,7 @@ stateDiagram-v2
     DIAGNOSTICO --> CANCELADA
     EN_PROCESO --> CANCELADA
     LISTA --> CANCELADA
+    ENTREGADA --> DIAGNOSTICO: sólo reopen WARRANTY/SAME_ISSUE
 ```
 
 Mapa canónico:
@@ -42,10 +43,10 @@ Mapa canónico:
 | `DIAGNOSTICO` | `EN_PROCESO`, `CANCELADA` |
 | `EN_PROCESO` | `DIAGNOSTICO` (regresión), `LISTA`, `CANCELADA` |
 | `LISTA` | `DIAGNOSTICO` (regresión), `EN_PROCESO` (regresión), `ENTREGADA`, `CANCELADA` |
-| `ENTREGADA` | ninguno |
+| `ENTREGADA` | ninguno por PATCH; `DIAGNOSTICO` sólo por reapertura dedicada |
 | `CANCELADA` | ninguno |
 
-- `ENTREGADA` y `CANCELADA` son terminales para el status PATCH. La futura reapertura de garantía usa una operación dedicada y no forma parte de este hito.
+- `ENTREGADA` y `CANCELADA` son terminales para el status PATCH. La reapertura de `ENTREGADA` usa una operación dedicada y no amplía ese grafo genérico.
 - Un destino desconocido falla en validación; una arista conocida pero inválida devuelve HTTP 400 con `INVALID_STATUS_TRANSITION`.
 - Solicitar el mismo estado se rechaza y nunca crea historial.
 - La orden se bloquea en una transacción y se valida desde el estado leído bajo lock.
@@ -55,6 +56,19 @@ Mapa canónico:
 - `LISTA → EN_PROCESO` representa una prueba fallida cuyo trabajo correctivo ya es conocido.
 - Una regresión válida crea history con la nota y audit `STATUS_CHANGED` con `transitionKind: REGRESSION` y la misma razón, atómicamente.
 - Permanecen prohibidos los retornos a `RECIBIDA`, cualquier salida de `CANCELADA` y `ENTREGADA → DIAGNOSTICO` mediante el status PATCH.
+
+## Reapertura de garantía o misma falla
+
+- Sólo `ADMIN` usa `POST /api/work-orders/:id/reopen`; `MECANICO` no reabre.
+- La orden debe estar actualmente `ENTREGADA` y vuelve siempre a `DIAGNOSTICO`.
+- `type` admite exclusivamente `WARRANTY` o `SAME_ISSUE`; una falla distinta crea una orden nueva.
+- `reason` es obligatorio, no vacío y de máximo 1000 caracteres.
+- La motocicleta y su propietario actual deben permanecer activos.
+- No puede existir otra orden abierta para la misma motocicleta.
+- El servicio bloquea `Client → Bike → WorkOrder`, revalida el estado persistido y coordina esta operación con creación y eliminación.
+- Estado, history `ENTREGADA → DIAGNOSTICO` y audit `REOPENED` con `reopenType`/razón se confirman o revierten juntos.
+- Dos solicitudes concurrentes producen como máximo una reapertura; crear una nueva orden o eliminar la moto en competencia produce un único resultado válido.
+- Total, ítems y responsable se conservan. No existe un campo mutable de “última reapertura”: los ledgers append-only preservan todas las recurrencias.
 
 ## Creación y unicidad de órdenes abiertas
 
@@ -174,6 +188,7 @@ La placa se recorta, convierte a mayúsculas y elimina espacios antes de guardar
 | Avanzar a `LISTA` | Sí | Sí |
 | Avanzar a `ENTREGADA` | Sí | No |
 | Avanzar a `CANCELADA` | Sí | No |
+| Reabrir `ENTREGADA` por garantía/misma falla | Sí | No |
 | Consultar historial | Sí | Sí |
 | Consultar auditoría empresarial global | Sí | No |
 | Administrar usuarios | Sí | No |

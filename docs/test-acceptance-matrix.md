@@ -23,6 +23,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-OWN-008` a `PZ-OWN-010` | `frontend/tests/WorkOrdersPage.test.jsx`, `WorkOrderDetailPage.test.jsx`, `App.test.jsx` |
 | `PZ-STATE-001` a `PZ-STATE-007` | `backend/tests/workOrderStatus.integration.test.js` |
 | `PZ-STATE-008` a `PZ-STATE-009` | `frontend/tests/WorkOrderDetailPage.test.jsx` |
+| `PZ-REOPEN-001` a `PZ-REOPEN-009` | `backend/tests/workOrderReopen.integration.test.js` |
+| `PZ-REOPEN-010` a `PZ-REOPEN-011` | `frontend/tests/WorkOrderDetailPage.test.jsx`, `apiModules.test.js` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -154,6 +156,15 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-STATE-005 | Audit registra STATUS_CHANGED, razón y transitionKind REGRESSION | regression audit cases | PASS |
 | PZ-STATE-006 | Fallo audit revierte estado e history | forced regression audit failure | PASS |
 | PZ-STATE-007 | Retrocesos arbitrarios, terminales y ENTREGADA por PATCH fallan | forbidden transition matrix | PASS |
+| PZ-REOPEN-001 | Reapertura usa endpoint ADMIN dedicado y no abre el PATCH genérico | authorization/generic PATCH cases | PASS |
+| PZ-REOPEN-002 | Sólo WARRANTY/SAME_ISSUE con reason válido pasan validación | validation matrix | PASS |
+| PZ-REOPEN-003 | Sólo ENTREGADA puede volver a DIAGNOSTICO | persisted status matrix | PASS |
+| PZ-REOPEN-004 | Bike y propietario eliminados bloquean sin efectos | deleted resource cases | PASS |
+| PZ-REOPEN-005 | Otra orden abierta devuelve BIKE_HAS_ACTIVE_WORK_ORDER | competing open case | PASS |
+| PZ-REOPEN-006 | Total/responsable se conservan; history/audit contienen actor, tipo y razón | both-type ledger cases | PASS |
+| PZ-REOPEN-007 | Fallo audit revierte status e history | forced audit rollback case | PASS |
+| PZ-REOPEN-008 | Dos reopens concurrentes dejan un único cambio/evento | concurrent reopen case | PASS |
+| PZ-REOPEN-009 | Reopen contra create/delete conserva unicidad y lifecycle | cross-operation races | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |
@@ -205,6 +216,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-OWN-010 | ADMIN asigna, reasigna y desasigna con razón/confirmación y estados UX | assignment panel cases | PASS |
 | PZ-STATE-008 | Detalle ofrece los tres retornos con etiquetas y acciones por rol | regression control cases | PASS |
 | PZ-STATE-009 | Regresión permanece bloqueada sin motivo y exige confirmación | reason/confirmation case | PASS |
+| PZ-REOPEN-010 | Panel ADMIN ofrece tipos cerrados, reason y confirmación | admin reopen flow | PASS |
+| PZ-REOPEN-011 | Panel se oculta por rol/estado, evita doble submit y presenta conflictos | role/error/loading cases | PASS |
 
 ## Evidencia no funcional y documental
 

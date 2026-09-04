@@ -155,6 +155,17 @@ La tabla contiene 111 requisitos: 105 `Done` y 6 `Foundation`. No existen filas 
 | PZ-STATE-007 | Retrocesos arbitrarios, terminales y reopen genérico siguen prohibidos | HITO 10 | grafo cerrado; sin arista ENTREGADA | status API | forbidden transition matrix | Done |
 | PZ-STATE-008 | UI muestra los tres retornos con etiquetas inequívocas según rol | HITO 10 | matriz frontend alineada | `/orders/:id` | regression control cases | Done |
 | PZ-STATE-009 | UI bloquea sin motivo y confirma antes de enviar una regresión | HITO 10 | validación/confirmación defensiva | `/orders/:id` | reason/confirmation case | Done |
+| PZ-REOPEN-001 | Reapertura es endpoint dedicado sólo ADMIN; PATCH genérico sigue cerrado | HITO 11 | route RBAC + service separado | `POST /work-orders/:id/reopen` | auth/generic PATCH cases | Done |
+| PZ-REOPEN-002 | Sólo WARRANTY/SAME_ISSUE y reason no vacío son válidos | HITO 11 | validator allowlisted | reopen API | validation matrix | Done |
+| PZ-REOPEN-003 | Sólo una orden actualmente ENTREGADA puede reabrirse | HITO 11 | estado revalidado bajo lock | reopen API | status matrix | Done |
+| PZ-REOPEN-004 | Bike y propietario deben estar activos | HITO 11 | locks Client → Bike + lifecycle recheck | reopen API | deleted resource cases | Done |
+| PZ-REOPEN-005 | Otra orden abierta bloquea la reapertura | HITO 11 | open-order query bloqueada + UNIQUE físico | reopen API | competing open case | Done |
+| PZ-REOPEN-006 | Reopen conserva total/responsable y registra history/audit exactos | HITO 11 | transacción + ledgers append-only | reopen/history/audit APIs | both-type ledger cases | Done |
+| PZ-REOPEN-007 | Fallo audit revierte status e history | HITO 11 | transacción única | reopen API | forced audit failure | Done |
+| PZ-REOPEN-008 | Dos reopens concurrentes confirman máximo uno | HITO 11 | locks canónicos + estado persistido | reopen API | concurrent reopen case | Done |
+| PZ-REOPEN-009 | Reopen se serializa contra alta y delete sin violar invariantes | HITO 11 | locks compartidos Client → Bike → WorkOrder | reopen/create/delete APIs | cross-operation races | Done |
+| PZ-REOPEN-010 | UI ADMIN ofrece sólo tipos válidos, reason y confirmación | HITO 11 | `ReopenPanel` + API dedicada | `/orders/:id` | admin reopen flow | Done |
+| PZ-REOPEN-011 | UI oculta por rol/estado, evita doble submit y muestra conflictos | HITO 11 | render condicional + estado local | `/orders/:id` | role/error/loading cases | Done |
 | P0-DEMO-001 | Seed demo opcional, íntegro, idempotente y no productivo | Extensión opcional aprobada | `seedDemoData`, marcador reservado y transacción | `npm run db:seed:demo` | `demoSeed.integration.test.js` | Done |
 
 ## Regla de mantenimiento

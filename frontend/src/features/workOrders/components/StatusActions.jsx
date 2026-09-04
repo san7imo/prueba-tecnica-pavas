@@ -28,7 +28,9 @@ export const StatusActions = ({ status, role, onTransition, loadingStatus, error
       </div>
       {workflowAllowed.length === 0 ? (
         <p className="terminal-message" role="status">
-          Esta orden está en un estado final y no admite más cambios.
+          {status === 'ENTREGADA'
+            ? 'Esta orden fue entregada y no admite transiciones normales.'
+            : 'Esta orden está en un estado final y no admite más cambios.'}
         </p>
       ) : allowed.length === 0 ? (
         <p className="terminal-message" role="status">

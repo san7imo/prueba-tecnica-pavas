@@ -9,8 +9,8 @@ Aprobado — 2026-09-03.
 Los roles actuales son globales: no existe responsable por orden y un mecánico puede operar trabajo ajeno. La máquina de estados sólo avanza, aunque durante reparación pueden aparecer fallas adicionales, una prueba final puede fallar y una moto entregada puede regresar por garantía.
 
 ADR-003 describe la máquina original. La asignación (HITO 7), el ownership
-(HITO 9) y las regresiones genéricas (HITO 10) ya materializan esta decisión;
-la reapertura dedicada permanece para HITO 11.
+(HITO 9), las regresiones genéricas (HITO 10) y la reapertura dedicada
+(HITO 11) materializan esta decisión.
 
 ## Decisión
 
@@ -39,7 +39,11 @@ La primera cubre una falla adicional durante reparación; las otras cubren prueb
 reason, ADMIN, recursos activos y ninguna orden abierta competidora. Una falla
 diferente crea una nueva orden.
 
-History y audit se escriben en la misma transacción. Cada reapertura vive como evento; no se agrega un campo de “última reapertura” que perdería repeticiones.
+El servicio bloquea `Client → Bike → WorkOrder`, revalida lifecycle, estado y
+ausencia de otra orden abierta. History y audit se escriben en la misma
+transacción. Cada reapertura vive como evento; no se agrega un campo de “última
+reapertura” que perdería repeticiones. La UI la presenta como panel separado
+sólo a `ADMIN`, con motivo obligatorio, confirmación y errores del backend.
 
 ### Ítems y usuarios
 

@@ -60,6 +60,14 @@ export const workOrdersApi = {
     return response.data.data;
   },
 
+  async reopen(id, type, reason) {
+    const response = await httpClient.post(`/work-orders/${id}/reopen`, {
+      type,
+      reason: reason.trim(),
+    });
+    return response.data.data;
+  },
+
   async getHistory(id, { page = 1, pageSize = 20 } = {}) {
     const response = await httpClient.get(`/work-orders/${id}/history`, {
       params: { page, pageSize },

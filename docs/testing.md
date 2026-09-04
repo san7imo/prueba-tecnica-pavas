@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  24 suites, 293 pruebas
-Frontend: 12 suites, 73 pruebas
-Matriz:   174 filas PASS
+Backend:  25 suites, 314 pruebas
+Frontend: 12 suites, 76 pruebas
+Matriz:   185 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -177,6 +177,18 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando revalidación después del lock.
 
+### Reapertura — `workOrderReopen.integration.test.js`
+
+- ambos tipos (`WARRANTY`/`SAME_ISSUE`) regresan exclusivamente de `ENTREGADA` a `DIAGNOSTICO`;
+- razón obligatoria/normalizada, ID, allowlist de tipo, 401/403 y 404;
+- recursos activos y ausencia de otra orden abierta;
+- conservación de total/responsable y contenido exacto de history/audit `REOPENED`;
+- el PATCH genérico mantiene prohibido `ENTREGADA → DIAGNOSTICO`;
+- fallo audit revierte estado e history;
+- dos reopens dejan sólo uno confirmado;
+- reopen contra alta de una falla distinta deja exactamente una orden abierta;
+- reopen contra delete de motocicleta nunca deja una moto eliminada operativa.
+
 ### Autenticación — `auth.integration.test.js`
 
 - bcrypt, seed ADMIN idempotente y login normalizado;
@@ -275,6 +287,14 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - los botones de regresión permanecen deshabilitados mientras el motivo esté vacío;
 - una regresión exige confirmación y envía target/motivo al API sólo al aceptar;
 - las etiquetas distinguen regresar de avanzar y el backend sigue siendo autoritativo.
+
+### Reapertura administrativa — `WorkOrderDetailPage.test.jsx` y `apiModules.test.js`
+
+- sólo `ADMIN` ve el panel y únicamente sobre una orden `ENTREGADA`;
+- el selector ofrece exclusivamente garantía/misma falla y la razón bloquea el envío vacío;
+- la confirmación precede el request y la operación usa el endpoint/payload dedicado;
+- éxito actualiza el detalle devuelto y refresca history; conflicto muestra el mensaje seguro;
+- el estado de carga impide doble envío; `MECANICO` y `CANCELADA` no exponen la acción.
 
 ### Accesibilidad y polish
 

@@ -49,6 +49,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - ownership operativo: cada `MECANICO` sólo consulta y muta sus órdenes asignadas;
 - vista **Mis órdenes** para mecánicos y colas **Todas/Sin asignar** con gestión de responsable para `ADMIN`.
 - retrocesos controlados y auditados cuando la reparación revela otra falla o una prueba final falla.
+- reapertura administrativa de una orden entregada por garantía o la misma falla, con razón, history/audit y protección concurrente.
 
 ## Stack tecnológico
 
@@ -253,7 +254,7 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 |---|---|
 | `npm run dev` | inicia la API con recarga de Node.js |
 | `npm start` | inicia la API sin modo watch |
-| `npm test` | ejecuta 15 suites sobre MySQL de pruebas |
+| `npm test` | ejecuta 25 suites sobre MySQL de pruebas |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 | `npm run db:seed:admin` | crea de forma idempotente el ADMIN inicial |
@@ -266,7 +267,7 @@ El puerto host de MySQL puede cambiarse con `DB_PORT` en el `.env` raíz y debe 
 | `npm run dev` | inicia Vite en desarrollo |
 | `npm run build` | genera el bundle de producción |
 | `npm run preview` | sirve localmente el bundle generado |
-| `npm test` | ejecuta 10 suites de Vitest/RTL |
+| `npm test` | ejecuta 12 suites de Vitest/RTL |
 | `npm run test:watch` | ejecuta Vitest en modo interactivo |
 | `npm run lint` | valida el código con ESLint |
 
@@ -283,6 +284,8 @@ Login ADMIN
   → verificar el total
   → cambiar el estado
   → consultar el historial
+  → entregar
+  → reabrir por garantía en diagnóstico
 ```
 
 Para comprobar RBAC, cree un usuario `MECANICO`, inicie sesión con él y
@@ -297,12 +300,17 @@ responsables, entregar/cancelar, borrar ítems ni administrar usuarios.
 RECIBIDA → DIAGNOSTICO → EN_PROCESO → LISTA → ENTREGADA
 ```
 
-`CANCELADA` es válida desde `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. `ENTREGADA` y `CANCELADA` son terminales. Las transiciones inválidas o al mismo estado devuelven HTTP 400 y no generan historial.
+`CANCELADA` es válida desde `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO` o `LISTA`. `ENTREGADA` y `CANCELADA` son terminales para el PATCH genérico. Las transiciones inválidas o al mismo estado devuelven HTTP 400 y no generan historial.
 
 Con un motivo obligatorio, `EN_PROCESO` puede volver a `DIAGNOSTICO` y
 `LISTA` puede volver a `DIAGNOSTICO` o `EN_PROCESO`. Esos retornos quedan en el
 historial y en la auditoría como `REGRESSION`; no habilitan ningún retroceso a
 `RECIBIDA` ni la reapertura de una orden entregada.
+
+Sólo `ADMIN` puede reabrir una orden `ENTREGADA` mediante la operación dedicada:
+`WARRANTY` o `SAME_ISSUE`, motivo obligatorio, motocicleta/propietario activos y
+ninguna otra orden abierta. El resultado vuelve a `DIAGNOSTICO` y queda en
+history y audit `REOPENED`; una falla distinta se registra como orden nueva.
 
 - `ADMIN`: acceso completo a las acciones implementadas.
 - `MECANICO`: lectura, creación de ítems y avance a `DIAGNOSTICO`,
@@ -332,9 +340,9 @@ El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `tes
 Baseline verificado para la entrega:
 
 ```text
-Backend:        24 suites, 293 pruebas
-Frontend:       12 suites, 73 pruebas
-Matriz crítica: 174 casos/filas PASS
+Backend:        25 suites, 314 pruebas
+Frontend:       12 suites, 76 pruebas
+Matriz crítica: 185 casos/filas PASS
 Migraciones:    13 ejecutadas, 0 pendientes
 ```
 

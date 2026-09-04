@@ -15,6 +15,7 @@ vi.mock('../src/api/workOrdersApi.js', () => ({
     deleteItem: vi.fn(),
     updateStatus: vi.fn(),
     changeAssignment: vi.fn(),
+    reopen: vi.fn(),
     getHistory: vi.fn(),
   },
 }));
@@ -300,14 +301,100 @@ describe('WorkOrderDetailPage', () => {
     expect(await screen.findByText('La transición ya no es válida.')).toBeInTheDocument();
   });
 
-  it('shows terminal feedback without transition buttons', async () => {
+  it('offers ADMIN the dedicated delivered-order reopening flow', async () => {
     workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'ENTREGADA' });
+    workOrdersApi.reopen.mockResolvedValue({
+      ...orderFixture,
+      status: 'DIAGNOSTICO',
+    });
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
     renderPage();
 
-    expect(await screen.findByText(/estado final y no admite más cambios/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no admite transiciones normales/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /iniciar|marcar|entregar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cancelar orden/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/nuevo responsable/i)).not.toBeInTheDocument();
+
+    const type = screen.getByLabelText(/tipo de reapertura/i);
+    expect([...type.options].map(({ value }) => value)).toEqual([
+      'WARRANTY',
+      'SAME_ISSUE',
+    ]);
+    expect([...type.options].some(({ value }) => value === 'OTHER')).toBe(false);
+    fireEvent.change(type, { target: { value: 'SAME_ISSUE' } });
+
+    const submit = screen.getByRole('button', { name: /reabrir en diagnóstico/i });
+    expect(submit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/motivo de reapertura/i), {
+      target: { value: '  Persiste la falla original.  ' },
+    });
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(submit);
+    expect(workOrdersApi.reopen).not.toHaveBeenCalled();
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(workOrdersApi.reopen).toHaveBeenCalledWith(
+      7,
+      'SAME_ISSUE',
+      '  Persiste la falla original.  ',
+    ));
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringMatching(/misma falla.*volverá a Diagnóstico.*motivo quedará registrado/i),
+    );
+    expect(await screen.findByText(/orden reabierta en Diagnóstico/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /reabrir orden/i })).not.toBeInTheDocument();
+    await waitFor(() => expect(workOrdersApi.getHistory).toHaveBeenCalledTimes(2));
+  });
+
+  it('surfaces a reopening conflict and prevents duplicate submission', async () => {
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'ENTREGADA' });
+    let rejectReopen;
+    workOrdersApi.reopen.mockReturnValue(new Promise((_resolve, reject) => {
+      rejectReopen = reject;
+    }));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+    await screen.findByRole('heading', { name: /reabrir orden/i });
+
+    fireEvent.change(screen.getByLabelText(/motivo de reapertura/i), {
+      target: { value: 'Garantía vigente.' },
+    });
+    const submit = screen.getByRole('button', { name: /reabrir en diagnóstico/i });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    expect(workOrdersApi.reopen).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /reabriendo/i })).toBeDisabled();
+    rejectReopen({
+      response: {
+        status: 409,
+        data: {
+          error: {
+            code: 'BIKE_HAS_ACTIVE_WORK_ORDER',
+            message: 'La motocicleta ya tiene otra orden abierta.',
+          },
+        },
+      },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La motocicleta ya tiene otra orden abierta.',
+    );
+    expect(screen.getByRole('button', { name: /reabrir en diagnóstico/i })).toBeEnabled();
+  });
+
+  it('does not expose reopening to MECANICO or from CANCELADA', async () => {
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'ENTREGADA' });
+    const mechanicRender = renderPage(mechanicUser);
+    await screen.findByRole('heading', { name: /orden #7/i });
+    expect(screen.queryByRole('heading', { name: /reabrir orden/i })).not.toBeInTheDocument();
+
+    mechanicRender.unmount();
+    workOrdersApi.getById.mockResolvedValue({ ...orderFixture, status: 'CANCELADA' });
+    renderPage();
+    await screen.findByRole('heading', { name: /orden #7/i });
+    expect(screen.queryByRole('heading', { name: /reabrir orden/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/estado final y no admite más cambios/i)).toBeInTheDocument();
   });
 
   it('renders a specific not-found state', async () => {

@@ -60,3 +60,12 @@ export const updateWorkOrderAssignment = async (request, response) => {
   );
   response.json({ data: serializeWorkOrder(workOrder) });
 };
+
+export const reopenWorkOrder = async (request, response) => {
+  const workOrder = await workOrderService.reopenWorkOrder(
+    request.validated.params.id,
+    request.validated.body,
+    request.user,
+  );
+  response.json({ data: serializeWorkOrder(workOrder) });
+};

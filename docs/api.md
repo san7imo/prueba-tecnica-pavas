@@ -3,7 +3,7 @@
 ## Alcance implementado
 
 La API expone las rutas completas de las fases 1 y 2 y los hitos de
-productización aprobados hasta HITO 10. Clientes, motocicletas, órdenes y
+productización aprobados hasta HITO 11. Clientes, motocicletas, órdenes y
 usuarios requieren access JWT; sólo health y el ciclo login/refresh/logout son
 públicos.
 
@@ -41,6 +41,7 @@ GET    /api/work-orders/:id
 GET    /api/work-orders/:id/history?page=&pageSize=
 PATCH  /api/work-orders/:id/assignment
 PATCH  /api/work-orders/:id/status
+POST   /api/work-orders/:id/reopen
 POST   /api/work-orders/:id/items
 DELETE /api/work-orders/items/:itemId
 
@@ -546,8 +547,8 @@ para todos es 400; una válida pero prohibida o una orden ajena/sin asignar es
 Las tres regresiones exigen `note` no vacío; sin él responden
 `400 STATUS_REGRESSION_REASON_REQUIRED`. Una regresión válida persiste la nota
 en history y crea `STATUS_CHANGED` con `metadata.transitionKind=REGRESSION` y
-la misma razón. `ENTREGADA → DIAGNOSTICO` continúa rechazado aquí: la
-reapertura de garantía tendrá un endpoint dedicado en su hito.
+la misma razón. `ENTREGADA → DIAGNOSTICO` continúa rechazado aquí y sólo se
+ejecuta mediante la operación dedicada de reapertura.
 
 ```json
 { "data": { "id": 10, "status": "DIAGNOSTICO" } }
@@ -565,6 +566,42 @@ reapertura de garantía tendrá un endpoint dedicado en su hito.
 Errores: `400 VALIDATION_ERROR`, `400 INVALID_STATUS_TRANSITION`,
 `400 STATUS_REGRESSION_REASON_REQUIRED`,
 `403 WORK_ORDER_NOT_ASSIGNED_TO_ACTOR`, `404 WORK_ORDER_NOT_FOUND`, 500 seguro.
+
+### Reabrir por garantía o misma falla
+
+```http
+POST /api/work-orders/:id/reopen
+Authorization: Bearer <accessToken ADMIN>
+Content-Type: application/json
+
+{
+  "type": "WARRANTY",
+  "reason": "Persiste la falla reportada por el cliente."
+}
+```
+
+Operación exclusiva de `ADMIN`. `type` admite únicamente `WARRANTY` o
+`SAME_ISSUE`; `reason` es obligatorio, se recorta y admite máximo 1000
+caracteres. Sólo una orden actualmente `ENTREGADA`, cuya motocicleta y
+propietario estén activos, puede volver a `DIAGNOSTICO`. Una falla no
+relacionada debe crear una orden nueva y no existe el tipo `OTHER`.
+
+La transacción bloquea `Client → Bike → WorkOrder`, confirma que no haya otra
+orden abierta para la motocicleta, cambia el estado y escribe juntos:
+
+- history `ENTREGADA → DIAGNOSTICO`, con actor y razón;
+- audit `REOPENED`, con before/after, razón y
+  `metadata.reopenType=WARRANTY|SAME_ISSUE`.
+
+La respuesta contiene el detalle autoritativo de la orden ya reabierta. No se
+agregan campos de “última reapertura”; la secuencia vive en los dos ledgers.
+
+Errores: `400 VALIDATION_ERROR`, `401 AUTHENTICATION_REQUIRED`, `403 FORBIDDEN`,
+`404 WORK_ORDER_NOT_FOUND`, `409 WORK_ORDER_NOT_DELIVERED`, `409 BIKE_INACTIVE`,
+`409 BIKE_OWNER_INACTIVE`, `409 BIKE_HAS_ACTIVE_WORK_ORDER` y
+`409 CONCURRENT_MODIFICATION_RETRY`. Dos reaperturas o una reapertura en
+competencia con alta/eliminación se serializan sin producir dos órdenes
+abiertas ni trabajo operativo sobre una motocicleta eliminada.
 
 ### Consultar historial
 

@@ -233,6 +233,9 @@ p { color: var(--ink-700); line-height: 1.55; }
 .assignment-panel .section-heading p:last-child { margin-top: 0.25rem; color: var(--ink-500); }
 .assignment-reason { margin-top: 0.8rem; }
 .assignment-reason textarea { min-height: 5.5rem; }
+.reopen-panel .section-heading p:last-child { margin-top: 0.25rem; color: var(--ink-500); }
+.reopen-reason { margin-top: 0.8rem; }
+.reopen-reason textarea { min-height: 6rem; }
 .terminal-message { margin-bottom: 0; padding: 0.8rem; border-radius: var(--radius-sm); color: var(--ink-700); background: var(--surface-muted); font-size: 0.8rem; }
 
 .login-page { display: grid; min-height: 100vh; place-items: center; padding: 1.25rem; background: radial-gradient(circle at top left, #e7eef7 0, transparent 34%), var(--navy-950); }

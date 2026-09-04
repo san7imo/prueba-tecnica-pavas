@@ -1,4 +1,5 @@
 import {
+  WORK_ORDER_REOPEN_TYPES,
   WORK_ORDER_SCOPES,
   WORK_ORDER_STATUSES,
 } from '../constants/workOrder.js';
@@ -356,6 +357,55 @@ export const validateWorkOrderStatusUpdate = (request, _response, next) => {
   request.validated = {
     params: { id },
     body: { toStatus, note },
+  };
+  next();
+};
+
+export const validateWorkOrderReopen = (request, _response, next) => {
+  const body = asObject(request.body);
+  const details = [];
+  const id = positiveId({
+    value: request.params.id,
+    field: 'id',
+    label: 'Work order id',
+    details,
+  });
+  const type = requiredString({
+    value: body.type,
+    field: 'type',
+    label: 'Reopen type',
+    maxLength: 30,
+    details,
+  });
+  const reason = requiredString({
+    value: body.reason,
+    field: 'reason',
+    label: 'Reopen reason',
+    maxLength: MAX_STATUS_NOTE_LENGTH,
+    details,
+  });
+
+  if (type !== undefined && !WORK_ORDER_REOPEN_TYPES.includes(type)) {
+    details.push({
+      field: 'type',
+      message: 'Reopen type must be WARRANTY or SAME_ISSUE.',
+    });
+  }
+
+  if (details.length > 0) {
+    completeValidation({
+      request,
+      section: 'body',
+      value: { type, reason },
+      details,
+      next,
+    });
+    return;
+  }
+
+  request.validated = {
+    params: { id },
+    body: { type, reason },
   };
   next();
 };

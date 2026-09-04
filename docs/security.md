@@ -69,6 +69,14 @@ moto y create de orden comparten `Client → Bike`; así nunca queda una orden
 nueva sobre una moto eliminada. Placa sigue protegida por UNIQUE global y una
 colisión con un eliminado dirige a restore sin liberar la identidad histórica.
 
+La reapertura usa una ruta dedicada autorizada sólo para `ADMIN`; autenticación
+y RBAC preceden la validación del ID/body. El backend no acepta reapertura por el
+PATCH genérico ni tipos fuera de `WARRANTY`/`SAME_ISSUE`. Bajo locks
+`Client → Bike → WorkOrder` revalida lifecycle, estado y ausencia de otra orden
+abierta; actor, tipo y razón provienen exclusivamente del contexto autenticado y
+del payload allowlisted. History y audit revierten junto con el estado ante
+cualquier fallo.
+
 ## Frontend, XSS y almacenamiento
 
 El access token sólo vive en módulo/contexto; ningún token va a `localStorage` o `sessionStorage`. JavaScript no puede leer la cookie `HttpOnly`. Un cliente auth separado evita recursión; una promesa compartida coordina 401 concurrentes y cada petición reintenta una vez. Logout limpia memoria incluso si falla la red, y un refresh obsoleto no restaura una sesión cerrada.
