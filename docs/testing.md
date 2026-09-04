@@ -8,8 +8,8 @@ Inventario verificado:
 
 ```text
 Backend:  28 suites, 342 pruebas
-Frontend: 14 suites, 93 pruebas
-Matriz:   196 filas PASS
+Frontend: 15 suites, 104 pruebas
+Matriz:   235 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -66,7 +66,7 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 ### Esquema — `schema.integration.test.js`
 
-- aplica las trece migraciones desde cero;
+- aplica las catorce migraciones desde cero;
 - verifica asociaciones, FKs, ENUM, UNIQUE y CHECK;
 - verifica columnas lifecycle, tabla/índices de audit, asignación y actor de ítem;
 - prueba placa normalizada y `DECIMAL` como string;
@@ -77,8 +77,9 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 - aplica primero las siete migraciones originales;
 - inserta filas legacy relacionadas;
-- aplica 008–012 y confirma campos nuevos nulos/safe canonicalization sin pérdida de datos;
-- revierte 008–012, confirma que las filas originales sobreviven y reaplica.
+- aplica 008–014 y confirma campos nuevos nulos, canonicalización segura,
+  guard de orden abierta e índices operativos sin pérdida de datos;
+- revierte 008–014, confirma que las filas originales sobreviven y reaplica.
 
 La suite omite deliberadamente validación de modelo en casos concretos para demostrar que MySQL sigue siendo barrera final.
 
@@ -238,6 +239,17 @@ La respuesta perdedora nombra el estado confirmado por la ganadora, demostrando 
 - tres transiciones permitidas al `MECANICO` y 403 en entrega/cancelación;
 - separación 400 por workflow y 403 por permiso.
 
+### Lifecycle de usuarios — `userLifecycle.integration.test.js`
+
+- razón obligatoria y acotada para cambio de rol o actividad;
+- protección contra desactivar o degradar al último `ADMIN` activo;
+- bloqueo de desactivación/remoción de rol para mecánicos con órdenes abiertas;
+- reasignación previa que desbloquea de forma explícita la desactivación;
+- auditoría segura y atómica de rol/actividad con actor y razón;
+- carrera entre dos reducciones de administradores que conserva uno activo;
+- carrera asignación/desactivación que nunca deja trabajo en un usuario inactivo;
+- autenticación y RBAC evaluados antes que la validación contextual.
+
 ### Historial — `workOrderHistory.integration.test.js`
 
 - evento inicial exacto `NULL -> RECIBIDA` y rollback si falla;
@@ -328,6 +340,14 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - tras reapertura reaparecen los controles permitidos;
 - un `WORK_ORDER_CLOSED` causado por estado desactualizado se muestra al usuario.
 
+### Dashboard y auditoría operativa
+
+- `DashboardPage.test.jsx` cubre las cuatro colas abiertas para `ADMIN`, el
+  scope propio para `MECANICO`, accesos por rol, vacío, error y retry;
+- `AuditPages.test.jsx` cubre listado, filtros acotados, detalle inmutable,
+  contexto legible, validación local, vacío, error y retry;
+- `App.test.jsx` verifica navegación y guardas para Dashboard y Audit.
+
 ### Accesibilidad y polish
 
 - campos requeridos y labels asociados;
@@ -336,6 +356,20 @@ Los componentes mockean módulos API estrechos, no componentes internos. Así se
 - labels operativos para acciones sin cambiar enums;
 - estados loading/error/empty/disabled/retry/confirmación;
 - navegación y permisos por rol.
+
+### Recuperabilidad y responsive — HITO 17
+
+- login conserva pathname, query y hash del destino protegido;
+- logout pendiente se deshabilita y no duplica requests;
+- navegación SPA entrega foco al contenido principal;
+- edición de clientes/motocicletas permite retry sin abandonar la ruta;
+- conflictos de placa y lifecycle de mecánico enlazan a vistas filtradas donde
+  la persona puede restaurar o reasignar;
+- orden, motocicleta y cliente relacionados son navegables por nombre/placa;
+- búsqueda de propietario conserva interacción por teclado sin formularios HTML
+  anidados;
+- `responsiveStyles.test.js` protege los breakpoints estructurales de
+  navegación, detalle, formularios, tablas y alertas accionables.
 
 ## Comandos
 
@@ -382,8 +416,22 @@ Las carreras usan fixtures confirmados y conexiones separadas:
 - mismo target deja exactamente un evento;
 - 150 eventos empatados prueban el desempate por ID.
 
-Una verificación histórica de concurrencia repitió siete casos críticos tres
-veces en procesos Vitest frescos: 21 passes, cero fallos.
+La verificación de HITO 18 repitió siete casos críticos tres veces en procesos
+Vitest frescos: 21 passes, cero fallos. Incluyó refresh, alta de orden,
+reasignación, transición, reapertura, mutación de ítem y reducción de
+administradores.
+
+## Registro consolidado HITO 18 — 2026-09-03
+
+- backend completo: 28/28 suites, 342/342 pruebas;
+- frontend completo: 15/15 suites, 104/104 pruebas;
+- concurrencia focalizada: 7 casos × 3 procesos = 21/21;
+- lint backend/frontend: pass;
+- build frontend: pass, 129 módulos transformados;
+- migraciones de desarrollo: 14 ejecutadas, cero pendientes;
+- historial paginado observado en esta ejecución: 9.48 ms para 100 de 150
+  eventos empatados;
+- matriz crítica: 235 requisitos/riesgos con evidencia `PASS`.
 
 ## Smoke de navegador y API
 

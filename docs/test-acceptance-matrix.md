@@ -17,6 +17,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-AUDIT-*` | `backend/tests/audit.integration.test.js`, `auditSnapshots.test.js` |
 | `PZ-CLIENT-*` | `backend/tests/clientLifecycle.integration.test.js`, `clientContactMigration.integration.test.js` |
 | `PZ-BIKE-*` | `backend/tests/bikeLifecycle.integration.test.js`, `clientsBikes.integration.test.js` |
+| `PZ-OPEN-*` | `backend/tests/workOrders.integration.test.js`, `singleOpenOrderMigration.integration.test.js`, `workOrderStatus.integration.test.js` |
 | `PZ-ASSIGN-*` | `backend/tests/workOrderAssignment.integration.test.js` |
 | `PZ-NEW-*` | `frontend/tests/NewWorkOrderPage.test.jsx`, `App.test.jsx` |
 | `PZ-OWN-001` a `PZ-OWN-007` | `backend/tests/workOrderOwnership.integration.test.js` |
@@ -27,6 +28,11 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | `PZ-REOPEN-010` a `PZ-REOPEN-011` | `frontend/tests/WorkOrderDetailPage.test.jsx`, `apiModules.test.js` |
 | `PZ-ITEM-001` a `PZ-ITEM-010` | `backend/tests/workOrderItemLifecycle.integration.test.js`, `workOrders.integration.test.js` |
 | `PZ-ITEM-011` | `frontend/tests/WorkOrderDetailPage.test.jsx` |
+| `PZ-USER-*` | `backend/tests/userLifecycle.integration.test.js`, `frontend/tests/UsersPage.test.jsx` |
+| `PZ-PERF-*` | `backend/tests/operationalQueries.integration.test.js`, `workOrders.integration.test.js` |
+| `PZ-DASH-*` | `frontend/tests/DashboardPage.test.jsx`, `App.test.jsx`, `WorkOrdersPage.test.jsx` |
+| `PZ-UX-*` | `frontend/tests/App.test.jsx`, `AuthContext.test.jsx`, `httpClientAuth.test.js`, `BikeMasters.test.jsx`, `ClientMasters.test.jsx`, `NewWorkOrderPage.test.jsx`, `UsersPage.test.jsx`, `WorkOrderDetailPage.test.jsx`, `responsiveStyles.test.js` |
+| `PZ-MIG-*` | `backend/tests/schema.integration.test.js`, `productizationSchema.integration.test.js`, `clientContactMigration.integration.test.js`, `singleOpenOrderMigration.integration.test.js`, `operationalQueries.integration.test.js` |
 | `P2-SEC-*`, `P0-INF-*` | `security.test.js`, configuración/guardas y `notFound.test.js` |
 | `P1-FE-*`, `P1-UX-*`, `P2-FE-*` | suites homónimas bajo `frontend/tests/` indicadas en cada fila |
 
@@ -50,8 +56,8 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-SEC-001 | Abuso de login recibe 429 estable | rate-limit endpoint case | PASS |
 | P2-RBAC-001 | Token ausente/malformado/inactivo devuelve 401 antes de validar | `rbac.integration.test.js`: auth boundary | PASS |
 | P2-RBAC-002 | Rol autenticado sin permiso recibe 403 | `authorize.test.js` + RBAC HTTP | PASS |
-| P2-RBAC-003A | Ambos roles crean/leen recursos de negocio | RBAC resource matrix | PASS |
-| P2-RBAC-003B | Ambos agregan ítems; sólo ADMIN elimina | item role matrix | PASS |
+| P2-RBAC-003A | Evolución aprobada: ADMIN crea maestras/órdenes; ambos roles leen el contexto permitido | RBAC resource matrix | PASS |
+| P2-RBAC-003B | ADMIN agrega/elimina ítems; MECANICO agrega sólo sobre su orden asignada | item role + ownership matrices | PASS |
 | P2-RBAC-003C | MECANICO avanza a tres estados intermedios | intermediate transitions case | PASS |
 | P2-RBAC-004 | MECANICO no administra, elimina, entrega ni cancela | registration/users/items/status 403 | PASS |
 | P2-RBAC-005 | Workflow inválido es 400; destino válido sin permiso es 403 | workflow vs role case | PASS |
@@ -74,6 +80,12 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P1-BE-007A | Orden válida inicia RECIBIDA/0.00 y bloquea mass assignment | `workOrders.integration.test.js`: create/defaults | PASS |
 | P1-BE-007B | Bike inválida, faltantes y fechas ambiguas fallan | WorkOrder POST validation matrix | PASS |
 | P1-BE-007C | `entryDate` omitida usa tiempo de servidor acotado | omitted-date case | PASS |
+| PZ-OPEN-001 | La migración aborta con diagnóstico si ya existen dos órdenes abiertas | `singleOpenOrderMigration.integration.test.js`: preflight sin cambios | PASS |
+| PZ-OPEN-002 | La columna generada y su UNIQUE impiden violar el invariante fuera del servicio | generated-column constraint case | PASS |
+| PZ-OPEN-003 | Una segunda orden abierta devuelve `BIKE_HAS_ACTIVE_WORK_ORDER` sin efectos parciales | `workOrders.integration.test.js`: stable conflict case | PASS |
+| PZ-OPEN-004 | Una falla nueva sí permite otra orden después de cerrar la anterior | closed-history/new-order case | PASS |
+| PZ-OPEN-005 | Dos altas concurrentes producen exactamente un 201, un 409 y un solo ledger inicial | concurrent create case | PASS |
+| PZ-OPEN-006 | Cierre concurrente contra nueva alta mantiene como máximo una orden abierta | `workOrderStatus.integration.test.js`: close/create race | PASS |
 | P2-AUDIT-002A | Creación registra un `NULL → RECIBIDA` con actor/fecha/nota null | initial history case | PASS |
 | P2-AUDIT-002B | Fallo del historial inicial revierte orden | create rollback case | PASS |
 | P1-BE-008 | Lista/filtros status/placa/combinados funcionan | WorkOrder GET matrix | PASS |
@@ -96,7 +108,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-AUDIT-003 | Cambio/cancelación válida guarda actor/from/to/fecha/nota una vez | caso de contenido del historial | PASS |
 | P2-AUDIT-004 | Intentos inválidos/idempotentes/terminales/prohibidos no auditan | no-event matrix | PASS |
 | P2-AUDIT-009 | Fallo de inserción audit revierte estado | transition rollback case | PASS |
-| P2-AUDIT-005 | Ambos roles leen historial seguro newest-first | caso de historial seguro | PASS |
+| P2-AUDIT-005 | ADMIN lee todo historial; MECANICO sólo el propio, siempre seguro y newest-first | history + ownership cases | PASS |
 | P2-AUDIT-007 | 150 filas empatadas paginan 100/50 con desempate ID | large-history case | PASS |
 | P2-AUDIT-006 | Índice físico `(work_order_id, created_at DESC, id DESC)` | schema index metadata | PASS |
 | P2-AUDIT-010 | Misma transición concurrente deja un cambio/evento | carrera al mismo target | PASS |
@@ -177,6 +189,18 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-ITEM-008 | Fallo audit revierte delete y total | forced delete-audit failure | PASS |
 | PZ-ITEM-009 | PATCH de ítem no existe y no reescribe evidencia | no-update route case | PASS |
 | PZ-ITEM-010 | Add/delete contra close/reopen se serializa sin corrupción | item lifecycle races | PASS |
+| PZ-USER-001 | Cambio de rol/actividad exige razón no vacía y acotada | `userLifecycle.integration.test.js`: reason validation | PASS |
+| PZ-USER-002 | No se puede desactivar ni degradar al último ADMIN activo | last-admin conflict cases | PASS |
+| PZ-USER-003 | Activar/desactivar/cambiar rol genera auditoría segura con razón y snapshots | active/role audit cases | PASS |
+| PZ-USER-004 | Un mecánico con órdenes abiertas no puede desactivarse ni perder el rol | assigned-open-order conflict cases | PASS |
+| PZ-USER-005 | Reasignar el trabajo desbloquea después la desactivación | reassignment-then-deactivation case | PASS |
+| PZ-USER-006 | Dos reducciones ADMIN concurrentes dejan exactamente un administrador activo | concurrent ADMIN reduction case | PASS |
+| PZ-USER-007 | Asignar contra desactivar nunca deja una orden en un mecánico inactivo | assignment/deactivation race | PASS |
+| PZ-USER-008 | Autenticación/RBAC preceden la validación del lifecycle de usuarios | authorization-boundary case | PASS |
+| PZ-PERF-001 | La placa de órdenes usa igualdad normalizada sin wildcard inicial | `workOrders.integration.test.js`: SQL shape/exact-match cases | PASS |
+| PZ-PERF-002 | Los tres índices operativos nuevos y los guards previos existen exactamente | `operationalQueries.integration.test.js`: index inventory | PASS |
+| PZ-PERF-003 | Los planes de placa, All, estado, moto y My Orders usan índices adecuados | EXPLAIN sobre 2.400 órdenes | PASS |
+| PZ-PERF-004 | Count/data siguen acotados, deterministas y sin N+1/joins innecesarios | query-count and SQL-shape cases | PASS |
 | P0-INF-003 | Ruta desconocida usa 404 centralizado seguro | `notFound.test.js` | PASS |
 | P2-SEC-002A | Helmet, sin X-Powered-By, CSP API y HSTS por ambiente | `security.test.js`: header cases | PASS |
 | P2-SEC-002B | CORS exacto/credentials/denegado/preflight/no-Origin | CORS cases + auth flow | PASS |
@@ -184,7 +208,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-SEC-004 | Excepción inesperada da 500 sin stack/SQL/path | caso 500 seguro | PASS |
 | P2-SEC-003 | Configuración producción insegura falla al iniciar | application/auth config matrices | PASS |
 | P0-INF-005 | Setup destructivo rechaza producción/desarrollo/no-test | `testDatabaseGuard.test.js` | PASS |
-| P1-DATA-SCHEMA | Siete migraciones apply/revert/reapply, FKs/CHECK/ENUM/DECIMAL | schema lifecycle case | PASS |
+| P1-DATA-SCHEMA | El esquema original y el stack completo de catorce migraciones aplican/revierten/reaplican con FKs/CHECK/ENUM/DECIMAL | `schema.integration.test.js`: schema lifecycle case | PASS |
 
 ## Frontend
 
@@ -201,7 +225,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-FE-003A | ADMIN lista/crea usuarios sin delete | `UsersPage.test.jsx` list/create case | PASS |
 | P2-FE-003B | Rol exige guardar; deactivate confirma; activate funciona | user mutation cases | PASS |
 | P2-FE-003C | Loading/error/retry/empty/create lock visibles | user state cases | PASS |
-| P2-FE-004A | MECANICO agrega/avanza; no delete/deliver/cancel/users | mechanic controls cases | PASS |
+| P2-FE-004A | MECANICO agrega/avanza sólo su orden; no delete/deliver/cancel/users | mechanic controls/ownership cases | PASS |
 | P2-FE-004B | ADMIN ve controles válidos y confirmaciones | admin detail cases | PASS |
 | P2-FE-005 | Timeline muestra actor/from/to/note/inicial y estados/paginación | `HistoryTimeline.test.jsx` | PASS |
 | P1-FE-001 | Lista muestra placa/cliente/estado/fecha/total y estados UI | `WorkOrdersPage.test.jsx` | PASS |
@@ -231,15 +255,51 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-REOPEN-010 | Panel ADMIN ofrece tipos cerrados, reason y confirmación | admin reopen flow | PASS |
 | PZ-REOPEN-011 | Panel se oculta por rol/estado, evita doble submit y presenta conflictos | role/error/loading cases | PASS |
 | PZ-ITEM-011 | Detalle muestra creador, protege cerrado, rehabilita tras reopen y presenta conflicto tardío | item lifecycle UI cases | PASS |
+| PZ-USER-009 | El conflicto por trabajo asignado enlaza a la cola exacta para reasignar | `UsersPage.test.jsx` + `WorkOrdersPage.test.jsx`: lifecycle recovery flow | PASS |
+| PZ-DASH-001 | Dashboard ADMIN consulta las cuatro colas abiertas y enlaza filtros autoritativos | `DashboardPage.test.jsx`: ADMIN queues case | PASS |
+| PZ-DASH-002 | Dashboard MECANICO usa exclusivamente `scope=mine` y oculta accesos ADMIN | mechanic dashboard case | PASS |
+| PZ-DASH-003 | Dashboard presenta vacío, fallo y retry sin perder la operación | empty/retry cases | PASS |
+| PZ-DASH-004 | Navegación, home y guardas exponen Dashboard/Audit según el rol | `App.test.jsx`: shell/route guard cases | PASS |
+| PZ-AUDIT-009 | UI ADMIN lista auditoría segura con filtros acotados y paginación | `AuditPages.test.jsx`: list/filter cases | PASS |
+| PZ-AUDIT-010 | Detalle muestra before/after/metadata inmutables y contexto legible | audit detail case | PASS |
+| PZ-AUDIT-011 | Lista y detalle de auditoría tienen loading/error/retry/empty recuperables | audit recovery cases | PASS |
+| PZ-UX-001 | Login retorna a la ruta solicitada completa y una sesión expirada conserva flujo seguro | `App.test.jsx` + `httpClientAuth.test.js`: return URL/failed refresh cases | PASS |
+| PZ-UX-002 | Logout pendiente deshabilita la acción y bloquea doble envío | `App.test.jsx`: pending logout case | PASS |
+| PZ-UX-003 | Navegación SPA mueve foco al contenido y búsqueda de propietario funciona con Enter | `App.test.jsx` + `BikeMasters.test.jsx`: keyboard cases | PASS |
+| PZ-UX-004 | Edición de cliente/motocicleta reintenta su carga sin abandonar la ruta | `ClientMasters.test.jsx` + `BikeMasters.test.jsx`: edit retry cases | PASS |
+| PZ-UX-005 | Conflicto de placa conduce a la maestra filtrada, incluso para registros eliminados | `NewWorkOrderPage.test.jsx` + `BikeMasters.test.jsx`: plate recovery flow | PASS |
+| PZ-UX-006 | Orden, motocicleta y cliente relacionados son navegables por nombre/placa | `WorkOrderDetailPage.test.jsx`: related-resource links | PASS |
+| PZ-UX-007 | Breakpoints conservan navegación, detalle, formularios, tablas y alertas accionables utilizables | `responsiveStyles.test.js`: tablet/mobile structural contract | PASS |
 
 ## Evidencia no funcional y documental
 
 | ID | Requisito o riesgo | Evidencia | Estado |
 |---|---|---|---|
-| P1-DOC-001 | Install/lint/test/build ejecutables | verificación desde entorno limpio en `testing.md`/reporte HITO 14 | PASS |
-| P1-DOC-002 | Colección Postman válida y fiel | parser JSON + 5 carpetas/22 requests | PASS |
+| P1-DOC-001 | Install/lint/test/build ejecutables | clean-install HITO 14 + regresión/lint/build HITO 18 | PASS |
+| P1-DOC-002 | Colección Postman original de Fases 1/2 permanece como JSON válido; su ampliación productizada corresponde al HITO 19 | parser JSON + inventario base de 5 carpetas/22 requests | PASS |
 | P2-AUDIT-008 | Historial <1s a escala de prueba | request 100/150: 9.40 ms, plan indexado | PASS |
 | P0-DOC-001 | Arquitectura, negocio, seguridad y API documentados | documentos y ADR versionados | PASS |
+| PZ-MIG-001 | Base vacía aplica y revierte las catorce migraciones sin residuos | `schema.integration.test.js`: full stack lifecycle | PASS |
+| PZ-MIG-002 | Datos legacy sobreviven upgrade, down y reapply de 008–014 | `productizationSchema.integration.test.js`: populated baseline case | PASS |
+| PZ-MIG-003 | Canonicalización de contactos es idempotente y aborta antes de alterar datos inválidos | `clientContactMigration.integration.test.js` | PASS |
+| PZ-MIG-004 | Guard de orden abierta preflighta inconsistencias y aplica tras corrección humana | `singleOpenOrderMigration.integration.test.js` | PASS |
+| PZ-MIG-005 | Índices de rendimiento tienen down/reapply reversible sin pérdida de dominio | `operationalQueries.integration.test.js`: migration lifecycle case | PASS |
+| P0-DEMO-001 | Seed demo es determinista, exacto, idempotente, aislado y bloqueado en producción | `demoSeed.integration.test.js` | PASS |
+
+## Ejecución consolidada — HITO 18
+
+Fecha local: **2026-09-03**. Entorno: MySQL 8.4 en Docker, base exclusiva de integración configurada por el proyecto.
+
+| Compuerta | Resultado observado |
+|---|---|
+| Backend completo | 28/28 suites, 342/342 pruebas PASS |
+| Frontend completo | 15/15 suites, 104/104 pruebas PASS |
+| Concurrencia crítica | 7 casos × 3 procesos frescos = 21/21 PASS |
+| Lint | backend y frontend PASS |
+| Build | frontend, 129 módulos transformados, PASS |
+| Migraciones de desarrollo | 14 ejecutadas, 0 pendientes |
+
+La repetición focalizada cubrió una carrera representativa de refresh, alta de orden, reasignación, transición, reapertura, mutación de ítem y reducción de administradores. Cada caso corrió una vez dentro de la suite completa y dos veces adicionales en procesos Vitest frescos.
 
 ## Regla de mantenimiento
 

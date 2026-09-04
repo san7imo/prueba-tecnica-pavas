@@ -66,11 +66,32 @@ describe('Motorcycle master screens', () => {
     fireEvent.change(screen.getByLabelText(/marca/i), { target: { value: 'Yamaha' } });
     fireEvent.change(screen.getByLabelText(/modelo/i), { target: { value: 'FZ 2.0' } });
     fireEvent.change(screen.getByLabelText(/buscar cliente activo/i), { target: { value: 'Ana' } });
-    fireEvent.keyDown(screen.getByLabelText(/buscar cliente activo/i), { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: /^buscar$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ana torres/i }));
     fireEvent.click(screen.getByRole('button', { name: /guardar motocicleta/i }));
     await waitFor(() => expect(bikesApi.create).toHaveBeenCalledWith({ plate: 'abc 123', brand: 'Yamaha', model: 'FZ 2.0', cylinder: null, clientId: 1 }));
     expect(await screen.findByRole('heading', { name: /moto guardada/i })).toBeInTheDocument();
+  });
+
+  it('searches for an owner with Enter without nesting HTML forms', async () => {
+    const { container } = renderWithAuth(
+      <MemoryRouter initialEntries={['/bikes/new']}>
+        <Routes><Route path="/bikes/new" element={<BikeFormPage />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelector('form form')).toBeNull();
+    const search = screen.getByLabelText(/buscar cliente activo/i);
+    fireEvent.change(search, { target: { value: 'Ana' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    expect(await screen.findByRole('button', { name: /ana torres/i }))
+      .toBeInTheDocument();
+    expect(clientsApi.list).toHaveBeenCalledWith({
+      search: 'Ana',
+      lifecycle: 'active',
+      pageSize: 10,
+    });
   });
 
   it('shows owner, open-order context, history and protected lifecycle mutation', async () => {
