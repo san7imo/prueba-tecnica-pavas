@@ -352,7 +352,7 @@ npm run build
 
 El backend se niega a ejecutar preparación destructiva si `NODE_ENV` no es `test`, si el nombre no contiene `test` o si coincide con la base de desarrollo. No ejecute las suites contra datos reales.
 
-Baseline verificado para la entrega:
+Release verificado desde instalación y base limpias en HITO 20:
 
 ```text
 Backend:        28 suites, 342 pruebas
@@ -360,6 +360,9 @@ Frontend:       15 suites, 104 pruebas
 Matriz crítica: 235 casos/filas PASS
 Migraciones:    14 ejecutadas, 0 pendientes
 ```
+
+El gate incluyó seeds idempotentes, recorrido HTTP completo por ambos roles,
+soft delete/restore, concurrencia crítica, auditoría segura y smoke del build.
 
 Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs/test-acceptance-matrix.md).
 

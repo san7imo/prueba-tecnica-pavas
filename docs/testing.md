@@ -452,6 +452,49 @@ pasó 104/104 en 9.96 s; ese es el gate válido reportado.
 Esta validación comprueba estructura y consistencia documental; el recorrido
 HTTP real de la colección se reserva para el gate limpio de HITO 20.
 
+## Verificación final HITO 20 — 2026-09-04
+
+La verificación partió del commit `a37365b` mediante `git archive`, sin `.git`,
+`node_modules` ni `dist`, y con un volumen MySQL nuevo expresamente autorizado.
+
+- la base comenzó con 0 migraciones ejecutadas y 14 pendientes; aplicó las 14
+  y terminó sin pendientes;
+- `npm ci` frontend instaló 246 paquetes y reportó cero vulnerabilidades;
+- el primer `npm ci` backend instaló sus módulos pero quedó esperando la
+  auditoría remota; se interrumpió sólo ese proceso temporal y
+  `npm ci --no-audit` volvió a limpiar/instalar 281 paquetes desde el lockfile
+  en 2 s;
+- seed ADMIN: primera ejecución creó uno y la segunda no duplicó;
+- seed demo: primera ejecución creó 20 clientes, 30 motos, 96 órdenes,
+  192 ítems, 376 filas de historial y 3 mecánicos; la segunda no cambió datos;
+- backend limpio: 28/28 suites y 342/342 pruebas en 254.44 s; lint pass;
+- frontend limpio: 15/15 suites y 104/104 pruebas en 10.01 s; lint pass;
+- build: 129 módulos, JS 400.02 kB (117.01 kB gzip); preview devolvió 200 en
+  `/` y en una ruta SPA profunda;
+- matriz de aceptación: 235 IDs únicos, todos `PASS`;
+- Postman: JSON/scripts válidos, secretos vacíos, 7 carpetas, 36 requests,
+  33/33 patrones y smoke real de health/login desde sus definiciones.
+- auditoría SQL posterior al recorrido: cero motos con más de una orden abierta,
+  asignaciones abiertas inválidas, lifecycle inconsistente, totales desalineados
+  o filas audit con nombres de campos sensibles.
+
+El recorrido HTTP real comprobó ADMIN y MECANICO, ownership, una sola orden
+abierta, asignación/reasignación, total exacto, los tres retrocesos, entrega,
+protección de ítems cerrados, orden nueva por falla diferente, bloqueo de reopen
+con otra abierta, garantía, lifecycle de usuarios, soft delete/restore, placa
+reservada, history y audit sin secretos, refresh/replay/logout. Una primera
+aserción del harness buscó `ITEM_ADDED` bajo `WORK_ORDER`; se corrigió a su
+entidad contractual `WORK_ORDER_ITEM` y la inspección pasó sin cambiar producto
+ni datos.
+
+Al terminar el recorrido, se eliminó expresamente el volumen de verificación y
+se reconstruyó el estado de presentación desde cero. El estado final contiene
+sólo el ADMIN y el dataset oficial de los seeders: 4 usuarios, 20 clientes,
+30 motos, 96 órdenes, 192 ítems, 376 filas de historial y 0 eventos de auditoría
+manuales. Las 14 migraciones están ejecutadas, no hay pendientes y las consultas
+de cierre reportan cero órdenes abiertas duplicadas por moto, responsables
+abiertos inválidos o totales inconsistentes.
+
 ## Smoke de navegador y API
 
 El smoke real complementa, no reemplaza, las suites. El recorrido probado fue ADMIN creando Client → Bike → dos WorkOrders → REPUESTO/MANO_OBRA → total → estados → historial → MECANICO; luego MECANICO leyendo, agregando ítem, usando transición permitida y comprobando restricciones/logout.
