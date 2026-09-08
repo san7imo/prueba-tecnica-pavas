@@ -3,6 +3,10 @@ import {
   WORK_ORDER_SCOPES,
   WORK_ORDER_STATUSES,
 } from '../constants/workOrder.js';
+import {
+  isValidClientDocumentNumber,
+  normalizeClientDocumentNumber,
+} from '../utils/clientDocument.js';
 import { normalizePlate } from '../utils/normalizePlate.js';
 import {
   asObject,
@@ -115,6 +119,26 @@ const optionalAssignmentReason = (value, details) => {
   return normalized || null;
 };
 
+const optionalClientDocumentNumber = (value, details) => {
+  const rawValue = optionalQueryString({
+    value,
+    field: 'clientDocumentNumber',
+    label: 'Client document number',
+    maxLength: 50,
+    details,
+  });
+  if (rawValue === undefined) return undefined;
+  const documentNumber = normalizeClientDocumentNumber(rawValue);
+  if (!isValidClientDocumentNumber(documentNumber)) {
+    details.push({
+      field: 'clientDocumentNumber',
+      message: 'Client document number must contain 5 to 20 digits.',
+    });
+    return undefined;
+  }
+  return documentNumber;
+};
+
 export const validateCreateWorkOrder = (request, _response, next) => {
   const body = asObject(request.body);
   const details = [];
@@ -152,6 +176,10 @@ export const validateCreateWorkOrder = (request, _response, next) => {
 
 export const validateWorkOrderList = (request, _response, next) => {
   const details = [];
+  const clientDocumentNumber = optionalClientDocumentNumber(
+    request.query.clientDocumentNumber,
+    details,
+  );
   const scope = optionalQueryString({
     value: request.query.scope,
     field: 'scope',
@@ -226,6 +254,7 @@ export const validateWorkOrderList = (request, _response, next) => {
       scope,
       plate,
       bikeId,
+      clientDocumentNumber,
       assignedMechanicId,
       page,
       pageSize,

@@ -27,7 +27,7 @@ export const OrderTable = ({ orders }) => (
             <td data-label="Placa"><span className="plate">{order.bike.plate}</span></td>
             <td data-label="Cliente">
               <span className="cell-primary">{order.bike.client.name}</span>
-              <span className="cell-secondary">{order.bike.brand} {order.bike.model}</span>
+              <span className="cell-secondary">C.C. {order.bike.client.documentNumber || 'pendiente'} · {order.bike.brand} {order.bike.model}</span>
             </td>
             <td data-label="Estado"><StatusBadge status={order.status} /></td>
             <td data-label="Responsable"><span className="cell-primary">{order.assignedMechanic?.name ?? 'Sin asignar'}</span></td>

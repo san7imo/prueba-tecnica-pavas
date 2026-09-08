@@ -17,6 +17,7 @@ const asDecimal = (value) =>
 const snapshotBuilders = Object.freeze({
   [AUDIT_ENTITY_TYPE.CLIENT]: (client) => ({
     id: asId(client.id),
+    documentNumber: client.documentNumber ?? null,
     name: client.name,
     phone: client.phone,
     email: client.email ?? null,
@@ -64,6 +65,7 @@ const snapshotBuilders = Object.freeze({
 
 const snapshotFields = Object.freeze({
   [AUDIT_ENTITY_TYPE.CLIENT]: new Set([
+    'documentNumber',
     'name',
     'phone',
     'email',

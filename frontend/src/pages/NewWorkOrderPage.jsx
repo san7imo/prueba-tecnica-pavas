@@ -10,9 +10,13 @@ import { BikeLookup } from '../features/workOrders/components/BikeLookup.jsx';
 import { QuickRegistration } from '../features/workOrders/components/QuickRegistration.jsx';
 import { getApiError } from '../utils/apiError.js';
 
-const EMPTY_CLIENT = { name: '', phone: '', email: '' };
+const EMPTY_CLIENT = { documentNumber: '', name: '', phone: '', email: '' };
 const EMPTY_BIKE = { plate: '', brand: '', model: '', cylinder: '' };
-const DUPLICATE_CODES = new Set(['CLIENT_DUPLICATE_RISK', 'CLIENT_RESTORE_REQUIRED']);
+const DUPLICATE_CODES = new Set([
+  'CLIENT_DOCUMENT_ALREADY_EXISTS',
+  'CLIENT_DUPLICATE_RISK',
+  'CLIENT_RESTORE_REQUIRED',
+]);
 
 const activeResources = (resources) =>
   resources.filter((resource) => resource.lifecycle !== 'deleted');
@@ -163,6 +167,7 @@ export const NewWorkOrderPage = () => {
     setDuplicateCandidates([]);
     try {
       const client = await clientsApi.create({
+        documentNumber: clientForm.documentNumber.trim(),
         name: clientForm.name.trim(),
         phone: clientForm.phone.trim(),
         ...(clientForm.email.trim() ? { email: clientForm.email.trim() } : {}),
@@ -325,7 +330,7 @@ export const NewWorkOrderPage = () => {
             <div className="section-heading">
               <div>
                 <h2 id="client-step-title">Selecciona el cliente</h2>
-                <p>Busca por nombre, teléfono o correo para evitar duplicados.</p>
+                <p>Busca primero por cédula; nombre, teléfono y correo quedan como alternativas.</p>
               </div>
               {selectedClient ? <span className="step-complete">Seleccionado</span> : null}
             </div>

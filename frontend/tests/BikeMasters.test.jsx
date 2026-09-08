@@ -14,7 +14,7 @@ vi.mock('../src/api/bikesApi.js', () => ({ bikesApi: { list: vi.fn(), getById: v
 vi.mock('../src/api/clientsApi.js', () => ({ clientsApi: { list: vi.fn(), getById: vi.fn() } }));
 vi.mock('../src/api/workOrdersApi.js', () => ({ workOrdersApi: { list: vi.fn() } }));
 
-const owner = { id: 1, name: 'Ana Torres', phone: '3001234567', email: 'ana@example.com', lifecycle: 'active' };
+const owner = { id: 1, documentNumber: '1020304050', name: 'Ana Torres', phone: '3001234567', email: 'ana@example.com', lifecycle: 'active' };
 const bike = { id: 2, plate: 'ABC123', brand: 'Yamaha', model: 'FZ 2.0', cylinder: '149', clientId: 1, client: owner, lifecycle: 'active', currentOpenOrder: null };
 const meta = { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 };
 
@@ -33,7 +33,7 @@ describe('Motorcycle master screens', () => {
     expect(screen.getByText('Ana Torres')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/inicio de placa/i), { target: { value: ' ab ' } });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
-    await waitFor(() => expect(bikesApi.list).toHaveBeenLastCalledWith({ platePrefix: 'ab', lifecycle: 'active', page: 1, pageSize: 20 }));
+    await waitFor(() => expect(bikesApi.list).toHaveBeenLastCalledWith({ platePrefix: 'ab', clientDocumentNumber: '', lifecycle: 'active', page: 1, pageSize: 20 }));
     unmount();
 
     renderWithAuth(<MemoryRouter><BikesPage /></MemoryRouter>, { auth: { user: mechanicUser, accessToken: 'token', isAuthenticated: true, isLoading: false, sessionMessage: '', login: vi.fn(), logout: vi.fn() } });
@@ -51,6 +51,7 @@ describe('Motorcycle master screens', () => {
 
     await waitFor(() => expect(bikesApi.list).toHaveBeenCalledWith({
       platePrefix: 'abc 123',
+      clientDocumentNumber: '',
       lifecycle: 'all',
       page: 1,
       pageSize: 20,
@@ -94,6 +95,25 @@ describe('Motorcycle master screens', () => {
     });
   });
 
+  it('uses exact document lookup as the primary owner search', async () => {
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/bikes/new']}>
+        <Routes><Route path="/bikes/new" element={<BikeFormPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    const search = screen.getByLabelText(/cédula del cliente/i);
+    fireEvent.change(search, { target: { value: '1.020-304.050' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    expect(await screen.findByRole('button', { name: /ana torres/i }))
+      .toBeInTheDocument();
+    expect(clientsApi.list).toHaveBeenCalledWith({
+      documentNumber: '1020304050',
+      lifecycle: 'active',
+      pageSize: 10,
+    });
+  });
+
   it('shows owner, open-order context, history and protected lifecycle mutation', async () => {
     const currentOpenOrder = { id: 8, entryDate: '2026-09-03T15:00:00.000Z', faultDescription: 'No enciende', status: 'DIAGNOSTICO', total: '25000.00' };
     bikesApi.getById.mockResolvedValue({ ...bike, currentOpenOrder });
@@ -110,7 +130,7 @@ describe('Motorcycle master screens', () => {
   });
 
   it('changes owner through its dedicated justified operation', async () => {
-    const destination = { id: 9, name: 'Bruno Díaz', phone: '3019998877', email: null, lifecycle: 'active' };
+    const destination = { id: 9, documentNumber: '1020304051', name: 'Bruno Díaz', phone: '3019998877', email: null, lifecycle: 'active' };
     clientsApi.list.mockResolvedValue({ data: [destination], meta });
     bikesApi.changeOwner.mockResolvedValue({ ...bike, clientId: 9, client: destination });
     renderWithAuth(<MemoryRouter initialEntries={['/bikes/2/edit']}><Routes><Route path="/bikes/:id/edit" element={<BikeFormPage />} /><Route path="/bikes/:id" element={<h1>Propietario guardado</h1>} /></Routes></MemoryRouter>);

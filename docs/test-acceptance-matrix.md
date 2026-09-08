@@ -69,7 +69,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-USER-006 | Desactivar invalida access inmediatamente | deactivation stale-token case | PASS |
 | P2-USER-007 | Cambiar rol invalida access con rol obsoleto | stale-role token case | PASS |
 | P2-USER-004 | Payload/modelo omite password/hash/token | aserciones profundas de payload seguro | PASS |
-| P1-BE-001 | Crear cliente valida requeridos, email y normalización | `clientsBikes.integration.test.js`: POST matrix | PASS |
+| P1-BE-001 | Crear cliente valida cédula y demás requeridos, email y normalización | `clientsBikes.integration.test.js`: POST matrix | PASS |
 | P1-BE-002 | Buscar cliente por nombre/teléfono/email y vacío | Client GET search matrix | PASS |
 | P1-BE-003 | Detalle cliente y 404/ID inválido | Client detail matrix | PASS |
 | P1-BE-004 | Crear motocicleta, cilindrada opcional y cliente válido | Bike POST matrix | PASS |
@@ -132,6 +132,12 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | PZ-CLIENT-010 | Restore limpia lifecycle, no restaura motos y audita override | restore cases | PASS |
 | PZ-CLIENT-011 | Sólo ADMIN muta clientes y auth/RBAC preceden validación | client mutation boundary | PASS |
 | PZ-CLIENT-012 | Fallo audit revierte lifecycle y carrera con alta de moto es consistente | rollback/concurrency cases | PASS |
+| PZ-CLIENT-013 | Alta exige cédula y normaliza puntos, espacios y guiones a 5–20 dígitos | `clientLifecycle.integration.test.js`: document validation case | PASS |
+| PZ-CLIENT-014 | Cédula activa/eliminada no se duplica y el UNIQUE físico reserva su identidad | lifecycle conflicts + `schema.integration.test.js` | PASS |
+| PZ-CLIENT-015 | Listado de clientes busca cédula por igualdad exacta | exact document list case | PASS |
+| PZ-CLIENT-016 | Motos y órdenes aceptan filtro exacto de cédula y serializan el cliente identificado | `bikeLifecycle.integration.test.js` + `workOrders.integration.test.js` | PASS |
+| PZ-CLIENT-017 | Formularios, selector reuse-first y maestras priorizan y muestran la cédula | `ClientMasters`, `BikeMasters`, `NewWorkOrderPage`, `WorkOrdersPage` | PASS |
+| PZ-CLIENT-018 | Dos altas concurrentes con la misma cédula dejan un 201, un 409 y un solo audit | concurrent document creation case | PASS |
 | PZ-BIKE-001 | Create normaliza placa y la reserva globalmente tras soft delete | create/deleted duplicate case | PASS |
 | PZ-BIKE-002 | Listado pagina y filtra por igualdad, prefijo, owner y lifecycle | paginated filter matrix | PASS |
 | PZ-BIKE-003 | Filtros de placa excluyentes y queries acotadas validan | invalid filter/bounds cases | PASS |
@@ -208,7 +214,7 @@ Los nombres de archivo se abrevian en las filas cuando el grupo ya fija su suite
 | P2-SEC-004 | Excepción inesperada da 500 sin stack/SQL/path | caso 500 seguro | PASS |
 | P2-SEC-003 | Configuración producción insegura falla al iniciar | application/auth config matrices | PASS |
 | P0-INF-005 | Setup destructivo rechaza producción/desarrollo/no-test | `testDatabaseGuard.test.js` | PASS |
-| P1-DATA-SCHEMA | El esquema original y el stack completo de catorce migraciones aplican/revierten/reaplican con FKs/CHECK/ENUM/DECIMAL | `schema.integration.test.js`: schema lifecycle case | PASS |
+| P1-DATA-SCHEMA | El esquema original y el stack completo de quince migraciones aplican/revierten/reaplican con FKs/CHECK/ENUM/DECIMAL | `schema.integration.test.js`: schema lifecycle case | PASS |
 
 ## Frontend
 
@@ -300,6 +306,19 @@ Fecha local: **2026-09-03**. Entorno: MySQL 8.4 en Docker, base exclusiva de int
 | Migraciones de desarrollo | 14 ejecutadas, 0 pendientes |
 
 La repetición focalizada cubrió una carrera representativa de refresh, alta de orden, reasignación, transición, reapertura, mutación de ítem y reducción de administradores. Cada caso corrió una vez dentro de la suite completa y dos veces adicionales en procesos Vitest frescos.
+
+## Ejecución de extensión de identificación — 2026-09-05
+
+| Compuerta | Resultado observado |
+|---|---|
+| Backend completo | 28/28 suites, 348/348 pruebas PASS |
+| Frontend completo | 15/15 suites, 105/105 pruebas PASS |
+| Lint | backend y frontend PASS |
+| Build | frontend, 130 módulos transformados, PASS |
+| Matriz crítica | 241 IDs únicos, todos PASS |
+| Migraciones de desarrollo | 15 ejecutadas, 0 pendientes |
+| Demo | 20/20 clientes con cédula; 0 duplicadas |
+| Smoke HTTP | cédula exacta: 1 cliente, 2 motos y 7 órdenes relacionadas |
 
 ## Regla de mantenimiento
 

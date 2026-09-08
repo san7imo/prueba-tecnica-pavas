@@ -102,8 +102,13 @@ describe.sequential('HITO 15 operational query hardening', () => {
       status: WORK_ORDER_STATUS.DELIVERED,
     });
 
-    const reverted = await migrator.down({ step: 1 });
-    expect(reverted.map(({ name }) => name)).toEqual([
+    const revertedDocumentMigration = await migrator.down({ step: 1 });
+    const revertedIndexMigration = await migrator.down({ step: 1 });
+    expect([
+      ...revertedDocumentMigration,
+      ...revertedIndexMigration,
+    ].map(({ name }) => name)).toEqual([
+      '202609050015-add-client-document-number.js',
       '202609030014-harden-operational-query-indexes.js',
     ]);
     const revertedIndexes = await workOrderIndexes();
@@ -115,6 +120,7 @@ describe.sequential('HITO 15 operational query hardening', () => {
     const reapplied = await migrator.up();
     expect(reapplied.map(({ name }) => name)).toEqual([
       '202609030014-harden-operational-query-indexes.js',
+      '202609050015-add-client-document-number.js',
     ]);
     expect(await models.WorkOrder.count()).toBe(1);
   });

@@ -6,9 +6,16 @@ export const clientsApi = {
     return response.data.data;
   },
 
-  async list({ search = '', lifecycle = 'active', page = 1, pageSize = 20 } = {}) {
+  async list({
+    documentNumber = '',
+    search = '',
+    lifecycle = 'active',
+    page = 1,
+    pageSize = 20,
+  } = {}) {
     const response = await httpClient.get('/clients', {
       params: {
+        ...(documentNumber ? { documentNumber } : {}),
         ...(search ? { search } : {}),
         ...(lifecycle !== 'active' ? { lifecycle } : {}),
         page,

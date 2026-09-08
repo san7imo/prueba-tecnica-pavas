@@ -20,6 +20,7 @@ import {
 
 let migrator;
 let adminAccessToken;
+let clientDocumentSequence = 0;
 const request = createAuthenticatedRequest(() => adminAccessToken);
 
 const cleanDomainData = async () => {
@@ -32,6 +33,7 @@ const cleanDomainData = async () => {
 };
 
 const clientPayload = (overrides = {}) => ({
+  documentNumber: String(1000000000 + ++clientDocumentSequence),
   name: 'Juan Perez',
   phone: '3001234567',
   email: 'juan@example.com',
@@ -61,7 +63,13 @@ const createBike = async (clientId, overrides = {}) => {
   return response.body.data;
 };
 
-const clientCore = ({ id, name, phone, email }) => ({ id, name, phone, email });
+const clientCore = ({ id, documentNumber, name, phone, email }) => ({
+  id,
+  documentNumber,
+  name,
+  phone,
+  email,
+});
 
 const activeClientShape = (client) => ({
   ...clientCore(client),
@@ -99,6 +107,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  clientDocumentSequence = 0;
   await cleanDomainData();
 });
 
@@ -123,6 +132,7 @@ describe('Clients API', () => {
       expect(response.body).toEqual({
         data: activeClientShape({
           id: expect.any(Number),
+          documentNumber: expect.any(String),
           name: 'Juan Perez',
           phone: '3001234567',
           email: 'juan@example.com',
@@ -142,6 +152,7 @@ describe('Clients API', () => {
     });
 
     it.each([
+      ['documentNumber', { name: 'Juan Perez', phone: '3001234567' }],
       ['name', { phone: '3001234567' }],
       ['phone', { name: 'Juan Perez' }],
     ])('rejects a missing %s', async (field, payload) => {

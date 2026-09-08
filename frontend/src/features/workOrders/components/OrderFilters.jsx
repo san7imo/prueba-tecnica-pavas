@@ -2,6 +2,23 @@ import { WORK_ORDER_STATUSES, WORK_ORDER_STATUS_LABELS } from '../../../constant
 
 export const OrderFilters = ({ draft, onChange, onSubmit, onClear, disabled }) => (
   <form className="filters" onSubmit={onSubmit} aria-label="Filtros de órdenes">
+    <div className="field field--compact filters__plate">
+      <label htmlFor="order-client-document-filter">Cédula del cliente</label>
+      <input
+        id="order-client-document-filter"
+        value={draft.clientDocumentNumber}
+        onChange={(event) => onChange({
+          ...draft,
+          clientDocumentNumber: event.target.value,
+        })}
+        placeholder="Ej. 1020304050"
+        maxLength={50}
+        inputMode="numeric"
+        disabled={disabled}
+        autoFocus
+      />
+    </div>
+
     <div className="field field--compact">
       <label htmlFor="order-status-filter">Estado</label>
       <select

@@ -5,6 +5,7 @@ export const serializeClient = (resource) => {
   const client = plain(resource);
   return {
     id: client.id,
+    documentNumber: client.documentNumber ?? null,
     name: client.name,
     phone: client.phone,
     email: client.email,

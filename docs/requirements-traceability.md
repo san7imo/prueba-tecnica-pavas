@@ -6,7 +6,7 @@
 - `Pending`: implementación/evidencia aún no realizada.
 - `Done`: comportamiento implementado con evidencia aprobada.
 
-La tabla contiene 214 requisitos: 208 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
+La tabla contiene 220 requisitos: 214 `Done` y 6 `Foundation`. No existen filas `Pending`. La matriz detallada requisito → riesgo → caso está en [test-acceptance-matrix.md](test-acceptance-matrix.md).
 
 | ID | Requisito | Fase fuente | Implementación | Endpoint/UI | Prueba automatizada | Estado |
 |---|---|---|---|---|---|---|
@@ -104,6 +104,12 @@ La tabla contiene 214 requisitos: 208 `Done` y 6 `Foundation`. No existen filas 
 | PZ-CLIENT-010 | Restore limpia lifecycle sin restaurar motocicletas | HITO 3 | transacción y auditoría `RESTORED` | `POST /api/clients/:id/restore` | restore/override/rollback | Done |
 | PZ-CLIENT-011 | Sólo ADMIN puede mutar maestras de clientes | HITO 3 | RBAC previo a validación | Client mutation APIs | auth boundary cases | Done |
 | PZ-CLIENT-012 | Alta de moto y borrado de cliente serializan el propietario | HITO 3 | lock canónico sobre Client | POST Bike / DELETE Client | concurrency invariant | Done |
+| PZ-CLIENT-013 | Toda alta nueva exige cédula canónica de 5–20 dígitos | Extensión aprobada posterior HITO 20 | validator, setter y normalizador | POST/PATCH Client | required/normalization/invalid cases | Done |
+| PZ-CLIENT-014 | Cédula permanece única entre clientes activos y eliminados | Extensión aprobada posterior HITO 20 | pre-check contextual + `uq_clients_document_number` | POST/PATCH Client | active/deleted/DB uniqueness cases | Done |
+| PZ-CLIENT-015 | La búsqueda principal de clientes usa cédula exacta indexada | Extensión aprobada posterior HITO 20 | filtro `documentNumber` por igualdad | GET Client API/maestra | exact document search | Done |
+| PZ-CLIENT-016 | Motos, órdenes y selectores filtran o muestran la cédula del cliente | Extensión aprobada posterior HITO 20 | joins allowlisted + `clientDocumentNumber` | Bikes/Orders/New Order | cross-module API/UI cases | Done |
+| PZ-CLIENT-017 | Cédula creada o modificada queda en snapshots seguros | Extensión aprobada posterior HITO 20 | allowlist audit CLIENT | Client mutations/Audit | create/update snapshot cases | Done |
+| PZ-CLIENT-018 | Altas concurrentes no crean dos clientes con la misma cédula | Extensión aprobada posterior HITO 20 | UNIQUE físico + traducción contextual | POST Client | concurrent document creation | Done |
 | PZ-BIKE-001 | Placa permanece única entre motos activas/eliminadas | HITO 4 | UNIQUE global + conflicto contextual | POST/PATCH Bike | plate lifecycle cases | Done |
 | PZ-BIKE-002 | Lista paginada filtra exacto/prefijo/owner/lifecycle | HITO 4 | índices existentes + repository acotado | `GET /api/bikes` | filter/pagination matrix | Done |
 | PZ-BIKE-003 | Filtros de placa son excluyentes y sin wildcard inicial | HITO 4 | validator + igualdad/prefijo | `GET /api/bikes` | invalid/exact/prefix cases | Done |

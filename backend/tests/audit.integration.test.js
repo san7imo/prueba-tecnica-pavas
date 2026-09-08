@@ -54,6 +54,7 @@ const cleanBusinessData = async () => {
 
 const createClientThroughApi = async (authenticatedRequest = adminRequest) => {
   const response = await authenticatedRequest(app).post('/api/clients').send({
+    documentNumber: '1000000001',
     name: 'Audit Client',
     phone: '3001234567',
     email: 'audit.client@example.test',
@@ -122,6 +123,7 @@ afterAll(async () => {
 describe.sequential('Global business audit', () => {
   it('records client creation with the authenticated actor and an explicit snapshot', async () => {
     const response = await adminRequest(app).post('/api/clients').send({
+      documentNumber: '1000000002',
       name: '  Traceable Client  ',
       phone: '  3009998877  ',
       email: '  TRACEABLE@EXAMPLE.TEST  ',
@@ -142,6 +144,7 @@ describe.sequential('Global business audit', () => {
     });
     expect(event.afterData).toEqual({
       id: String(response.body.data.id),
+      documentNumber: '1000000002',
       name: 'Traceable Client',
       phone: '3009998877',
       email: 'traceable@example.test',
@@ -299,6 +302,7 @@ describe.sequential('Global business audit', () => {
     });
 
     await adminRequest(app).post('/api/clients').send({
+      documentNumber: '1000000003',
       name: 'Rolled-back Client',
       phone: '3002223344',
     }).expect(500);
@@ -372,6 +376,7 @@ describe.sequential('Global business audit', () => {
   it('lists and filters events with bounded pagination and safe actor data', async () => {
     const first = await createClientThroughApi(adminRequest);
     const secondResponse = await adminRequest(app).post('/api/clients').send({
+      documentNumber: '1000000004',
       name: 'Second Audit Client',
       phone: '3011112233',
       email: null,

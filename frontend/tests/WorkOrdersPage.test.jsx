@@ -70,15 +70,16 @@ describe('WorkOrdersPage', () => {
     await screen.findByText('ABC123');
 
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'RECIBIDA' } });
+    fireEvent.change(screen.getByLabelText(/cédula del cliente/i), { target: { value: ' 1020304050 ' } });
     fireEvent.change(screen.getByLabelText('Placa'), { target: { value: ' abc 123 ' } });
     fireEvent.click(screen.getByRole('button', { name: /aplicar filtros/i }));
 
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: 'RECIBIDA', plate: 'abc 123', scope: 'all', page: 1, pageSize: 20,
+      status: 'RECIBIDA', plate: 'abc 123', clientDocumentNumber: '1020304050', scope: 'all', page: 1, pageSize: 20,
     }));
     fireEvent.click(await screen.findByRole('button', { name: /siguiente/i }));
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: 'RECIBIDA', plate: 'abc 123', scope: 'all', page: 2, pageSize: 20,
+      status: 'RECIBIDA', plate: 'abc 123', clientDocumentNumber: '1020304050', scope: 'all', page: 2, pageSize: 20,
     }));
   });
 
@@ -90,7 +91,7 @@ describe('WorkOrdersPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /sin asignar/i }));
 
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: '', plate: '', scope: 'unassigned', page: 1, pageSize: 20,
+      status: '', plate: '', clientDocumentNumber: '', scope: 'unassigned', page: 1, pageSize: 20,
     }));
     expect(await screen.findByText(/no hay órdenes sin asignar/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sin asignar/i }))
@@ -104,6 +105,7 @@ describe('WorkOrdersPage', () => {
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenCalledWith({
       status: 'DIAGNOSTICO',
       plate: '',
+      clientDocumentNumber: '',
       scope: 'unassigned',
       page: 1,
       pageSize: 20,
@@ -120,6 +122,7 @@ describe('WorkOrdersPage', () => {
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenCalledWith({
       status: '',
       plate: '',
+      clientDocumentNumber: '',
       scope: 'all',
       assignedMechanicId: 2,
       page: 1,
@@ -130,7 +133,7 @@ describe('WorkOrdersPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /mostrar todas las órdenes/i }));
     await waitFor(() => expect(workOrdersApi.list).toHaveBeenLastCalledWith({
-      status: '', plate: '', scope: 'all', page: 1, pageSize: 20,
+      status: '', plate: '', clientDocumentNumber: '', scope: 'all', page: 1, pageSize: 20,
     }));
   });
 
@@ -141,7 +144,7 @@ describe('WorkOrdersPage', () => {
     expect(await screen.findByRole('heading', { name: /mis órdenes/i }))
       .toBeInTheDocument();
     expect(workOrdersApi.list).toHaveBeenCalledWith({
-      status: '', plate: '', scope: 'mine', page: 1, pageSize: 20,
+      status: '', plate: '', clientDocumentNumber: '', scope: 'mine', page: 1, pageSize: 20,
     });
     expect(screen.getByText(/sólo órdenes asignadas a Mauro Mecánico/i))
       .toBeInTheDocument();

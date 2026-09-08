@@ -101,7 +101,7 @@ describe.sequential('Persistence schema', () => {
     }
 
     const applied = await migrator.up();
-    expect(applied).toHaveLength(14);
+    expect(applied).toHaveLength(15);
     models = initializeModels(sequelize);
   });
 
@@ -120,7 +120,7 @@ describe.sequential('Persistence schema', () => {
 
   it('applies all tables from a clean database', async () => {
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
-    expect(await migrator.executed()).toHaveLength(14);
+    expect(await migrator.executed()).toHaveLength(15);
   });
 
   it('defines and traverses the principal associations', async () => {
@@ -240,6 +240,21 @@ describe.sequential('Persistence schema', () => {
     ).rejects.toBeInstanceOf(UniqueConstraintError);
   });
 
+  it('normalizes client document numbers and enforces global uniqueness', async () => {
+    const first = await models.Client.create({
+      documentNumber: ' 1.020-304.050 ',
+      name: 'Document owner',
+      phone: '3001234567',
+    });
+    expect(first.documentNumber).toBe('1020304050');
+
+    await expect(models.Client.create({
+      documentNumber: '1020304050',
+      name: 'Duplicate document owner',
+      phone: '3007654321',
+    })).rejects.toBeInstanceOf(UniqueConstraintError);
+  });
+
   it('enforces Bike -> Client at database level', async () => {
     await expect(
       models.Bike.create({
@@ -339,6 +354,7 @@ describe.sequential('Persistence schema', () => {
       expect(columns.deleted_by_user_id.allowNull).toBe(true);
       expect(columns.delete_reason.allowNull).toBe(true);
     }
+    expect(clientColumns.document_number.allowNull).toBe(true);
     expect(orderColumns.assigned_mechanic_id.allowNull).toBe(true);
     expect(orderColumns.open_bike_id.allowNull).toBe(true);
     expect(itemColumns.created_by_user_id.allowNull).toBe(true);
@@ -353,6 +369,7 @@ describe.sequential('Persistence schema', () => {
       expect.arrayContaining([
         'ix_clients_lifecycle_name_id',
         'ix_clients_deleted_by_user',
+        'uq_clients_document_number',
         'ix_bikes_lifecycle_plate_id',
         'ix_bikes_client_lifecycle_plate_id',
         'ix_bikes_deleted_by_user',
@@ -632,11 +649,11 @@ describe.sequential('Persistence schema', () => {
     });
 
     const reverted = await migrator.down({ to: 0 });
-    expect(reverted).toHaveLength(14);
+    expect(reverted).toHaveLength(15);
     expect(await domainTablesPresent()).toEqual([]);
 
     const reapplied = await migrator.up();
-    expect(reapplied).toHaveLength(14);
+    expect(reapplied).toHaveLength(15);
     expect((await domainTablesPresent()).sort()).toEqual([...DOMAIN_TABLES].sort());
   }, 30000);
 });

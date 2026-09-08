@@ -15,8 +15,10 @@ const EMPTY_META = { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 };
 export const ClientsPage = () => {
   const { user } = useAuth();
   const isAdmin = user.role === 'ADMIN';
+  const [draftDocumentNumber, setDraftDocumentNumber] = useState('');
   const [draftSearch, setDraftSearch] = useState('');
   const [draftLifecycle, setDraftLifecycle] = useState('active');
+  const [documentNumber, setDocumentNumber] = useState('');
   const [search, setSearch] = useState('');
   const [lifecycle, setLifecycle] = useState('active');
   const [page, setPage] = useState(1);
@@ -29,7 +31,13 @@ export const ClientsPage = () => {
     setLoading(true);
     setError('');
     try {
-      const result = await clientsApi.list({ search, lifecycle, page, pageSize: 20 });
+      const result = await clientsApi.list({
+        documentNumber,
+        search,
+        lifecycle,
+        page,
+        pageSize: 20,
+      });
       setClients(result.data);
       setMeta(result.meta);
     } catch (requestError) {
@@ -37,7 +45,7 @@ export const ClientsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [lifecycle, page, search]);
+  }, [documentNumber, lifecycle, page, search]);
 
   useEffect(() => {
     // Synchronize the server-backed list whenever the applied filters change.
@@ -48,19 +56,24 @@ export const ClientsPage = () => {
   const applyFilters = (event) => {
     event.preventDefault();
     setPage(1);
+    setDocumentNumber(draftDocumentNumber.trim());
     setSearch(draftSearch.trim());
     setLifecycle(draftLifecycle);
   };
 
   const clearFilters = () => {
+    setDraftDocumentNumber('');
     setDraftSearch('');
     setDraftLifecycle('active');
+    setDocumentNumber('');
     setSearch('');
     setLifecycle('active');
     setPage(1);
   };
 
-  const hasFilters = Boolean(search || lifecycle !== 'active');
+  const hasFilters = Boolean(
+    documentNumber || search || lifecycle !== 'active',
+  );
 
   return (
     <section aria-labelledby="clients-title">
@@ -76,7 +89,11 @@ export const ClientsPage = () => {
       <div className="panel filters-panel">
         <form className="filters" onSubmit={applyFilters}>
           <div className="field filters__plate">
-            <label htmlFor="client-search">Nombre, teléfono o correo</label>
+            <label htmlFor="client-document-number">Cédula exacta</label>
+            <input id="client-document-number" value={draftDocumentNumber} onChange={(event) => setDraftDocumentNumber(event.target.value)} placeholder="Ej. 1020304050" maxLength="50" inputMode="numeric" disabled={loading} autoFocus />
+          </div>
+          <div className="field filters__plate">
+            <label htmlFor="client-search">Búsqueda secundaria</label>
             <input id="client-search" value={draftSearch} onChange={(event) => setDraftSearch(event.target.value)} placeholder="Ej. Ana o 3001234567" maxLength="254" disabled={loading} />
           </div>
           {isAdmin ? (
@@ -91,7 +108,7 @@ export const ClientsPage = () => {
           ) : null}
           <div className="filters__actions">
             <button className="button button--secondary" type="submit" disabled={loading}>Buscar</button>
-            <button className="button button--ghost" type="button" onClick={clearFilters} disabled={loading || (!hasFilters && !draftSearch && draftLifecycle === 'active')}>Limpiar</button>
+            <button className="button button--ghost" type="button" onClick={clearFilters} disabled={loading || (!hasFilters && !draftDocumentNumber && !draftSearch && draftLifecycle === 'active')}>Limpiar</button>
           </div>
         </form>
       </div>
@@ -106,9 +123,10 @@ export const ClientsPage = () => {
           <>
             <div className="table-scroll" tabIndex="0" role="region" aria-label="Listado de clientes">
               <table className="data-table">
-                <thead><tr><th>Cliente</th><th>Teléfono</th><th>Estado</th><th><span className="visually-hidden">Acciones</span></th></tr></thead>
+                <thead><tr><th>Cédula</th><th>Cliente</th><th>Teléfono</th><th>Estado</th><th><span className="visually-hidden">Acciones</span></th></tr></thead>
                 <tbody>{clients.map((client) => (
                   <tr key={client.id}>
+                    <td data-label="Cédula"><span className="cell-primary">{client.documentNumber || 'Pendiente'}</span></td>
                     <td data-label="Cliente"><span className="cell-primary">{client.name}</span><span className="cell-secondary">{client.email || 'Sin correo registrado'}</span></td>
                     <td data-label="Teléfono">{client.phone}</td>
                     <td data-label="Estado"><LifecycleBadge lifecycle={client.lifecycle} /></td>

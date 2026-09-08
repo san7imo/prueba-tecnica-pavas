@@ -105,6 +105,15 @@ describe.sequential('optional demo data seed', () => {
     expect(await models.WorkOrderStatusHistory.count()).toBe(DEMO_EXPECTED_COUNTS.history);
     expect(demoMechanics).toHaveLength(DEMO_EXPECTED_COUNTS.users);
 
+    const demoClients = await models.Client.findAll({
+      attributes: ['documentNumber'],
+      order: [['id', 'ASC']],
+    });
+    expect(demoClients.every(({ documentNumber }) => documentNumber !== null))
+      .toBe(true);
+    expect(new Set(demoClients.map(({ documentNumber }) => documentNumber)).size)
+      .toBe(DEMO_EXPECTED_COUNTS.clients);
+
     const openCounts = await models.WorkOrder.findAll({
       attributes: [
         'bikeId',

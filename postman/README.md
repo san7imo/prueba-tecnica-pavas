@@ -16,9 +16,10 @@ La colección aplica `Bearer {{accessToken}}` a las rutas protegidas. Login
 captura el access token automáticamente y el cookie jar de Postman conserva la
 cookie `HttpOnly` de refresh. Health, login, refresh y logout declaran `noauth`.
 
-Las requests de alta generan email, teléfono y placa únicos y capturan
-`managedUserId`, `mechanicId`, `clientId`, `bikeId`, `bikePlate`, `workOrderId`
-e `itemId`. La consulta de auditoría captura `auditEventId`. No exporte la
+Las requests de alta generan cédula, email, teléfono y placa únicos y capturan
+`managedUserId`, `mechanicId`, `clientId`, `clientDocumentNumber`, `bikeId`,
+`bikePlate`, `workOrderId` e `itemId`. La consulta de auditoría captura
+`auditEventId`. No exporte la
 colección después de llenar contraseñas o tokens.
 
 ## Recorrido principal reproducible

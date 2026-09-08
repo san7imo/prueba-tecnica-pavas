@@ -26,7 +26,11 @@ export const QuickRegistration = ({
   if (!visible) return null;
 
   if (mode === 'client') {
-    const duplicateConflict = ['CLIENT_DUPLICATE_RISK', 'CLIENT_RESTORE_REQUIRED']
+    const duplicateConflict = [
+      'CLIENT_DOCUMENT_ALREADY_EXISTS',
+      'CLIENT_DUPLICATE_RISK',
+      'CLIENT_RESTORE_REQUIRED',
+    ]
       .includes(clientError?.code);
     const canOverride = clientError?.code === 'CLIENT_DUPLICATE_RISK';
 
@@ -39,9 +43,13 @@ export const QuickRegistration = ({
           </div>
         </div>
         <form className="form-grid" onSubmit={onClientSubmit} aria-label="Registro rápido de cliente">
-          <div className="field field--span-2">
+          <div className="field">
+            <label htmlFor="quick-client-document-number">Cédula<span className="required-mark" aria-hidden="true"> *</span></label>
+            <input id="quick-client-document-number" name="documentNumber" value={clientForm.documentNumber} onChange={onClientChange} required minLength="5" maxLength="50" inputMode="numeric" disabled={clientLoading} autoFocus />
+          </div>
+          <div className="field">
             <label htmlFor="quick-client-name">Nombre completo<span className="required-mark" aria-hidden="true"> *</span></label>
-            <input id="quick-client-name" name="name" value={clientForm.name} onChange={onClientChange} required maxLength="120" disabled={clientLoading} autoFocus />
+            <input id="quick-client-name" name="name" value={clientForm.name} onChange={onClientChange} required maxLength="120" disabled={clientLoading} />
           </div>
           <div className="field">
             <label htmlFor="quick-client-phone">Teléfono<span className="required-mark" aria-hidden="true"> *</span></label>

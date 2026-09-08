@@ -7,6 +7,7 @@ import {
 
 export const CLIENT_ATTRIBUTES = [
   'id',
+  'documentNumber',
   'name',
   'phone',
   'email',
@@ -15,8 +16,14 @@ export const CLIENT_ATTRIBUTES = [
   'deleteReason',
 ];
 
-const DUPLICATE_ATTRIBUTES = ['id', 'phone', 'email', 'deletedAt'];
-const MUTABLE_FIELDS = ['name', 'phone', 'email'];
+const DUPLICATE_ATTRIBUTES = [
+  'id',
+  'documentNumber',
+  'phone',
+  'email',
+  'deletedAt',
+];
+const MUTABLE_FIELDS = ['documentNumber', 'name', 'phone', 'email'];
 const LIFECYCLE_FIELDS = ['deletedAt', 'deletedByUserId', 'deleteReason'];
 
 const lifecycleWhere = (lifecycle) => {
@@ -70,12 +77,20 @@ export const clientRepository = {
     });
   },
 
-  findPaginated({ search, phoneSearch, lifecycle, page, pageSize }) {
+  findPaginated({
+    documentNumber,
+    search,
+    phoneSearch,
+    lifecycle,
+    page,
+    pageSize,
+  }) {
     return models.Client.findAndCountAll({
       attributes: CLIENT_ATTRIBUTES,
       where: {
         [Op.and]: [
           lifecycleWhere(lifecycle),
+          documentNumber ? { documentNumber } : {},
           searchWhere(search, phoneSearch),
         ],
       },
@@ -85,6 +100,14 @@ export const clientRepository = {
         ['name', 'ASC'],
         ['id', 'ASC'],
       ],
+    });
+  },
+
+  findByDocumentNumber(documentNumber, options = {}) {
+    return models.Client.findOne({
+      attributes: DUPLICATE_ATTRIBUTES,
+      where: { documentNumber },
+      transaction: options.transaction,
     });
   },
 

@@ -1,5 +1,9 @@
 import { BIKE_LIFECYCLE, BIKE_LIFECYCLES } from '../constants/bike.js';
 import { BusinessRuleError } from '../errors/BusinessRuleError.js';
+import {
+  isValidClientDocumentNumber,
+  normalizeClientDocumentNumber,
+} from '../utils/clientDocument.js';
 import { normalizePlate } from '../utils/normalizePlate.js';
 import {
   asObject,
@@ -30,6 +34,26 @@ const normalizedPlate = ({ value, field, label, required, details }) => {
     return undefined;
   }
   return plate;
+};
+
+const optionalClientDocumentNumber = (value, details) => {
+  const rawValue = optionalQueryString({
+    value,
+    field: 'clientDocumentNumber',
+    label: 'Client document number',
+    maxLength: 50,
+    details,
+  });
+  if (rawValue === undefined) return undefined;
+  const documentNumber = normalizeClientDocumentNumber(rawValue);
+  if (!isValidClientDocumentNumber(documentNumber)) {
+    details.push({
+      field: 'clientDocumentNumber',
+      message: 'Client document number must contain 5 to 20 digits.',
+    });
+    return undefined;
+  }
+  return documentNumber;
 };
 
 const normalizeCylinder = (value, details) => {
@@ -140,6 +164,10 @@ export const validateCreateBike = (request, _response, next) => {
 
 export const validateBikeList = (request, _response, next) => {
   const details = [];
+  const clientDocumentNumber = optionalClientDocumentNumber(
+    request.query.clientDocumentNumber,
+    details,
+  );
   const plate = normalizedPlate({
     value: request.query.plate,
     field: 'plate',
@@ -201,7 +229,15 @@ export const validateBikeList = (request, _response, next) => {
   completeValidation({
     request,
     section: 'query',
-    value: { plate, platePrefix, clientId, lifecycle, page, pageSize },
+    value: {
+      plate,
+      platePrefix,
+      clientId,
+      clientDocumentNumber,
+      lifecycle,
+      page,
+      pageSize,
+    },
     details,
     next,
   });

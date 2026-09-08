@@ -41,6 +41,7 @@ Refresh/logout y la colección Postman eran opcionales en el enunciado original,
 - auditoría atómica de altas autenticadas, alta/eliminación de ítems y cambios de estado;
 - consulta paginada/filtrada del audit global, exclusiva para `ADMIN`.
 - lifecycle backend completo de clientes: edición, paginación, duplicados, soft delete y restore auditados.
+- cédula de cliente normalizada y globalmente única, usada como búsqueda principal en clientes, motocicletas, órdenes y selección de propietario;
 - lifecycle backend completo de motocicletas: búsqueda exacta/prefijo, propietario, edición, soft delete/restore, contexto de órdenes y auditoría.
 - maestras frontend completas de clientes y motocicletas para `ADMIN`;
 - una sola orden abierta por motocicleta, protegida también ante concurrencia;
@@ -202,9 +203,9 @@ pruebas:    pavas_workshop_test
 
 Las siete migraciones originales crean `clients`, `bikes`, `work_orders`,
 `work_order_items`, `users`, `refresh_tokens` y `work_order_status_history`.
-Siete migraciones posteriores agregan lifecycles, `audit_events`, responsable,
+Ocho migraciones posteriores agregan lifecycles, `audit_events`, responsable,
 actor de ítem, normalización de contactos, unicidad de orden abierta e índices
-para las consultas operativas.
+para las consultas operativas, además de la cédula única del cliente.
 
 | Comando backend | Propósito |
 |---|---|
@@ -363,6 +364,18 @@ Migraciones:    14 ejecutadas, 0 pendientes
 
 El gate incluyó seeds idempotentes, recorrido HTTP completo por ambos roles,
 soft delete/restore, concurrencia crítica, auditoría segura y smoke del build.
+
+Extensión de identificación de clientes verificada el 2026-09-05:
+
+```text
+Backend:        28 suites, 348 pruebas
+Frontend:       15 suites, 105 pruebas
+Matriz crítica: 241 casos/filas PASS
+Migraciones:    15 ejecutadas, 0 pendientes
+```
+
+La base demo fue reconstruida desde cero: sus 20 clientes tienen cédulas no
+nulas y únicas; una segunda ejecución de ambos seeds no modificó datos.
 
 Consulte [Estrategia de pruebas](docs/testing.md) y [Matriz de aceptación](docs/test-acceptance-matrix.md).
 

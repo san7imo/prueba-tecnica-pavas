@@ -13,7 +13,7 @@ const WORK_ORDER_ATTRIBUTES = [
   'assignedMechanicId',
 ];
 const BIKE_ATTRIBUTES = ['id', 'plate', 'brand', 'model', 'cylinder', 'clientId'];
-const CLIENT_ATTRIBUTES = ['id', 'name', 'phone', 'email'];
+const CLIENT_ATTRIBUTES = ['id', 'documentNumber', 'name', 'phone', 'email'];
 const MECHANIC_ATTRIBUTES = ['id', 'name', 'email', 'role', 'active'];
 const ITEM_ATTRIBUTES = [
   'id',
@@ -25,7 +25,7 @@ const ITEM_ATTRIBUTES = [
   'createdByUserId',
 ];
 
-const bikeInclude = (plate) => ({
+const bikeInclude = (plate, clientDocumentNumber) => ({
   association: 'bike',
   attributes: BIKE_ATTRIBUTES,
   required: true,
@@ -34,14 +34,25 @@ const bikeInclude = (plate) => ({
     association: 'client',
     attributes: CLIENT_ATTRIBUTES,
     required: true,
+    where: clientDocumentNumber ? { documentNumber: clientDocumentNumber } : undefined,
   },
 });
 
-const bikeCountInclude = (plate) => ({
+const bikeCountInclude = (plate, clientDocumentNumber) => ({
   association: 'bike',
   attributes: [],
   required: true,
-  where: { plate },
+  where: plate ? { plate } : undefined,
+  ...(clientDocumentNumber
+    ? {
+        include: {
+          association: 'client',
+          attributes: [],
+          required: true,
+          where: { documentNumber: clientDocumentNumber },
+        },
+      }
+    : {}),
 });
 
 const assignedMechanicInclude = {
@@ -165,6 +176,7 @@ export const workOrderRepository = {
     status,
     plate,
     bikeId,
+    clientDocumentNumber,
     assignedMechanicId,
     page,
     pageSize,
@@ -178,12 +190,17 @@ export const workOrderRepository = {
     return Promise.all([
       models.WorkOrder.count({
         where,
-        include: plate ? bikeCountInclude(plate) : undefined,
+        include: plate || clientDocumentNumber
+          ? bikeCountInclude(plate, clientDocumentNumber)
+          : undefined,
       }),
       models.WorkOrder.findAll({
         attributes: WORK_ORDER_ATTRIBUTES,
         where,
-        include: [bikeInclude(plate), assignedMechanicInclude],
+        include: [
+          bikeInclude(plate, clientDocumentNumber),
+          assignedMechanicInclude,
+        ],
         limit: pageSize,
         offset: (page - 1) * pageSize,
         order: [

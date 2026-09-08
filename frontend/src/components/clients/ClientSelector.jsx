@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { clientsApi } from '../../api/clientsApi.js';
 import { getApiErrorMessage } from '../../utils/apiError.js';
+import { normalizeClientDocumentNumber } from '../../utils/clientDocument.js';
 
 export const ClientSelector = ({
   selected,
@@ -9,14 +10,15 @@ export const ClientSelector = ({
   disabled = false,
   emptyAction = null,
 }) => {
+  const [documentNumber, setDocumentNumber] = useState('');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const changeSearch = (event) => {
-    setSearch(event.target.value);
+  const changeLookup = (setter) => (event) => {
+    setter(event.target.value);
     setResults([]);
     setSearched(false);
     setError('');
@@ -27,7 +29,14 @@ export const ClientSelector = ({
     setLoading(true);
     setError('');
     try {
-      const response = await clientsApi.list({ search: search.trim(), lifecycle: 'active', pageSize: 10 });
+      const response = await clientsApi.list({
+        ...(documentNumber.trim()
+          ? { documentNumber: normalizeClientDocumentNumber(documentNumber) }
+          : {}),
+        ...(search.trim() ? { search: search.trim() } : {}),
+        lifecycle: 'active',
+        pageSize: 10,
+      });
       setResults(response.data.filter((client) => client.lifecycle !== 'deleted'));
       setSearched(true);
     } catch (requestError) {
@@ -41,16 +50,17 @@ export const ClientSelector = ({
 
   return (
     <div className="client-selector">
-      {selected ? <div className="selected-client" role="status"><span><strong>{selected.name}</strong><small>{selected.phone}{selected.email ? ` · ${selected.email}` : ''}</small></span><button className="text-button" type="button" onClick={() => onSelect(null)} disabled={disabled}>Cambiar</button></div> : null}
+      {selected ? <div className="selected-client" role="status"><span><strong>{selected.name}</strong><small>C.C. {selected.documentNumber || 'pendiente'} · {selected.phone}{selected.email ? ` · ${selected.email}` : ''}</small></span><button className="text-button" type="button" onClick={() => onSelect(null)} disabled={disabled}>Cambiar</button></div> : null}
       {!selected ? (
         <>
           <div className="lookup-form" role="search">
-            <div className="field"><label htmlFor="owner-search">Buscar cliente activo</label><input id="owner-search" value={search} onChange={changeSearch} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } }} placeholder="Nombre, teléfono o correo" maxLength="254" disabled={disabled || loading} /></div>
+            <div className="field"><label htmlFor="owner-document-number">Cédula del cliente</label><input id="owner-document-number" value={documentNumber} onChange={changeLookup(setDocumentNumber)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } }} placeholder="Búsqueda exacta principal" maxLength="50" inputMode="numeric" disabled={disabled || loading} /></div>
+            <div className="field"><label htmlFor="owner-search">Buscar cliente activo</label><input id="owner-search" value={search} onChange={changeLookup(setSearch)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } }} placeholder="Nombre, teléfono o correo" maxLength="254" disabled={disabled || loading} /></div>
             <button className="button button--secondary" type="button" onClick={submit} disabled={disabled || loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
           </div>
           {error ? <p className="inline-alert inline-alert--error" role="alert">{error}</p> : null}
           {searched && !loading && !error && results.length === 0 ? <div className="empty-lookup"><p className="inline-alert" role="status">No se encontraron clientes activos. Revisa la búsqueda antes de registrar uno nuevo.</p>{emptyAction}</div> : null}
-          {results.length ? <div className="selection-list" aria-label="Clientes encontrados">{results.map((client) => <button key={client.id} className="selection-card selection-card--client" type="button" onClick={() => onSelect(client)} disabled={disabled}><span><strong>{client.name}</strong><small>{client.phone}{client.email ? ` · ${client.email}` : ''}</small></span><span className="selection-card__action">Seleccionar</span></button>)}</div> : null}
+          {results.length ? <div className="selection-list" aria-label="Clientes encontrados">{results.map((client) => <button key={client.id} className="selection-card selection-card--client" type="button" onClick={() => onSelect(client)} disabled={disabled}><span><strong>{client.name}</strong><small>C.C. {client.documentNumber || 'pendiente'} · {client.phone}{client.email ? ` · ${client.email}` : ''}</small></span><span className="selection-card__action">Seleccionar</span></button>)}</div> : null}
         </>
       ) : null}
     </div>

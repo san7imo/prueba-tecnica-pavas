@@ -38,3 +38,13 @@ posterior al cierre documental.
   responsable.
 
 No se crea tag ni se marca un gate futuro como aprobado desde este documento.
+
+## Extensión aprobada después de HITO 20 — identificación de clientes
+
+- [x] `documentNumber` requerido en nuevas altas y normalizado a 5–20 dígitos;
+- [x] índice global `uq_clients_document_number`, incluido soft delete;
+- [x] cédula como búsqueda principal en clientes, motocicletas y órdenes;
+- [x] formularios, relaciones, selector reuse-first y auditoría muestran cédula;
+- [x] concurrencia de altas deja una sola identidad y un solo audit;
+- [x] backend 348/348, frontend 105/105, lint y build en pass;
+- [x] base demo reconstruida con 15 migraciones, 0 pendientes y 20 cédulas únicas.

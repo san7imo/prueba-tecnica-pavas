@@ -141,8 +141,8 @@ describe.sequential('Complete Motorcycle backend lifecycle', () => {
   });
 
   it('paginates exact/prefix/owner searches with explicit lifecycle views', async () => {
-    const firstOwner = await createClient();
-    const secondOwner = await createClient();
+    const firstOwner = await createClient({ documentNumber: '1020304050' });
+    const secondOwner = await createClient({ documentNumber: '1020304051' });
     const bikes = [];
     for (let index = 0; index < 23; index += 1) {
       bikes.push(await models.Bike.create({
@@ -190,6 +190,14 @@ describe.sequential('Complete Motorcycle backend lifecycle', () => {
       .query({ clientId: firstOwner.id, pageSize: 100 });
     expect(byOwner.body.data).toHaveLength(12);
     expect(byOwner.body.data.every(({ clientId }) => clientId === firstOwner.id)).toBe(true);
+
+    const byOwnerDocument = await adminRequest(app)
+      .get('/api/bikes')
+      .query({ clientDocumentNumber: '1.020.304.050', pageSize: 100 });
+    expect(byOwnerDocument.status).toBe(200);
+    expect(byOwnerDocument.body.data).toHaveLength(12);
+    expect(byOwnerDocument.body.data.every(({ client }) =>
+      client.documentNumber === '1020304050')).toBe(true);
 
     const deleted = await adminRequest(app)
       .get('/api/bikes')

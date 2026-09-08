@@ -105,7 +105,7 @@ export const ClientDetailPage = () => {
           <Link className="back-link" to="/clients">← Volver a clientes</Link>
           <p className="eyebrow">Detalle del cliente</p>
           <div className="title-with-status"><h1 id="client-detail-title">{client.name}</h1><LifecycleBadge lifecycle={client.lifecycle} /></div>
-          <p>{client.phone}{client.email ? ` · ${client.email}` : ' · Sin correo registrado'}</p>
+          <p>C.C. {client.documentNumber || 'Pendiente'} · {client.phone}{client.email ? ` · ${client.email}` : ' · Sin correo registrado'}</p>
         </div>
         {isAdmin && client.lifecycle === 'active' ? <Link className="button button--secondary" to={`/clients/${id}/edit`}>Editar cliente</Link> : null}
       </div>
@@ -138,7 +138,7 @@ export const ClientDetailPage = () => {
         <aside className="detail-aside">
           <section className="panel resource-card">
             <p className="card-label">Contacto</p><h2>Datos registrados</h2>
-            <dl><div><dt>Teléfono</dt><dd>{client.phone}</dd></div><div><dt>Correo</dt><dd>{client.email || 'No registrado'}</dd></div></dl>
+            <dl><div><dt>Cédula</dt><dd>{client.documentNumber || 'Pendiente'}</dd></div><div><dt>Teléfono</dt><dd>{client.phone}</dd></div><div><dt>Correo</dt><dd>{client.email || 'No registrado'}</dd></div></dl>
           </section>
           {client.lifecycle === 'deleted' ? <section className="panel resource-card"><p className="card-label">Baja lógica</p><h2>Registro preservado</h2><dl><div><dt>Fecha</dt><dd>{formatDateTime(client.deletedAt)}</dd></div><div><dt>Motivo</dt><dd>{client.deleteReason}</dd></div></dl></section> : null}
           {isAdmin ? (

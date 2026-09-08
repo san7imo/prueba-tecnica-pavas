@@ -142,6 +142,7 @@ const buildClients = () =>
     const sequence = String(index + 1).padStart(2, '0');
     const timestamp = addMilliseconds(DEMO_CREATED_AT, index * 60_000);
     return {
+      documentNumber: String(1000000000 + index + 1),
       name,
       phone: `30055501${sequence}`,
       email: `cliente.demo.${sequence}@${DEMO_EMAIL_DOMAIN}`,

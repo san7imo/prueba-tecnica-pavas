@@ -9,7 +9,10 @@
 - **Efecto al aprobarse:** ninguno sobre runtime, esquema o API.
 - **Estado de implementación:** el destino quedó materializado en HITO 18. La
   medición de HITO 15 añadió la migración reversible `014` para los índices
-  operativos, sin cambiar las reglas congeladas.
+  operativos, sin cambiar las reglas congeladas. Después del release HITO 20 se
+  aprobó una extensión acotada: cédula única de cliente y búsqueda transversal,
+  persistida por la migración `015`. Este addendum prevalece únicamente sobre
+  los campos y filtros de cliente descritos abajo.
 
 ## 1. Objetivo de producto
 
@@ -209,6 +212,9 @@ DEACTIVATED
 
 Normalización:
 
+- cédula/API `documentNumber`: requerida para altas nuevas, string de 5–20
+  dígitos después de retirar puntos, espacios y guiones; UNIQUE global incluso
+  durante soft delete; nullable en DB únicamente para filas legacy;
 - nombre: trim, sin unicidad;
 - email: trim + lowercase, opcional y validado;
 - teléfono: trim, retirar espacios, guiones, puntos y paréntesis, preservar como máximo un `+` inicial, validar `^\+?\d{7,20}$` y almacenar canónico;
@@ -281,7 +287,7 @@ Los snapshots usan claves de dominio en camelCase, IDs como strings para no perd
 
 | Entidad | Campos permitidos en before/after |
 |---|---|
-| `CLIENT` | `id`, `name`, `phone`, `email`, `deletedAt`, `deletedByUserId`, `deleteReason` |
+| `CLIENT` | `id`, `documentNumber`, `name`, `phone`, `email`, `deletedAt`, `deletedByUserId`, `deleteReason` |
 | `BIKE` | `id`, `plate`, `brand`, `model`, `cylinder`, `clientId`, `deletedAt`, `deletedByUserId`, `deleteReason` |
 | `WORK_ORDER` | `id`, `bikeId`, `entryDate`, `faultDescription`, `status`, `total`, `assignedMechanicId` |
 | `WORK_ORDER_ITEM` | `id`, `workOrderId`, `type`, `description`, `count`, `unitValue`, `createdByUserId` |
@@ -475,21 +481,21 @@ Una violación de unique conocida se traduce al conflict específico. Deadlock o
 
 | Método y ruta | Rol | Entrada principal | Resultado/notas |
 |---|---|---|---|
-| `POST /api/clients` | ADMIN | name, phone, email?, confirmDuplicate?, duplicateReason? | 201; riesgo 409 |
-| `GET /api/clients` | ambos | search, lifecycle, page, pageSize | mechanic sólo active |
+| `POST /api/clients` | ADMIN | documentNumber, name, phone, email?, confirmDuplicate?, duplicateReason? | 201; cédula UNIQUE y riesgo de contacto 409 |
+| `GET /api/clients` | ambos | documentNumber, search, lifecycle, page, pageSize | cédula exacta principal; mechanic sólo active |
 | `GET /api/clients/:id` | ambos | id | deleted sólo ADMIN; UI combina motos paginadas |
-| `PATCH /api/clients/:id` | ADMIN | al menos uno de name/phone/email; override si aplica | 200 |
+| `PATCH /api/clients/:id` | ADMIN | al menos uno de documentNumber/name/phone/email; override si aplica | 200 |
 | `DELETE /api/clients/:id` | ADMIN | reason | 200 soft-deleted |
 | `POST /api/clients/:id/restore` | ADMIN | reason, confirmDuplicate?, duplicateReason? | 200 active; riesgo 409 |
 | `POST /api/bikes` | ADMIN | plate, brand, model, cylinder?, clientId | 201 |
-| `GET /api/bikes` | ambos | plate, platePrefix, clientId, lifecycle, page, pageSize | filtros de placa excluyentes; mechanic active |
+| `GET /api/bikes` | ambos | plate, platePrefix, clientId, clientDocumentNumber, lifecycle, page, pageSize | cédula de dueño exacta; filtros de placa excluyentes; mechanic active |
 | `GET /api/bikes/:id` | ambos | id | currentOpenOrder summary; deleted sólo ADMIN |
 | `PATCH /api/bikes/:id` | ADMIN | plate/brand/model/cylinder, al menos uno | no owner |
 | `PATCH /api/bikes/:id/owner` | ADMIN | clientId, reason | 200 + OWNER_CHANGED |
 | `DELETE /api/bikes/:id` | ADMIN | reason | 200 soft-deleted |
 | `POST /api/bikes/:id/restore` | ADMIN | reason | 200 active |
 | `POST /api/work-orders` | ADMIN | bikeId, faultDescription, entryDate?, assignedMechanicId? | 201 atómico |
-| `GET /api/work-orders` | ambos | status, plate, bikeId, scope, assignedMechanicId, page, pageSize | defaults por rol |
+| `GET /api/work-orders` | ambos | status, plate, bikeId, clientDocumentNumber, scope, assignedMechanicId, page, pageSize | cédula exacta; defaults por rol |
 | `GET /api/work-orders/:id` | ADMIN/owner | id | detalle + assignee |
 | `PATCH /api/work-orders/:id/assignment` | ADMIN | mechanicId nullable, reason condicional | sólo abierta |
 | `PATCH /api/work-orders/:id/status` | ADMIN/owner | toStatus, note? | matriz genérica |
@@ -623,6 +629,7 @@ H0 diseño
   → H18 aceptación
   → H19 docs/Postman
   → H20 release
+  → extensión aprobada: identificación única de cliente
 ```
 
 La nueva orden se implementa después de unicidad abierta y asignación para que nunca dependa de autoridad frontend.
@@ -633,6 +640,7 @@ La nueva orden se implementa después de unicidad abierta y asignación para que
 - clientes con motos activas no se eliminan;
 - placa globalmente única y reservada durante soft delete;
 - duplicate-risk de cliente permite override activo justificado, nunca duplica uno eliminado;
+- cédula de cliente es única, no admite override y no reemplaza la PK técnica;
 - auditoría global y status history coexisten;
 - snapshots y metadata usan allowlists cerradas;
 - una orden abierta se protege con lock de moto + generated UNIQUE;

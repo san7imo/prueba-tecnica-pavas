@@ -7,9 +7,9 @@ La aceptación se guía por requisitos y riesgo, no por un porcentaje de cobertu
 Inventario verificado:
 
 ```text
-Backend:  28 suites, 342 pruebas
-Frontend: 15 suites, 104 pruebas
-Matriz:   235 filas PASS
+Backend:  28 suites, 348 pruebas
+Frontend: 15 suites, 105 pruebas
+Matriz:   241 filas PASS
 ```
 
 La evidencia requisito → riesgo → test nombrado vive en [test-acceptance-matrix.md](test-acceptance-matrix.md).
@@ -66,9 +66,10 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 ### Esquema — `schema.integration.test.js`
 
-- aplica las catorce migraciones desde cero;
+- aplica las quince migraciones desde cero;
 - verifica asociaciones, FKs, ENUM, UNIQUE y CHECK;
-- verifica columnas lifecycle, tabla/índices de audit, asignación y actor de ítem;
+- verifica columnas lifecycle, tabla/índices de audit, asignación, actor de ítem
+  y cédula única nullable sólo para legacy;
 - prueba placa normalizada y `DECIMAL` como string;
 - valida columnas/índice descendente del historial y FKs `RESTRICT`;
 - revierte todas, confirma ausencia y reaplica.
@@ -77,9 +78,10 @@ El seed de demostración nunca se ejecuta implícitamente. `demoSeed.integration
 
 - aplica primero las siete migraciones originales;
 - inserta filas legacy relacionadas;
-- aplica 008–014 y confirma campos nuevos nulos, canonicalización segura,
-  guard de orden abierta e índices operativos sin pérdida de datos;
-- revierte 008–014, confirma que las filas originales sobreviven y reaplica.
+- aplica 008–015 y confirma campos nuevos nulos, canonicalización segura,
+  guard de orden abierta, índices operativos y cédula legacy nullable sin
+  pérdida de datos;
+- revierte 008–015, confirma que las filas originales sobreviven y reaplica.
 
 La suite omite deliberadamente validación de modelo en casos concretos para demostrar que MySQL sigue siendo barrera final.
 
@@ -103,7 +105,7 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 ### Clientes y motocicletas — `clientsBikes.integration.test.js`
 
-- creación, opcionales, normalización, allowlist y validaciones;
+- creación, cédula requerida, opcionales, normalización, allowlist y validaciones;
 - búsqueda parcial por nombre/teléfono/email;
 - detalle, 404 e ID inválido;
 - motocicleta con cliente anidado;
@@ -112,6 +114,9 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 ### Lifecycle de clientes — `clientLifecycle.integration.test.js`
 
+- cédula normalizada, obligatoria en altas, única entre activos/eliminados y
+  protegida por el índice final también ante altas concurrentes;
+- búsqueda exacta por cédula y snapshot auditado en create/update;
 - phone/email canónicos, formatos inválidos y nombre no único;
 - conflicto activo, override justificado y deleted-match restore-required;
 - listado paginado active/deleted/all, búsqueda y frontera ADMIN/MECANICO;
@@ -123,6 +128,7 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 ### Lifecycle de motocicletas — `bikeLifecycle.integration.test.js`
 
+- filtro exacto por cédula del propietario y serialización segura del cliente;
 - placa global única y conflicto restore-required para una identidad eliminada;
 - listado paginado por lifecycle/propietario, igualdad exacta y prefijo indexable;
 - detalle con propietario y orden abierta, más historia paginada por `bikeId`;
@@ -137,7 +143,8 @@ La suite omite deliberadamente validación de modelo en casos concretos para dem
 
 - orden válida/inválida, fecha explícita/omitida y defaults `RECIBIDA`/`0.00`;
 - protección de mass assignment;
-- listas vacías/pobladas, placa exacta sin subcadena, filtros, paginación y orden `entryDate DESC, id DESC`;
+- listas vacías/pobladas, placa y cédula de cliente exactas, filtros,
+  paginación y orden `entryDate DESC, id DESC`;
 - grafo Bike/Client/items y ausencia de N+1;
 - forma SQL sin `LIKE` para placa y count sin joins ajenos al filtro;
 - ambos tipos de ítem, cantidades fraccionarias y valor cero;
@@ -494,6 +501,25 @@ sólo el ADMIN y el dataset oficial de los seeders: 4 usuarios, 20 clientes,
 manuales. Las 14 migraciones están ejecutadas, no hay pendientes y las consultas
 de cierre reportan cero órdenes abiertas duplicadas por moto, responsables
 abiertos inválidos o totales inconsistentes.
+
+## Extensión de identificación de clientes — 2026-09-05
+
+- backend completo: 28/28 suites, 348/348 pruebas;
+- frontend completo: 15/15 suites, 105/105 pruebas;
+- lint backend/frontend y build de 130 módulos: pass;
+- matriz crítica: 241 IDs únicos, todos `PASS`;
+- Postman: JSON válido, 7 carpetas/36 requests y scripts compilables;
+- volumen MySQL reconstruido: 15 migraciones ejecutadas y cero pendientes;
+- seeds ADMIN/demo ejecutados dos veces: idempotentes;
+- demo final: 20 clientes, ninguno sin cédula y cero cédulas duplicadas;
+- smoke HTTP autenticado: cédula `1000000001` devolvió 1 cliente, sus 2 motos
+  y sus 7 órdenes; todas las relaciones serializaron la misma cédula;
+- `git diff --check`: sin errores de whitespace.
+
+La prueba concurrente de cédula confirma un único `201`, un único `409`
+`CLIENT_DOCUMENT_ALREADY_EXISTS`, una sola fila Client y un solo evento
+`CREATED`. El upgrade/down/reapply conserva filas legacy con cédula nullable en
+vez de inferir datos de identidad.
 
 ## Smoke de navegador y API
 

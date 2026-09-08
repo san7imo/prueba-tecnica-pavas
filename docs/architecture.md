@@ -2,7 +2,8 @@
 
 ## Estado y alcance
 
-Este documento describe la arquitectura del producto consolidado en HITO 19:
+Este documento describe la arquitectura del producto vigente, consolidado en
+HITO 19 y extendido con identificación única de clientes después de HITO 20:
 conserva las fases 1 y 2 y añade maestras completas, auditoría global, una sola
 orden abierta por motocicleta, responsabilidad mecánica, retornos controlados,
 reapertura, lifecycle seguro de usuarios, dashboard operativo y UX endurecida.
@@ -118,11 +119,12 @@ Los historiales se consultan con límite/offset acotado, un join del actor que s
 ## Persistencia y migraciones
 
 MySQL 8/InnoDB es la fuente de verdad y Sequelize el mapper/query layer. Umzug
-ejecuta catorce migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
+ejecuta quince migraciones ESM y registra su estado en `SequelizeMeta`. Las cuatro
 migraciones de HITO 1 añaden fundamentos compatibles con filas legacy; la 012
 prevalida y canonicaliza contactos de clientes sin inventar datos; la 013
-instala la barrera de orden abierta y la 014 añade índices medidos para colas e
-historia operativa. No se usa
+instala la barrera de orden abierta, la 014 añade índices medidos para colas e
+historia operativa y la 015 incorpora la cédula única de cliente sin inventar
+valores para filas legacy. No se usa
 `sequelize.sync` como estrategia de esquema.
 
 Desarrollo usa `pavas_workshop`; integración usa `pavas_workshop_test` y una guarda rechaza objetivos inseguros. Consulte [Base de datos](database.md) y [Pruebas](testing.md).

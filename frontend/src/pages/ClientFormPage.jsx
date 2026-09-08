@@ -7,8 +7,12 @@ import { ErrorState } from '../components/ui/ErrorState.jsx';
 import { LoadingState } from '../components/ui/LoadingState.jsx';
 import { getApiError } from '../utils/apiError.js';
 
-const EMPTY_FORM = { name: '', phone: '', email: '' };
-const DUPLICATE_CODES = new Set(['CLIENT_DUPLICATE_RISK', 'CLIENT_RESTORE_REQUIRED']);
+const EMPTY_FORM = { documentNumber: '', name: '', phone: '', email: '' };
+const DUPLICATE_CODES = new Set([
+  'CLIENT_DOCUMENT_ALREADY_EXISTS',
+  'CLIENT_DUPLICATE_RISK',
+  'CLIENT_RESTORE_REQUIRED',
+]);
 
 export const ClientFormPage = () => {
   const { id } = useParams();
@@ -28,7 +32,12 @@ export const ClientFormPage = () => {
     let active = true;
     clientsApi.getById(id)
       .then((client) => {
-        if (active) setForm({ name: client.name, phone: client.phone, email: client.email ?? '' });
+        if (active) setForm({
+          documentNumber: client.documentNumber ?? '',
+          name: client.name,
+          phone: client.phone,
+          email: client.email ?? '',
+        });
       })
       .catch((requestError) => {
         if (active) setLoadError(getApiError(requestError, 'No fue posible cargar el cliente.').message);
@@ -54,6 +63,7 @@ export const ClientFormPage = () => {
     setSaving(true);
     setError(null);
     const payload = {
+      documentNumber: form.documentNumber.trim(),
       name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || null,
@@ -85,12 +95,13 @@ export const ClientFormPage = () => {
           <Link className="back-link" to={editing ? `/clients/${id}` : '/clients'}>← Volver a clientes</Link>
           <p className="eyebrow">Maestra de clientes</p>
           <h1 id="client-form-title">{editing ? 'Editar cliente' : 'Nuevo cliente'}</h1>
-          <p>Los datos de contacto se normalizan y se revisan para prevenir registros duplicados.</p>
+          <p>La cédula identifica al cliente de forma única; los datos de contacto conservan su control de posibles duplicados.</p>
         </div>
       </div>
       <div className="panel form-panel">
         <form className="form-grid" onSubmit={submit} aria-label={editing ? 'Editar cliente' : 'Crear cliente'}>
-          <div className="field field--span-2"><label htmlFor="client-name">Nombre completo<span className="required-mark"> *</span></label><input id="client-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength="120" disabled={saving} autoFocus /></div>
+          <div className="field"><label htmlFor="client-document-number">Cédula<span className="required-mark"> *</span></label><input id="client-document-number" value={form.documentNumber} onChange={(event) => setForm({ ...form, documentNumber: event.target.value })} required minLength="5" maxLength="50" inputMode="numeric" disabled={saving} autoFocus /></div>
+          <div className="field"><label htmlFor="client-name">Nombre completo<span className="required-mark"> *</span></label><input id="client-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength="120" disabled={saving} /></div>
           <div className="field"><label htmlFor="client-phone">Teléfono<span className="required-mark"> *</span></label><input id="client-phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required minLength="7" maxLength="40" inputMode="tel" disabled={saving} /></div>
           <div className="field"><label htmlFor="client-email">Correo <span>(opcional)</span></label><input id="client-email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} type="email" maxLength="254" disabled={saving} /></div>
           {error && !DUPLICATE_CODES.has(error.code) ? <p className="inline-alert inline-alert--error field--span-2" role="alert">{error.message}</p> : null}

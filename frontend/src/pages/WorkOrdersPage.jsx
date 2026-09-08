@@ -11,7 +11,7 @@ import { useWorkOrders } from '../features/workOrders/hooks/useWorkOrders.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { WORK_ORDER_STATUSES } from '../constants/workOrders.js';
 
-const EMPTY_FILTERS = { status: '', plate: '' };
+const EMPTY_FILTERS = { status: '', plate: '', clientDocumentNumber: '' };
 const ADMIN_SCOPES = ['all', 'unassigned'];
 
 const positivePage = (value) => {
@@ -36,6 +36,7 @@ export const WorkOrdersPage = () => {
   const initialFilters = {
     status: WORK_ORDER_STATUSES.includes(requestedStatus) ? requestedStatus : '',
     plate: searchParams.get('plate') ?? '',
+    clientDocumentNumber: searchParams.get('clientDocumentNumber') ?? '',
   };
   const [scope, setScope] = useState(
     isAdmin && ADMIN_SCOPES.includes(requestedScope) ? requestedScope : isAdmin ? 'all' : 'mine',
@@ -68,6 +69,9 @@ export const WorkOrdersPage = () => {
     next.set('scope', nextScope);
     if (nextFilters.status) next.set('status', nextFilters.status);
     if (nextFilters.plate) next.set('plate', nextFilters.plate);
+    if (nextFilters.clientDocumentNumber) {
+      next.set('clientDocumentNumber', nextFilters.clientDocumentNumber);
+    }
     if (isAdmin && nextAssignedMechanicId) {
       next.set('assignedMechanicId', String(nextAssignedMechanicId));
     }
@@ -77,7 +81,11 @@ export const WorkOrdersPage = () => {
 
   const applyFilters = (event) => {
     event.preventDefault();
-    const nextFilters = { status: draft.status, plate: draft.plate.trim() };
+    const nextFilters = {
+      status: draft.status,
+      plate: draft.plate.trim(),
+      clientDocumentNumber: draft.clientDocumentNumber.trim(),
+    };
     setPage(1);
     setApplied(nextFilters);
     updateLocation({ nextFilters, nextPage: 1 });
@@ -96,7 +104,10 @@ export const WorkOrdersPage = () => {
   };
 
   const hasFilters = Boolean(
-    applied.status || applied.plate || assignedMechanicId,
+    applied.status ||
+    applied.plate ||
+    applied.clientDocumentNumber ||
+    assignedMechanicId,
   );
 
   const changeScope = (nextScope) => {
@@ -163,7 +174,7 @@ export const WorkOrdersPage = () => {
                 ? 'No hay órdenes sin asignar'
                 : isAdmin ? 'Aún no hay órdenes' : 'No tienes órdenes asignadas'}
             message={hasFilters
-              ? 'Ajusta el estado o la placa e inténtalo nuevamente.'
+              ? 'Ajusta la cédula, el estado o la placa e inténtalo nuevamente.'
               : scope === 'unassigned'
                 ? 'Todas las órdenes actuales ya tienen un responsable.'
                 : isAdmin

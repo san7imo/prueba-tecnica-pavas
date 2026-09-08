@@ -2,8 +2,9 @@
 
 ## Alcance implementado
 
-La API expone las rutas completas de las fases 1 y 2 y del producto consolidado
-en HITO 19. Clientes, motocicletas, órdenes, usuarios y auditoría requieren
+La API expone las rutas completas de las fases 1 y 2 y del producto vigente,
+incluida la identificación única añadida después de HITO 20. Clientes,
+motocicletas, órdenes, usuarios y auditoría requieren
 access JWT; sólo health y el ciclo login/refresh/logout son públicos.
 
 ```text
@@ -20,14 +21,14 @@ PATCH /api/users/:id/role
 PATCH /api/users/:id/active
 
 POST /api/clients
-GET  /api/clients?search=&lifecycle=&page=&pageSize=
+GET  /api/clients?documentNumber=&search=&lifecycle=&page=&pageSize=
 GET  /api/clients/:id
 PATCH /api/clients/:id
 DELETE /api/clients/:id
 POST /api/clients/:id/restore
 
 POST /api/bikes
-GET  /api/bikes?plate=&platePrefix=&clientId=&lifecycle=&page=&pageSize=
+GET  /api/bikes?plate=&platePrefix=&clientId=&clientDocumentNumber=&lifecycle=&page=&pageSize=
 GET  /api/bikes/:id
 PATCH /api/bikes/:id
 PATCH /api/bikes/:id/owner
@@ -35,7 +36,7 @@ DELETE /api/bikes/:id
 POST /api/bikes/:id/restore
 
 POST   /api/work-orders
-GET    /api/work-orders?status=&plate=&bikeId=&scope=&assignedMechanicId=&page=&pageSize=
+GET    /api/work-orders?status=&plate=&bikeId=&clientDocumentNumber=&scope=&assignedMechanicId=&page=&pageSize=
 GET    /api/work-orders/:id
 GET    /api/work-orders/:id/history?page=&pageSize=
 PATCH  /api/work-orders/:id/assignment
@@ -220,6 +221,7 @@ Authorization: Bearer <ADMIN accessToken>
 Content-Type: application/json
 
 {
+  "documentNumber": "1.020.304.050",
   "name": "Juan Perez",
   "phone": "3001234567",
   "email": "juan@example.com",
@@ -227,23 +229,31 @@ Content-Type: application/json
 }
 ```
 
-Sólo `ADMIN`. Nombre usa trim; email opcional usa trim/lowercase. Teléfono
+Sólo `ADMIN`. `documentNumber` es obligatorio, elimina puntos, espacios y
+guiones, y debe contener entre 5 y 20 dígitos. Se almacena como string para
+preservar ceros iniciales. Nombre usa trim; email opcional usa trim/lowercase. Teléfono
 retira espacios, guiones, puntos y paréntesis, conserva un `+` inicial y exige
 7–20 dígitos. Una coincidencia activa exacta de phone/email devuelve
 `409 CLIENT_DUPLICATE_RISK` con `candidateIds`/`matchedFields` seguros. Si son
 personas distintas puede reenviarse `confirmDuplicate: true` junto con
 `duplicateReason`; el override queda auditado. Una coincidencia eliminada
-siempre devuelve `409 CLIENT_RESTORE_REQUIRED`.
+siempre devuelve `409 CLIENT_RESTORE_REQUIRED`. La cédula es globalmente única
+incluso para clientes eliminados: una coincidencia activa devuelve
+`409 CLIENT_DOCUMENT_ALREADY_EXISTS` y una eliminada exige restauración; no
+existe override para duplicar una cédula.
 
 ### Buscar clientes
 
 ```http
-GET /api/clients?search=juan&lifecycle=active&page=1&pageSize=20
+GET /api/clients?documentNumber=1020304050&lifecycle=active&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
-`search` opcional busca parcialmente nombre/email y reconoce teléfono con
-formato humano contra su forma canónica. `lifecycle` admite `active` (default),
+`documentNumber` realiza la búsqueda principal por igualdad exacta después de
+normalizar la cédula y aprovecha su índice único. `search` conserva la búsqueda
+secundaria parcial por nombre/email y reconoce teléfono con formato humano
+contra su forma canónica. Ambos filtros, si se envían juntos, combinan con AND.
+`lifecycle` admite `active` (default),
 `deleted` y `all`; sólo `ADMIN` puede solicitar los dos últimos. Página default
 1/20, máximo 100; orden nombre/ID. Devuelve `{ "data": [], "meta": {} }`.
 
@@ -254,8 +264,8 @@ GET /api/clients/:id
 Authorization: Bearer <accessToken>
 ```
 
-ID entero positivo. Ambos roles leen activos; un detalle eliminado es sólo
-`ADMIN`. La respuesta añade `lifecycle`, `deletedAt`, `deletedByUserId` y
+ID técnico entero positivo. Ambos roles leen activos; un detalle eliminado es sólo
+`ADMIN`. La respuesta incluye `documentNumber` y añade `lifecycle`, `deletedAt`, `deletedByUserId` y
 `deleteReason`. Errores: 400, `404 CLIENT_NOT_FOUND`, 403 para un mecánico que
 intenta leer un eliminado.
 
@@ -266,13 +276,14 @@ PATCH /api/clients/:id
 Authorization: Bearer <ADMIN accessToken>
 Content-Type: application/json
 
-{ "name": "Nuevo nombre", "phone": "+57 300 123 4567", "email": null }
+{ "documentNumber": "1020304051", "name": "Nuevo nombre", "phone": "+57 300 123 4567", "email": null }
 ```
 
-Acepta al menos uno de `name`, `phone`, `email`; `null` elimina el email. Un
+Acepta al menos uno de `documentNumber`, `name`, `phone`, `email`; `null` elimina el email. Un
 cliente eliminado responde `409 CLIENT_INACTIVE`. Los cambios efectivos crean
 `UPDATED`; un payload idempotente retorna el recurso sin inventar un evento.
-Cambiar phone/email aplica la misma política de duplicados y override que create.
+Cambiar phone/email aplica la misma política de duplicados y override que create;
+cambiar cédula conserva la unicidad global y queda incluido en el snapshot auditado.
 
 ### Eliminar y restaurar
 
@@ -326,7 +337,7 @@ Sólo `ADMIN`. Placa, marca, modelo y `clientId` positivo son requeridos; `cylin
 ### Buscar motocicletas
 
 ```http
-GET /api/bikes?plate=abc%20123&clientId=1&lifecycle=active&page=1&pageSize=20
+GET /api/bikes?plate=abc%20123&clientDocumentNumber=1020304050&lifecycle=active&page=1&pageSize=20
 Authorization: Bearer <accessToken>
 ```
 
@@ -335,6 +346,7 @@ Filtros opcionales:
 - `plate`: igualdad exacta tras normalización;
 - `platePrefix`: prefijo normalizado indexable;
 - `clientId`: propietario positivo;
+- `clientDocumentNumber`: cédula exacta y normalizada del propietario;
 - `lifecycle`: `active` por defecto, `deleted` o `all`;
 - `page`: entero positivo, default 1;
 - `pageSize`: 1–100, default 20.
@@ -441,6 +453,7 @@ Queries opcionales:
 - `status`: uno de `RECIBIDA`, `DIAGNOSTICO`, `EN_PROCESO`, `LISTA`, `ENTREGADA`, `CANCELADA`;
 - `plate`: igualdad exacta después de normalizar mayúsculas y espacios;
 - `bikeId`: ID exacto para consultar la historia de una motocicleta;
+- `clientDocumentNumber`: cédula exacta y normalizada del cliente propietario;
 - `scope`: `all`, `mine` o `unassigned`;
 - `assignedMechanicId`: ID exacto del mecánico responsable;
 - `page`: entero positivo, default 1;

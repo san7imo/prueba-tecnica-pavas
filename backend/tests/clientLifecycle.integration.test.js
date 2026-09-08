@@ -43,6 +43,7 @@ const nextClientPayload = (overrides = {}) => {
   clientSequence += 1;
   const suffix = String(clientSequence).padStart(4, '0');
   return {
+    documentNumber: String(1000000000 + clientSequence),
     name: `Lifecycle Client ${clientSequence}`,
     phone: `300000${suffix}`,
     email: `lifecycle.client.${clientSequence}@example.test`,
@@ -98,12 +99,38 @@ afterAll(async () => {
 });
 
 describe.sequential('Complete Client backend lifecycle', () => {
+  it('requires, canonicalizes and validates the client document number', async () => {
+    const created = await createClient({ documentNumber: ' 1.000-000.001 ' });
+    expect(created.documentNumber).toBe('1000000001');
+
+    for (const documentNumber of ['', '1234', 'ABC12345', '1'.repeat(21)]) {
+      const response = await adminRequest(app)
+        .post('/api/clients')
+        .send(nextClientPayload({ documentNumber }));
+      expect(response.status).toBe(400);
+      expect(response.body.error.details).toContainEqual(
+        expect.objectContaining({ field: 'documentNumber' }),
+      );
+    }
+
+    const missing = nextClientPayload();
+    delete missing.documentNumber;
+    await adminRequest(app)
+      .post('/api/clients')
+      .send(missing)
+      .expect(400)
+      .expect(({ body }) => expect(body.error.details).toContainEqual(
+        expect.objectContaining({ field: 'documentNumber' }),
+      ));
+  });
+
   it('canonicalizes phone/email and rejects invalid canonical phones', async () => {
     const created = await createClient({
       phone: ' +57 (300) 123-45.67 ',
       email: '  SHARED@EXAMPLE.TEST  ',
     });
     expect(created).toMatchObject({
+      documentNumber: '1000000001',
       phone: '+573001234567',
       email: 'shared@example.test',
       lifecycle: 'active',
@@ -165,6 +192,76 @@ describe.sequential('Complete Client backend lifecycle', () => {
       candidateIds: [String(first.id)],
       matchedFields: ['email'],
     });
+  });
+
+  it('enforces document uniqueness across active and deleted clients', async () => {
+    const first = await createClient({ documentNumber: '1000000099' });
+    const activeConflict = await adminRequest(app).post('/api/clients').send(
+      nextClientPayload({
+        documentNumber: '1.000.000.099',
+        phone: '3110000099',
+        email: 'different.document@example.test',
+      }),
+    );
+    expect(activeConflict.status).toBe(409);
+    expect(activeConflict.body.error).toEqual({
+      code: 'CLIENT_DOCUMENT_ALREADY_EXISTS',
+      message: 'An active client already uses this document number.',
+      details: {
+        candidateIds: [String(first.id)],
+        matchedFields: ['documentNumber'],
+      },
+    });
+
+    await deleteClient(first.id, 'Archived identity.').expect(200);
+    const deletedConflict = await adminRequest(app).post('/api/clients').send(
+      nextClientPayload({
+        documentNumber: '1000000099',
+        phone: '3110000100',
+        email: 'deleted.document@example.test',
+      }),
+    );
+    expect(deletedConflict.status).toBe(409);
+    expect(deletedConflict.body.error).toEqual({
+      code: 'CLIENT_RESTORE_REQUIRED',
+      message: 'A deleted client already uses this document number and must be restored.',
+      details: {
+        candidateIds: [String(first.id)],
+        matchedFields: ['documentNumber'],
+      },
+    });
+  });
+
+  it('uses the database unique index as the final barrier for concurrent document creation', async () => {
+    const documentNumber = '1000000098';
+    const firstPayload = nextClientPayload({
+      documentNumber,
+      phone: '3110000098',
+      email: 'document.race.one@example.test',
+    });
+    const secondPayload = nextClientPayload({
+      documentNumber,
+      phone: '3110000097',
+      email: 'document.race.two@example.test',
+    });
+
+    const responses = await Promise.all([
+      adminRequest(app).post('/api/clients').send(firstPayload),
+      adminRequest(app).post('/api/clients').send(secondPayload),
+    ]);
+    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+    const conflict = responses.find(({ status }) => status === 409);
+    expect(conflict.body.error).toMatchObject({
+      code: 'CLIENT_DOCUMENT_ALREADY_EXISTS',
+      details: { matchedFields: ['documentNumber'] },
+    });
+    expect(await models.Client.count({ where: { documentNumber } })).toBe(1);
+    expect(await models.AuditEvent.count({
+      where: {
+        entityType: AUDIT_ENTITY_TYPE.CLIENT,
+        action: AUDIT_ACTION.CREATED,
+      },
+    })).toBe(1);
   });
 
   it('requires a justified override and audits an intentional active duplicate', async () => {
@@ -284,6 +381,13 @@ describe.sequential('Complete Client backend lifecycle', () => {
     expect(phoneSearch.status).toBe(200);
     expect(phoneSearch.body.data).toHaveLength(1);
     expect(phoneSearch.body.data[0].id).toBe(clients[0].id);
+
+    const documentSearch = await adminRequest(app)
+      .get('/api/clients')
+      .query({ documentNumber: clients[1].documentNumber });
+    expect(documentSearch.status).toBe(200);
+    expect(documentSearch.body.data).toHaveLength(1);
+    expect(documentSearch.body.data[0].id).toBe(clients[1].id);
   });
 
   it('validates lifecycle and bounded pagination filters', async () => {
@@ -346,6 +450,7 @@ describe.sequential('Complete Client backend lifecycle', () => {
     const response = await adminRequest(app)
       .patch(`/api/clients/${client.id}`)
       .send({
+        documentNumber: '1.020.304.050',
         name: '  Updated Client  ',
         phone: ' +57 (301) 222-33.44 ',
         email: '  UPDATED@EXAMPLE.TEST ',
@@ -354,6 +459,7 @@ describe.sequential('Complete Client backend lifecycle', () => {
       });
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
+      documentNumber: '1020304050',
       name: 'Updated Client',
       phone: '+573012223344',
       email: 'updated@example.test',
@@ -364,14 +470,16 @@ describe.sequential('Complete Client backend lifecycle', () => {
       where: { entityId: client.id, action: AUDIT_ACTION.UPDATED },
     });
     expect(event.metadata).toEqual({
-      changedFields: ['email', 'name', 'phone'],
+      changedFields: ['documentNumber', 'email', 'name', 'phone'],
     });
     expect(event.beforeData).toMatchObject({
+      documentNumber: client.documentNumber,
       name: client.name,
       phone: client.phone,
       email: client.email,
     });
     expect(event.afterData).toMatchObject({
+      documentNumber: '1020304050',
       name: 'Updated Client',
       phone: '+573012223344',
       email: 'updated@example.test',

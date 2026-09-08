@@ -43,6 +43,10 @@
       "value": ""
     },
     {
+      "key": "clientDocumentNumber",
+      "value": ""
+    },
+    {
       "key": "newOwnerClientId",
       "value": ""
     },
@@ -401,6 +405,7 @@
               "script": {
                 "exec": [
                   "const suffix = Date.now().toString();",
+                  "pm.variables.set('requestClientDocumentNumber', `10${suffix.slice(-8)}`);",
                   "pm.variables.set('requestClientPhone', `30${suffix.slice(-10)}`);",
                   "pm.variables.set('requestClientEmail', `postman.client.${suffix}@example.test`);"
                 ],
@@ -414,7 +419,9 @@
                   "pm.test('Created', () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
                   "pm.expect(body.data).to.have.property('id');",
-                  "pm.collectionVariables.set('clientId', body.data.id);"
+                  "pm.expect(body.data.documentNumber).to.eql(pm.variables.get('requestClientDocumentNumber'));",
+                  "pm.collectionVariables.set('clientId', body.data.id);",
+                  "pm.collectionVariables.set('clientDocumentNumber', body.data.documentNumber);"
                 ],
                 "type": "text/javascript"
               }
@@ -430,7 +437,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Cliente Postman\",\n  \"phone\": \"{{requestClientPhone}}\",\n  \"email\": \"{{requestClientEmail}}\"\n}",
+              "raw": "{\n  \"documentNumber\": \"{{requestClientDocumentNumber}}\",\n  \"name\": \"Cliente Postman\",\n  \"phone\": \"{{requestClientPhone}}\",\n  \"email\": \"{{requestClientEmail}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -438,7 +445,7 @@
               }
             },
             "url": "{{baseUrl}}/clients",
-            "description": "Crea un cliente y guarda su ID en clientId."
+            "description": "Crea un cliente con cédula única y guarda su ID y cédula para el recorrido."
           }
         },
         {
@@ -446,8 +453,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/clients?search=Postman&lifecycle={{lifecycle}}&page=1&pageSize=20",
-            "description": "Busca por nombre, teléfono o email, filtra active/deleted/all y devuelve metadata paginada. deleted/all requieren ADMIN."
+            "url": "{{baseUrl}}/clients?documentNumber={{clientDocumentNumber}}&lifecycle={{lifecycle}}&page=1&pageSize=20",
+            "description": "Busca por igualdad exacta de cédula, filtra active/deleted/all y devuelve metadata paginada. search conserva nombre, teléfono o email como alternativas; deleted/all requieren ADMIN."
           },
           "event": [
             {
@@ -656,8 +663,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/bikes?platePrefix={{bikePlate}}&clientId={{clientId}}&lifecycle={{lifecycle}}&page=1&pageSize=20",
-            "description": "Ejercita el prefijo indexable y la relación con propietario; no combine plate y platePrefix."
+            "url": "{{baseUrl}}/bikes?platePrefix={{bikePlate}}&clientDocumentNumber={{clientDocumentNumber}}&lifecycle={{lifecycle}}&page=1&pageSize=20",
+            "description": "Ejercita el prefijo indexable y la relación exacta con la cédula del propietario; no combine plate y platePrefix."
           },
           "event": [{
             "listen": "test",
@@ -876,8 +883,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/work-orders",
-            "description": "Devuelve la primera página predeterminada con metadata."
+            "url": "{{baseUrl}}/work-orders?clientDocumentNumber={{clientDocumentNumber}}&page=1&pageSize=20",
+            "description": "Devuelve las órdenes del cliente localizado por cédula exacta con metadata paginada."
           },
           "event": [
             {

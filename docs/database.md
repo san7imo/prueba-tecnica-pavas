@@ -4,13 +4,16 @@
 
 El esquema físico conserva las estructuras de Fases 1 y 2 y añade las
 fundaciones de persistencia de productización: lifecycle de clientes/motos,
-`audit_events`, responsable de orden y actor de ítem. Catorce migraciones son la
+`audit_events`, responsable de orden y actor de ítem. Quince migraciones son la
 fuente de verdad. HITO 3 activa el lifecycle de clientes y canonicaliza de
 forma segura sus contactos; HITO 4 activa el lifecycle y ownership de motos
 y las demás capacidades se activan por hito. La reapertura de HITO 11 no agrega
 columnas: sus repeticiones se reconstruyen desde `work_order_status_history` y
 `audit_events`, evitando un campo mutable de “última reapertura”. HITO 12 activa
 la columna de creador ya migrada; tampoco requiere una migración nueva.
+La migración `015` agrega `clients.document_number` y su índice único global;
+la columna queda nullable sólo para compatibilidad con filas legacy, mientras
+la API la exige en cada alta nueva y el seed demo siempre la completa.
 
 ## Convenciones
 
@@ -40,6 +43,7 @@ erDiagram
 
     CLIENT {
       bigint id PK
+      varchar document_number UK "nullable sólo legacy"
       varchar name
       varchar phone
       varchar email "nullable"
@@ -130,6 +134,12 @@ erDiagram
 
 ## `clients`
 
+`document_number` conserva la cédula como string, elimina puntos, espacios y
+guiones, exige 5–20 dígitos en la aplicación y tiene el índice único global
+`uq_clients_document_number`. Es nullable en el esquema únicamente para no
+inventar cédulas durante un upgrade de filas legacy; toda alta API y todos los
+clientes del seed demo la incluyen.
+
 `phone` se almacena sin espacios, guiones, puntos ni paréntesis, conserva como
 máximo un `+` inicial y debe cumplir `^\+?\d{7,20}$`. `email` es nullable y,
 cuando existe, se almacena con trim/lowercase y formato válido. No hay UNIQUE
@@ -139,6 +149,7 @@ de negocio, no una simplificación física.
 | Columna | Tipo | Reglas |
 |---|---|---|
 | `id` | `BIGINT UNSIGNED` | PK, autoincremental |
+| `document_number` | `VARCHAR(20)` | nullable sólo legacy, UNIQUE `uq_clients_document_number` |
 | `name` | `VARCHAR(150)` | requerida |
 | `phone` | `VARCHAR(30)` | requerida |
 | `email` | `VARCHAR(254)` | nullable |
@@ -151,7 +162,9 @@ Un cliente posee muchas motocicletas.
 
 `chk_clients_delete_state` exige que los tres campos lifecycle estén todos
 nulos o todos informados y que la razón no quede vacía. Los índices
-`ix_clients_lifecycle_name_id` e `ix_clients_deleted_by_user` soportan vistas
+`uq_clients_document_number` resuelve la búsqueda operacional exacta y reserva
+la cédula aun después del soft delete. `ix_clients_lifecycle_name_id` e
+`ix_clients_deleted_by_user` soportan vistas
 administrativas e integridad referencial.
 
 ## `bikes`
@@ -354,6 +367,7 @@ reemplazo de refresh usa `ON DELETE SET NULL`.
 202609030012-normalize-client-contacts.js
 202609030013-enforce-single-open-order.js
 202609030014-harden-operational-query-indexes.js
+202609050015-add-client-document-number.js
 ```
 
 Umzug registra ejecución en `SequelizeMeta`. Todas incluyen `up` y `down`; las
@@ -364,6 +378,11 @@ La 012 es data-only: primero inspecciona todas las filas y aborta indicando
 únicamente IDs/campos inválidos. Sólo si el preflight completo pasa actualiza
 teléfono/email en una transacción. Su `down` no inventa la puntuación o casing
 eliminados; retirar y reaplicar el registro de migración es idempotente.
+
+La 015 añade primero la columna nullable y luego `uq_clients_document_number`.
+Así preserva upgrades con clientes existentes sin inferir su identidad, permite
+múltiples `NULL` legacy conforme a MySQL y reserva globalmente cada cédula
+informada. Su `down` retira el índice antes de eliminar la columna.
 
 La 013 también ejecuta un preflight antes de modificar el esquema. Si detecta
 más de una orden abierta para una moto, aborta informando `bike_id` y cantidad,

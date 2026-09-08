@@ -207,7 +207,7 @@ p { color: var(--ink-700); line-height: 1.55; }
 .section-heading p { margin-top: 0.2rem; font-size: 0.82rem; }
 .section-heading--compact { margin-bottom: 1rem; }
 .step-complete { padding: 0.3rem 0.55rem; border-radius: 999px; color: var(--success); background: var(--success-soft); font-size: 0.7rem; font-weight: 800; }
-.lookup-form { display: grid; grid-template-columns: minmax(12rem, 1fr) auto; align-items: end; gap: 0.65rem; }
+.lookup-form { display: grid; grid-template-columns: repeat(2, minmax(12rem, 1fr)) auto; align-items: end; gap: 0.65rem; }
 .selection-list { display: grid; gap: 0.6rem; margin-top: 1rem; }
 .selection-card { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 1rem; width: 100%; padding: 0.9rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; text-align: left; }
 .selection-card:hover { border-color: #9bb6d3; }

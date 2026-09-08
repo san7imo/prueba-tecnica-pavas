@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,6 +73,10 @@ const openQuickClientForm = async () => {
 };
 
 const fillQuickClient = () => {
+  const form = screen.getByRole('form', { name: /registro rápido de cliente/i });
+  fireEvent.change(within(form).getByLabelText(/^cédula/i), {
+    target: { value: '1020304050' },
+  });
   fireEvent.change(screen.getByLabelText(/nombre completo/i), {
     target: { value: 'Ana Torres' },
   });
@@ -140,6 +144,7 @@ describe('NewWorkOrderPage reuse-first flow', () => {
     expect(await screen.findByText(/motocicletas activas registradas para Ana Torres/i))
       .toBeInTheDocument();
     expect(clientsApi.create).toHaveBeenCalledWith({
+      documentNumber: '1020304050',
       name: 'Ana Torres',
       phone: '3001234567',
       email: 'ana@example.com',
@@ -242,6 +247,7 @@ describe('NewWorkOrderPage reuse-first flow', () => {
     }));
 
     await waitFor(() => expect(clientsApi.create).toHaveBeenLastCalledWith({
+      documentNumber: '1020304050',
       name: 'Ana Torres',
       phone: '3001234567',
       email: 'ana@example.com',

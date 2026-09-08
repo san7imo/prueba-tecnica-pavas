@@ -1,3 +1,5 @@
+import { UniqueConstraintError } from 'sequelize';
+
 import { sequelize } from '../config/databaseContext.js';
 import { AUDIT_ACTION, AUDIT_ENTITY_TYPE } from '../constants/audit.js';
 import { CLIENT_DUPLICATE_FIELD, CLIENT_LIFECYCLE } from '../constants/client.js';
@@ -20,6 +22,21 @@ const lifecycleConflict = (code, message) => new ConflictError({ code, message }
 
 const duplicateConflict = (code, message, details) =>
   new ConflictError({ code, message, details });
+
+const documentConflict = (client) => duplicateConflict(
+  client?.deletedAt != null
+    ? 'CLIENT_RESTORE_REQUIRED'
+    : 'CLIENT_DOCUMENT_ALREADY_EXISTS',
+  client?.deletedAt != null
+    ? 'A deleted client already uses this document number and must be restored.'
+    : 'An active client already uses this document number.',
+  client
+    ? {
+        candidateIds: [String(client.id)],
+        matchedFields: ['documentNumber'],
+      }
+    : undefined,
+);
 
 const plain = (resource) =>
   typeof resource?.get === 'function' ? resource.get({ plain: true }) : resource;
@@ -92,29 +109,72 @@ const evaluateDuplicateRisk = async (
 const changedClientFields = (client, updates) =>
   Object.keys(updates).filter((field) => client[field] !== updates[field]);
 
+const assertUniqueDocumentNumber = async (
+  documentNumber,
+  excludeId,
+  transaction,
+) => {
+  const candidate = await clientRepository.findByDocumentNumber(
+    documentNumber,
+    { transaction },
+  );
+  if (candidate && String(candidate.id) !== String(excludeId ?? '')) {
+    throw documentConflict(candidate);
+  }
+};
+
+const isDocumentUniqueConstraint = (error) => {
+  if (!(error instanceof UniqueConstraintError)) return false;
+  const details = [
+    error?.parent?.constraint,
+    error?.parent?.sqlMessage,
+    error?.original?.sqlMessage,
+    ...Object.keys(error.fields ?? {}),
+  ].filter(Boolean).join(' ');
+  return /uq_clients_document_number|document_number|documentNumber/i.test(details);
+};
+
+const exactDocumentConflict = async (documentNumber) => {
+  const candidate = await clientRepository.findByDocumentNumber(documentNumber);
+  return documentConflict(candidate);
+};
+
 export const clientService = {
-  createClient(data, actor) {
-    return sequelize.transaction(async (transaction) => {
-      const duplicateMetadata = await evaluateDuplicateRisk({
-        contacts: { phone: data.phone, email: data.email },
-        confirmDuplicate: data.confirmDuplicate,
-        blockDeletedMatches: true,
-      }, transaction);
-      const client = await clientRepository.create({
-        name: data.name,
-        phone: data.phone,
-        email: data.email,
-      }, { transaction });
-      await auditService.record({
-        entityType: AUDIT_ENTITY_TYPE.CLIENT,
-        action: AUDIT_ACTION.CREATED,
-        actor,
-        after: client,
-        metadata: duplicateMetadata,
-        reason: duplicateMetadata ? data.duplicateReason : null,
-      }, transaction);
-      return client;
-    });
+  async createClient(data, actor) {
+    try {
+      return await sequelize.transaction(async (transaction) => {
+        await assertUniqueDocumentNumber(
+          data.documentNumber,
+          undefined,
+          transaction,
+        );
+        const duplicateMetadata = await evaluateDuplicateRisk({
+          contacts: { phone: data.phone, email: data.email },
+          confirmDuplicate: data.confirmDuplicate,
+          blockDeletedMatches: true,
+        }, transaction);
+        const client = await clientRepository.create({
+          documentNumber: data.documentNumber,
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+        }, { transaction });
+        await auditService.record({
+          entityType: AUDIT_ENTITY_TYPE.CLIENT,
+          action: AUDIT_ACTION.CREATED,
+          actor,
+          after: client,
+          metadata: duplicateMetadata,
+          reason: duplicateMetadata ? data.duplicateReason : null,
+        }, transaction);
+        return client;
+      });
+    } catch (error) {
+      if (isDocumentUniqueConstraint(error)) {
+        throw await exactDocumentConflict(data.documentNumber);
+      }
+      throw error;
+    }
   },
 
   async listClients(filters, actor) {
@@ -150,46 +210,67 @@ export const clientService = {
     return client;
   },
 
-  updateClient(id, data, actor) {
-    return sequelize.transaction(async (transaction) => {
-      const client = await clientRepository.findByIdForUpdate(id, transaction);
-      if (!client) throw clientNotFound();
-      if (client.deletedAt !== null) {
-        throw lifecycleConflict(
-          'CLIENT_INACTIVE',
-          'Deleted clients must be restored before they can be updated.',
-        );
-      }
+  async updateClient(id, data, actor) {
+    try {
+      return await sequelize.transaction(async (transaction) => {
+        const client = await clientRepository.findByIdForUpdate(id, transaction);
+        if (!client) throw clientNotFound();
+        if (client.deletedAt !== null) {
+          throw lifecycleConflict(
+            'CLIENT_INACTIVE',
+            'Deleted clients must be restored before they can be updated.',
+          );
+        }
 
-      const changedFields = changedClientFields(client, data.updates);
-      if (changedFields.length === 0) return client;
-      const contactUpdates = {};
-      if (changedFields.includes('phone')) contactUpdates.phone = data.updates.phone;
-      if (changedFields.includes('email')) contactUpdates.email = data.updates.email;
-      const duplicateMetadata = Object.keys(contactUpdates).length > 0
-        ? await evaluateDuplicateRisk({
-            contacts: contactUpdates,
-            excludeId: client.id,
-            confirmDuplicate: data.confirmDuplicate,
-            blockDeletedMatches: true,
-          }, transaction)
-        : null;
-      const before = detachedPlain(client);
-      await clientRepository.update(client, data.updates, transaction);
-      await auditService.record({
-        entityType: AUDIT_ENTITY_TYPE.CLIENT,
-        action: AUDIT_ACTION.UPDATED,
-        actor,
-        before,
-        after: client,
-        metadata: {
-          changedFields,
-          ...(duplicateMetadata ?? {}),
-        },
-        reason: duplicateMetadata ? data.duplicateReason : null,
-      }, transaction);
-      return client;
-    });
+        const changedFields = changedClientFields(client, data.updates);
+        if (changedFields.length === 0) return client;
+        if (changedFields.includes('documentNumber')) {
+          await assertUniqueDocumentNumber(
+            data.updates.documentNumber,
+            client.id,
+            transaction,
+          );
+        }
+        const contactUpdates = {};
+        if (changedFields.includes('phone')) {
+          contactUpdates.phone = data.updates.phone;
+        }
+        if (changedFields.includes('email')) {
+          contactUpdates.email = data.updates.email;
+        }
+        const duplicateMetadata = Object.keys(contactUpdates).length > 0
+          ? await evaluateDuplicateRisk({
+              contacts: contactUpdates,
+              excludeId: client.id,
+              confirmDuplicate: data.confirmDuplicate,
+              blockDeletedMatches: true,
+            }, transaction)
+          : null;
+        const before = detachedPlain(client);
+        await clientRepository.update(client, data.updates, transaction);
+        await auditService.record({
+          entityType: AUDIT_ENTITY_TYPE.CLIENT,
+          action: AUDIT_ACTION.UPDATED,
+          actor,
+          before,
+          after: client,
+          metadata: {
+            changedFields,
+            ...(duplicateMetadata ?? {}),
+          },
+          reason: duplicateMetadata ? data.duplicateReason : null,
+        }, transaction);
+        return client;
+      });
+    } catch (error) {
+      if (
+        isDocumentUniqueConstraint(error) &&
+        data.updates.documentNumber
+      ) {
+        throw await exactDocumentConflict(data.updates.documentNumber);
+      }
+      throw error;
+    }
   },
 
   deleteClient(id, reason, actor) {

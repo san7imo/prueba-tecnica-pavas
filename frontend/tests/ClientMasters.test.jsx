@@ -12,7 +12,7 @@ import { mechanicUser, renderWithAuth } from './testUtils.jsx';
 vi.mock('../src/api/clientsApi.js', () => ({ clientsApi: { list: vi.fn(), getById: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), restore: vi.fn() } }));
 vi.mock('../src/api/bikesApi.js', () => ({ bikesApi: { list: vi.fn() } }));
 
-const client = { id: 1, name: 'Ana Torres', phone: '3001234567', email: 'ana@example.com', lifecycle: 'active', deletedAt: null, deleteReason: null };
+const client = { id: 1, documentNumber: '1020304050', name: 'Ana Torres', phone: '3001234567', email: 'ana@example.com', lifecycle: 'active', deletedAt: null, deleteReason: null };
 const meta = { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 };
 
 describe('Client master screens', () => {
@@ -28,11 +28,11 @@ describe('Client master screens', () => {
     expect(await screen.findByText('Ana Torres')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /nuevo cliente/i })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/nombre, teléfono o correo/i), { target: { value: '  Ana  ' } });
+    fireEvent.change(screen.getByLabelText(/cédula exacta/i), { target: { value: ' 1020304050 ' } });
     fireEvent.change(screen.getByLabelText(/estado del registro/i), { target: { value: 'all' } });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
 
-    await waitFor(() => expect(clientsApi.list).toHaveBeenLastCalledWith({ search: 'Ana', lifecycle: 'all', page: 1, pageSize: 20 }));
+    await waitFor(() => expect(clientsApi.list).toHaveBeenLastCalledWith({ documentNumber: '1020304050', search: '', lifecycle: 'all', page: 1, pageSize: 20 }));
   });
 
   it('keeps mechanic client views read-only and active-only', async () => {
@@ -49,6 +49,7 @@ describe('Client master screens', () => {
       .mockResolvedValueOnce({ ...client, id: 2, name: 'Beatriz Torres' });
     renderWithAuth(<MemoryRouter initialEntries={['/clients/new']}><Routes><Route path="/clients/new" element={<ClientFormPage />} /><Route path="/clients/:id" element={<h1>Cliente guardado</h1>} /></Routes></MemoryRouter>);
 
+    fireEvent.change(screen.getByLabelText(/^cédula/i), { target: { value: '1020304051' } });
     fireEvent.change(screen.getByLabelText(/nombre completo/i), { target: { value: 'Beatriz Torres' } });
     fireEvent.change(screen.getByLabelText(/^teléfono/i), { target: { value: '3001234567' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar cliente/i }));
@@ -81,7 +82,7 @@ describe('Client master screens', () => {
     expect(await screen.findByDisplayValue('Ana Torres')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/nombre completo/i), { target: { value: ' Ana María Torres ' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
-    await waitFor(() => expect(clientsApi.update).toHaveBeenCalledWith('1', { name: 'Ana María Torres', phone: '3001234567', email: 'ana@example.com' }));
+    await waitFor(() => expect(clientsApi.update).toHaveBeenCalledWith('1', { documentNumber: '1020304050', name: 'Ana María Torres', phone: '3001234567', email: 'ana@example.com' }));
     expect(await screen.findByRole('heading', { name: /cliente actualizado/i })).toBeInTheDocument();
     unmount();
 

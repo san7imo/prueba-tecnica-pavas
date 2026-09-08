@@ -135,7 +135,7 @@ export const DashboardPage = () => {
                       <li key={order.id}>
                         <Link to={`/orders/${order.id}`}>
                           <span><strong className="plate">{order.bike.plate}</strong><small>Orden #{order.id}</small></span>
-                          <span><strong>{order.bike.client.name}</strong><small>{order.assignedMechanic?.name ?? 'Sin asignar'}</small></span>
+                          <span><strong>{order.bike.client.name}</strong><small>C.C. {order.bike.client.documentNumber || 'pendiente'} · {order.assignedMechanic?.name ?? 'Sin asignar'}</small></span>
                         </Link>
                       </li>
                     ))}

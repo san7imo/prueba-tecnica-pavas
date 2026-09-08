@@ -16,6 +16,7 @@ export const BIKE_ATTRIBUTES = [
 ];
 const CLIENT_ATTRIBUTES = [
   'id',
+  'documentNumber',
   'name',
   'phone',
   'email',
@@ -23,10 +24,12 @@ const CLIENT_ATTRIBUTES = [
   'deletedByUserId',
   'deleteReason',
 ];
-const CLIENT_INCLUDE = {
+const clientInclude = (documentNumber) => ({
   association: 'client',
   attributes: CLIENT_ATTRIBUTES,
-};
+  required: true,
+  where: documentNumber ? { documentNumber } : undefined,
+});
 const MUTABLE_FIELDS = ['plate', 'brand', 'model', 'cylinder'];
 const LIFECYCLE_FIELDS = ['deletedAt', 'deletedByUserId', 'deleteReason'];
 
@@ -58,7 +61,7 @@ export const bikeRepository = {
   findById(id, options = {}) {
     return models.Bike.findByPk(id, {
       attributes: BIKE_ATTRIBUTES,
-      include: CLIENT_INCLUDE,
+      include: clientInclude(),
       transaction: options.transaction,
     });
   },
@@ -79,7 +82,15 @@ export const bikeRepository = {
     });
   },
 
-  findPaginated({ plate, platePrefix, clientId, lifecycle, page, pageSize }) {
+  findPaginated({
+    plate,
+    platePrefix,
+    clientId,
+    clientDocumentNumber,
+    lifecycle,
+    page,
+    pageSize,
+  }) {
     const filters = lifecycleWhere(lifecycle);
     if (plate) filters.plate = plate;
     if (platePrefix) {
@@ -88,10 +99,15 @@ export const bikeRepository = {
     if (clientId) filters.clientId = clientId;
 
     return Promise.all([
-      models.Bike.count({ where: filters }),
+      models.Bike.count({
+        where: filters,
+        include: clientDocumentNumber
+          ? [{ ...clientInclude(clientDocumentNumber), attributes: [] }]
+          : undefined,
+      }),
       models.Bike.findAll({
         attributes: BIKE_ATTRIBUTES,
-        include: CLIENT_INCLUDE,
+        include: clientInclude(clientDocumentNumber),
         where: filters,
         limit: pageSize,
         offset: (page - 1) * pageSize,

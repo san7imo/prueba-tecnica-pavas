@@ -9,6 +9,10 @@ import {
   normalizeClientPhone,
 } from '../utils/clientContacts.js';
 import {
+  isValidClientDocumentNumber,
+  normalizeClientDocumentNumber,
+} from '../utils/clientDocument.js';
+import {
   asObject,
   completeValidation,
   optionalQueryString,
@@ -39,6 +43,34 @@ const paginationInteger = ({ value, field, defaultValue, max, details }) => {
     return undefined;
   }
   return parsed;
+};
+
+const clientDocumentNumber = ({ value, required, details }) => {
+  const rawDocumentNumber = required
+    ? requiredString({
+        value,
+        field: 'documentNumber',
+        label: 'Document number',
+        maxLength: 50,
+        details,
+      })
+    : optionalQueryString({
+        value,
+        field: 'documentNumber',
+        label: 'Document number',
+        maxLength: 50,
+        details,
+      });
+  if (rawDocumentNumber === undefined) return undefined;
+  const documentNumber = normalizeClientDocumentNumber(rawDocumentNumber);
+  if (!isValidClientDocumentNumber(documentNumber)) {
+    details.push({
+      field: 'documentNumber',
+      message: 'Document number must contain 5 to 20 digits.',
+    });
+    return undefined;
+  }
+  return documentNumber;
 };
 
 const clientPhone = (value, details) => {
@@ -149,6 +181,11 @@ const completeParamsAndBody = ({ request, params, body, details, next }) => {
 export const validateCreateClient = (request, _response, next) => {
   const body = asObject(request.body);
   const details = [];
+  const documentNumber = clientDocumentNumber({
+    value: body.documentNumber,
+    required: true,
+    details,
+  });
   const name = requiredString({
     value: body.name,
     field: 'name',
@@ -163,7 +200,7 @@ export const validateCreateClient = (request, _response, next) => {
   completeValidation({
     request,
     section: 'body',
-    value: { name, phone, email, ...duplicate },
+    value: { documentNumber, name, phone, email, ...duplicate },
     details,
     next,
   });
@@ -171,6 +208,11 @@ export const validateCreateClient = (request, _response, next) => {
 
 export const validateClientList = (request, _response, next) => {
   const details = [];
+  const documentNumber = clientDocumentNumber({
+    value: request.query.documentNumber,
+    required: false,
+    details,
+  });
   const search = optionalQueryString({
     value: request.query.search,
     field: 'search',
@@ -209,7 +251,7 @@ export const validateClientList = (request, _response, next) => {
   completeValidation({
     request,
     section: 'query',
-    value: { search, lifecycle, page, pageSize },
+    value: { documentNumber, search, lifecycle, page, pageSize },
     details,
     next,
   });
@@ -233,6 +275,14 @@ export const validateUpdateClient = (request, _response, next) => {
   const id = clientId(request, details);
   const updates = {};
 
+  if (hasOwn(body, 'documentNumber')) {
+    updates.documentNumber = clientDocumentNumber({
+      value: body.documentNumber,
+      required: true,
+      details,
+    });
+  }
+
   if (hasOwn(body, 'name')) {
     updates.name = requiredString({
       value: body.name,
@@ -244,7 +294,8 @@ export const validateUpdateClient = (request, _response, next) => {
   }
   if (hasOwn(body, 'phone')) updates.phone = clientPhone(body.phone, details);
   if (hasOwn(body, 'email')) updates.email = clientEmail(body.email, details);
-  if (!['name', 'phone', 'email'].some((field) => hasOwn(body, field))) {
+  if (!['documentNumber', 'name', 'phone', 'email'].some((field) =>
+    hasOwn(body, field))) {
     details.push({
       field: 'body',
       message: 'At least one client field must be provided.',

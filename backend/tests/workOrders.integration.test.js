@@ -144,6 +144,7 @@ describe('Work Orders API', () => {
           clientId: client.id,
           client: {
             id: client.id,
+            documentNumber: null,
             name: 'Ana Torres',
             phone: '3001234567',
             email: 'ana@example.com',
@@ -304,7 +305,8 @@ describe('Work Orders API', () => {
     });
 
     it('lists orders with bike and client data without items', async () => {
-      const { bike } = await createBike();
+      const client = await createClient({ documentNumber: '1020304050' });
+      const { bike } = await createBike({ client });
       await createWorkOrder(bike.id);
 
       const response = await request(app).get('/api/work-orders');
@@ -313,6 +315,7 @@ describe('Work Orders API', () => {
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].bike.plate).toBe('ABC123');
       expect(response.body.data[0].bike.client.name).toBe('Ana Torres');
+      expect(response.body.data[0].bike.client.documentNumber).toBe('1020304050');
       expect(response.body.data[0]).not.toHaveProperty('items');
     });
 
@@ -380,6 +383,37 @@ describe('Work Orders API', () => {
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual([]);
       expect(response.body.meta.totalItems).toBe(0);
+    });
+
+    it('filters by the client exact normalized document number', async () => {
+      const matchingClient = await createClient({
+        documentNumber: '1020304050',
+        phone: '3001234501',
+        email: 'matching.client@example.test',
+      });
+      const otherClient = await createClient({
+        documentNumber: '1020304051',
+        phone: '3001234502',
+        email: 'other.client@example.test',
+      });
+      const { bike: matchingBike } = await createBike({
+        client: matchingClient,
+        plate: 'DOC001',
+      });
+      const { bike: otherBike } = await createBike({
+        client: otherClient,
+        plate: 'DOC002',
+      });
+      await createWorkOrder(matchingBike.id);
+      await createWorkOrder(otherBike.id);
+
+      const response = await request(app)
+        .get('/api/work-orders')
+        .query({ clientDocumentNumber: '1.020-304.050' });
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].bike.client.documentNumber)
+        .toBe('1020304050');
     });
 
     it('combines status and plate filters', async () => {

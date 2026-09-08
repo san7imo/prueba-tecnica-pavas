@@ -2,8 +2,9 @@
 
 ## Estado
 
-Este documento es el contrato de dominio implementado para las fases 1 y 2 y
-la productización consolidada en HITO 19.
+Este documento es el contrato de dominio implementado para las fases 1 y 2,
+la productización consolidada y la identificación única de clientes añadida
+después de HITO 20.
 
 ## Máquina de estados de la orden
 
@@ -121,6 +122,15 @@ Mapa canónico:
 
 ## Lifecycle de clientes
 
+- El `id` técnico autoincremental conserva las relaciones y URLs. La cédula se
+  expone como `documentNumber`, se almacena en `document_number` como string y
+  es obligatoria para toda alta nueva.
+- La cédula elimina puntos, espacios y guiones, debe contener 5–20 dígitos y es
+  globalmente única entre activos y eliminados. No existe override de negocio
+  para compartirla; un eliminado con la misma cédula debe restaurarse.
+- La consulta principal usa igualdad exacta de `documentNumber`; nombre,
+  teléfono y correo permanecen como búsqueda secundaria. Motocicletas y órdenes
+  aceptan `clientDocumentNumber` para filtrar por el mismo identificador.
 - Teléfono se canonicaliza retirando espacios, guiones, puntos y paréntesis; conserva un único `+` inicial y exige entre 7 y 20 dígitos. Email usa trim/lowercase. No se infiere país.
 - Nombre nunca es clave duplicada. Coincidencias exactas activas de phone/email devuelven `409 CLIENT_DUPLICATE_RISK`; el override exige `confirmDuplicate: true` y `duplicateReason`.
 - Una coincidencia eliminada devuelve `409 CLIENT_RESTORE_REQUIRED` y no admite override de creación/update.

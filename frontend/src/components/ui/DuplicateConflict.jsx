@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 
-const FIELD_LABELS = { phone: 'teléfono', email: 'correo' };
+const FIELD_LABELS = {
+  documentNumber: 'cédula',
+  phone: 'teléfono',
+  email: 'correo',
+};
 
 export const DuplicateConflict = ({
   conflict,
@@ -21,8 +25,8 @@ export const DuplicateConflict = ({
         <ul>
           {candidates.map((candidate) => (
             <li key={candidate.id}>
-              <span><strong>{candidate.name}</strong><small>{candidate.phone}{candidate.email ? ` · ${candidate.email}` : ''}</small></span>
-              {onSelect && conflict.code === 'CLIENT_DUPLICATE_RISK' ? (
+              <span><strong>{candidate.name}</strong><small>C.C. {candidate.documentNumber || 'pendiente'} · {candidate.phone}{candidate.email ? ` · ${candidate.email}` : ''}</small></span>
+              {onSelect && conflict.code !== 'CLIENT_RESTORE_REQUIRED' ? (
                 <button className="button button--secondary" type="button" onClick={() => onSelect(candidate)}>Usar este cliente</button>
               ) : (
                 <Link className="text-link" to={`${resourcePath}/${candidate.id}`}>Ver cliente</Link>

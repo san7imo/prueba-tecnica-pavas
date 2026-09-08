@@ -6,6 +6,10 @@ import {
   normalizeClientEmail,
   normalizeClientPhone,
 } from '../utils/clientContacts.js';
+import {
+  isValidClientDocumentNumber,
+  normalizeClientDocumentNumber,
+} from '../utils/clientDocument.js';
 
 export class Client extends Model {}
 
@@ -21,6 +25,31 @@ export const initializeClient = (sequelize) =>
         type: DataTypes.STRING(150),
         allowNull: false,
         validate: { notEmpty: true },
+      },
+      documentNumber: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        unique: 'uq_clients_document_number',
+        field: 'document_number',
+        set(value) {
+          this.setDataValue(
+            'documentNumber',
+            value === null || value === undefined
+              ? null
+              : normalizeClientDocumentNumber(value),
+          );
+        },
+        validate: {
+          isValidOptionalDocumentNumber(value) {
+            if (
+              value !== null &&
+              value !== undefined &&
+              !isValidClientDocumentNumber(value)
+            ) {
+              throw new Error('Document number must contain 5 to 20 digits.');
+            }
+          },
+        },
       },
       phone: {
         type: DataTypes.STRING(30),

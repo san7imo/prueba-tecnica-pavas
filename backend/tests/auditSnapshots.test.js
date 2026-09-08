@@ -50,6 +50,7 @@ describe('audit snapshot allowlists', () => {
       deleteReason: null,
     })).toEqual({
       id: '1',
+      documentNumber: null,
       name: 'Client',
       phone: '3000000000',
       email: null,

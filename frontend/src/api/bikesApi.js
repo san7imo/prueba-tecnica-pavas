@@ -6,12 +6,21 @@ export const bikesApi = {
     return response.data.data;
   },
 
-  async list({ plate = '', platePrefix = '', clientId = '', lifecycle = 'active', page = 1, pageSize = 20 } = {}) {
+  async list({
+    plate = '',
+    platePrefix = '',
+    clientId = '',
+    clientDocumentNumber = '',
+    lifecycle = 'active',
+    page = 1,
+    pageSize = 20,
+  } = {}) {
     const response = await httpClient.get('/bikes', {
       params: {
         ...(plate ? { plate } : {}),
         ...(platePrefix ? { platePrefix } : {}),
         ...(clientId ? { clientId } : {}),
+        ...(clientDocumentNumber ? { clientDocumentNumber } : {}),
         ...(lifecycle !== 'active' ? { lifecycle } : {}),
         page,
         pageSize,

@@ -116,6 +116,7 @@ describe.sequential('HITO 8 role-based access control', () => {
         .post('/api/clients')
         .set(adminHeaders())
         .send({
+          documentNumber: `100000000${index}`,
           name: `Business Client ${index}`,
           phone: `300000000${index}`,
           email: `business.client.${index}@example.test`,

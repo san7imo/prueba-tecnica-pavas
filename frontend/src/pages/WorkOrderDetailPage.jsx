@@ -232,6 +232,7 @@ export const WorkOrderDetailPage = () => {
               </Link>
             </h2>
             <dl>
+              <div><dt>Cédula</dt><dd>{order.bike.client.documentNumber || 'Pendiente'}</dd></div>
               <div><dt>Teléfono</dt><dd>{order.bike.client.phone}</dd></div>
               <div><dt>Correo</dt><dd>{order.bike.client.email || 'No registrado'}</dd></div>
             </dl>

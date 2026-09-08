@@ -1,5 +1,6 @@
 export const clientFixture = {
   id: 1,
+  documentNumber: '1020304050',
   name: 'Ana Torres',
   phone: '3001234567',
   email: 'ana@example.com',
